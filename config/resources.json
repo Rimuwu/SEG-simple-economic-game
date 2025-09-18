@@ -1,0 +1,254 @@
+{
+    "oil": {
+        "label": "Нефть",
+        "emoji": "🛢️",
+        "basePrice": 75,
+        "massModifier": 1,
+        "raw": true // Это сырьё, не нужно городам
+    },
+    "metal": {
+        "label": "Металл",
+        "emoji": "⚙️",
+        "basePrice": 15,
+        "massModifier": 5,
+        "raw": true
+    },
+    "wood": {
+        "label": "Дерево",
+        "emoji": "🌲",
+        "basePrice": 15,
+        "massModifier": 5,
+        "raw": true
+    },
+    "cotton": {
+        "label": "Хлопок",
+        "emoji": "🌱",
+        "basePrice": 75,
+        "massModifier": 1,
+        "raw": true
+    },
+    "oil_products": {
+        "label": "Нефтепродукты",
+        "emoji": "⛽",
+        "basePrice": 400,
+        "massModifier": 1,
+        "production": {
+            "materials": {
+                "oil": 2
+            },
+            "turns": 1,
+            "output": 1
+        }
+    },
+    "nails": {
+        "label": "Гвозди",
+        "emoji": "📌",
+        "basePrice": 4,
+        "massModifier": 100,
+        "production": {
+            "materials": {
+                "metal": 1
+            },
+            "turns": 1,
+            "output": 10
+        }
+    },
+    "boards": {
+        "label": "Доски",
+        "emoji": "🪵",
+        "basePrice": 80,
+        "massModifier": 5,
+        "production": {
+            "materials": {
+                "wood": 2
+            },
+            "turns": 1,
+            "output": 1
+        }
+    },
+    "fabric": {
+        "label": "Ткань",
+        "emoji": "🧵",
+        "basePrice": 200,
+        "massModifier": 2,
+        "production": {
+            "materials": {
+                "cotton": 1
+            },
+            "turns": 1,
+            "output": 2
+        }
+    },
+    "medical_equipment": {
+        "label": "Медицинское оборудование",
+        "emoji": "🩺",
+        "basePrice": 12500,
+        "massModifier": 1.4,
+        "production": {
+            "materials": {
+                "oil_products": 4,
+                "fabric": 6
+            },
+            "turns": 2,
+            "output": 1
+        }
+    },
+    "machine": {
+        "label": "Станок",
+        "emoji": "🛠️",
+        "basePrice": 8000,
+        "massModifier": 1.6,
+        "production": {
+            "materials": {
+                "nails": 100,
+                "oil_products": 1
+            },
+            "turns": 2,
+            "output": 1
+        }
+    },
+    "furniture": {
+        "label": "Мебель",
+        "emoji": "🪑",
+        "basePrice": 6500,
+        "massModifier": 1.3,
+        "production": {
+            "materials": {
+                "boards": 6,
+                "nails": 50
+            },
+            "turns": 2,
+            "output": 1
+        }
+    },
+    "tent": {
+        "label": "Палатка",
+        "emoji": "⛺",
+        "basePrice": 7300,
+        "massModifier": 1,
+        "production": {
+            "materials": {
+                "fabric": 4,
+                "boards": 3
+            },
+            "turns": 2,
+            "output": 1
+        }
+    },
+    "barrel": {
+        "label": "Бочка",
+        "emoji": "🛢️",
+        "basePrice": 4200,
+        "massModifier": 2.2,
+        "production": {
+            "materials": {
+                "oil_products": 1,
+                "boards": 5
+            },
+            "turns": 1,
+            "output": 1
+        }
+    },
+    "tarpaulin": {
+        "label": "Брезент",
+        "emoji": "🧳",
+        "basePrice": 3600,
+        "massModifier": 4.8,
+        "production": {
+            "materials": {
+                "nails": 100,
+                "fabric": 3
+            },
+            "turns": 1,
+            "output": 1
+        }
+    },
+    "insulation": {
+        "label": "Изоляционный материал",
+        "emoji": "🌡",
+        "basePrice": 4600,
+        "massModifier": 2.8,
+        "production": {
+            "materials": {
+                "boards": 5,
+                "oil_products": 1
+            },
+            "turns": 1,
+            "output": 1
+        }
+    },
+    "sail": {
+        "label": "Парус",
+        "emoji": "⛵",
+        "basePrice": 6000,
+        "massModifier": 1,
+        "production": {
+            "materials": {
+                "fabric": 4,
+                "nails": 100
+            },
+            "turns": 1,
+            "output": 1
+        }
+    },
+    "generator": {
+        "label": "Генератор",
+        "emoji": "⚡",
+        "basePrice": 70000,
+        "massModifier": 2.2,
+        "production": {
+            "materials": {
+                "barrel": 2,
+                "nails": 150,
+                "oil_products": 3
+            },
+            "turns": 1,
+            "output": 1
+        }
+    },
+    "body_armor": {
+        "label": "Бронежилет",
+        "emoji": "🦺",
+        "basePrice": 32500,
+        "massModifier": 4.8,
+        "production": {
+            "materials": {
+                "tarpaulin": 1,
+                "fabric": 6,
+                "nails": 100
+            },
+            "turns": 1,
+            "output": 1
+        }
+    },
+    "refrigerator": {
+        "label": "Холодильник",
+        "emoji": "🧊",
+        "basePrice": 55400,
+        "massModifier": 2.8,
+        "production": {
+            "materials": {
+                "insulation": 2,
+                "nails": 200,
+                "oil_products": 3
+            },
+            "turns": 1,
+            "output": 1
+        }
+    },
+    "yacht": {
+        "label": "Парусная яхта",
+        "emoji": "⛵",
+        "basePrice": 156000,
+        "massModifier": 1,
+        "production": {
+            "materials": {
+                "sail": 2,
+                "boards": 20,
+                "fabric": 10
+            },
+            "turns": 1,
+            "output": 1
+        }
+    }
+}
