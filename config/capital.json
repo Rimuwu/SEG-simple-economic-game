@@ -1,0 +1,77 @@
+{
+    "start": 10000, // Редактируется сессией
+
+    "bank": {
+
+        "credit": {
+            "min": 1000,
+            "max": 100000,
+
+            "conditions": [
+                {
+                    "on_reputation": {"min": 0, "max": 5},
+                    "possible": false // Кредит не выдаётся
+                },
+                {
+                    "on_reputation": {"min": 100, "max": 0}, // 0 - нет ограничения
+                    "possible": true, // Кредит выдается
+
+                    "without_interest": 3, // Ходов с возможностью погасить без процентов
+                    "percent": 0.1 // Процентная ставка
+                },
+
+                {
+                    "on_reputation": {"min": 10, "max": 50},
+                    "possible": true,
+
+                    "without_interest": 1,
+                    "percent": 0.2
+                },
+                {
+                    "on_reputation": {"min": 51, "max": 100},
+                    "possible": true,
+
+                    "without_interest": 1,
+                    "percent": 0.15
+                }
+            ]
+        },
+
+        "contribution": {
+            "min": 1000,
+            "max": 100000,
+
+            "conditions": [
+                {
+                    "on_reputation": {"min": 100, "max": 0}, // 0 - нет ограничения
+                    "possible": true, // Вклад принимается
+
+                    "percent": 0.2 // Процентная ставка
+                },
+
+                {
+                    "on_reputation": {"min": 0, "max": 50},
+                    "possible": true,
+
+                    "percent": 0.1
+                },
+                {
+                    "on_reputation": {"min": 51, "max": 100},
+                    "possible": true,
+
+                    "percent": 0.15
+                }
+            ]
+        },
+
+        "tax": {
+            "auto_pay": false, // Автоматическая уплата налогов // Настраивается сессией
+
+            "small_business": 0.06, // Налог для малого бизнеса
+            "big_business": 0.25, // Налог для большого бизнеса
+
+            "big_on": 50000 // С какого дохода бизнес считается большим (за ход)
+        }
+
+    }
+}
