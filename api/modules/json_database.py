@@ -44,6 +44,9 @@ class JSONDatabase:
             # Создаём backup
             if self.db_path.exists():
                 backup_path = self.db_path.with_suffix('.backup.json')
+                # Удаляем старый backup если существует
+                if backup_path.exists():
+                    backup_path.unlink()
                 self.db_path.rename(backup_path)
             
             try:
