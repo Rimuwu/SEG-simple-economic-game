@@ -26,7 +26,7 @@ def get_fastapi_app(
         app.state.logger = api_logger
 
     if limiter: 
-        from modules.limiter import setup_rate_limiter
+        from global_modules.limiter import setup_rate_limiter
         setup_rate_limiter(app)
 
     for middleware in middlewares:

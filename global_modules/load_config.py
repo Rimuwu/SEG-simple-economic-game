@@ -1,12 +1,12 @@
 import json
 from pathlib import Path
 
-from modules.models.cells import Cells
-from modules.models.capital import Capital
-from modules.models.improvements import Improvements
-from modules.models.reputation import Reputation
-from modules.models.resources import Resources
-from modules.models.settings import Settings
+from global_modules.models.cells import Cells
+from global_modules.models.capital import Capital
+from global_modules.models.improvements import Improvements
+from global_modules.models.reputation import Reputation
+from global_modules.models.resources import Resources
+from global_modules.models.settings import Settings
 
 
 def load_json(filename: str, config_dir: Path) -> dict:
