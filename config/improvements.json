@@ -1,0 +1,70 @@
+{
+    "warehouse": { // Уровни складов
+        "1": { "capacity": 50, "cost": 0 },
+        "2": { "capacity": 75, "cost": 10000 },
+        "3": { "capacity": 100, "cost": 50000 },
+        "4": { "capacity": 150, "cost": 100000 }
+    },
+    "contracts": { // Уровни контрактов
+        "1": { "max": 5, "cost": 0 },
+        "2": { "max": 10, "cost": 10000 },
+        "3": { "max": 15, "cost": 50000 },
+        "4": { "max": 20, "cost": 100000 }
+    },
+    "mountain": { // Уровни улучшений на горе
+        "station": { // Станция добычи
+            "1": { "productsPerTurn": 10, "cost": 0 },
+            "2": { "productsPerTurn": 20, "cost": 10000 },
+            "3": { "productsPerTurn": 30, "cost": 50000 },
+            "4": { "productsPerTurn": 60, "cost": 100000 }
+        },
+        "factory": { // Фабрика по переработке
+            "1": { "tasksPerTurn": 15, "factories": 5, "cost": 0 },
+            "2": { "tasksPerTurn": 30, "factories": 5, "cost": 10000 },
+            "3": { "tasksPerTurn": 60, "factories": 5, "cost": 50000 },
+            "4": { "tasksPerTurn": 90, "factories": 5, "cost": 100000 }
+        }
+    },
+    "forest": { // Уровни улучшений в лесу
+        "station": {
+            "1": { "productsPerTurn": 15, "cost": 0 },
+            "2": { "productsPerTurn": 20, "cost": 10000 },
+            "3": { "productsPerTurn": 30, "cost": 50000 },
+            "4": { "productsPerTurn": 60, "cost": 100000 }
+        },
+        "factory": {
+            "1": { "tasksPerTurn": 15, "factories": 5, "cost": 0 },
+            "2": { "tasksPerTurn": 30, "factories": 5, "cost": 10000 },
+            "3": { "tasksPerTurn": 60, "factories": 5, "cost": 50000 },
+            "4": { "tasksPerTurn": 90, "factories": 5, "cost": 100000 }
+        }
+    },
+    "water": { // Уровни улучшений на воде
+        "station": {
+            "1": { "productsPerTurn": 2, "cost": 0 },
+            "2": { "productsPerTurn": 10, "cost": 10000 },
+            "3": { "productsPerTurn": 15, "cost": 50000 },
+            "4": { "productsPerTurn": 30, "cost": 100000 }
+        },
+        "factory": {
+            "1": { "tasksPerTurn": 3, "factories": 3, "cost": 0 },
+            "2": { "tasksPerTurn": 6, "factories": 3, "cost": 10000 },
+            "3": { "tasksPerTurn": 12, "factories": 3, "cost": 50000 },
+            "4": { "tasksPerTurn": 18, "factories": 3, "cost": 100000 }
+        }
+    },
+    "field": { // Уровни улучшений в поле
+        "station": {
+            "1": { "productsPerTurn": 2, "cost": 0 },
+            "2": { "productsPerTurn": 4, "cost": 10000 },
+            "3": { "productsPerTurn": 6, "cost": 50000 },
+            "4": { "productsPerTurn": 12, "cost": 100000 }
+        },
+        "factory": {
+            "1": { "tasksPerTurn": 3, "factories": 3, "cost": 0 },
+            "2": { "tasksPerTurn": 6, "factories": 3, "cost": 10000 },
+            "3": { "tasksPerTurn": 12, "factories": 3, "cost": 50000 },
+            "4": { "tasksPerTurn": 18, "factories": 3, "cost": 100000 }
+        }
+    }
+}
