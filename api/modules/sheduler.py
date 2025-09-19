@@ -1,3 +1,4 @@
+from typing import Callable
 from modules.json_database import just_db
 from modules.function_way import *
 import asyncio
@@ -64,27 +65,41 @@ class TaskScheduler:
             self.db.update('time_schedule', {'id': task['id']}, {'execute_at': next_execute_time.isoformat()})
 
         else:
-            self.db.delete('time_schedule', {'id': task['id']})
+            self.db.delete('time_schedule', id=task['id'])
 
-    def schedule_task(self, function_path: str, 
+    def schedule_task(self, function: Callable, 
                       execute_at: datetime, 
                       args: list = None, 
                       kwargs: dict = None,
-                      repeat: bool = False) -> int:
+                      repeat: bool = False,
+                      delete_on_shutdown: bool = False) -> int:
         if args is None: args = []
         if kwargs is None: kwargs = {}
 
         task_data = {
-            'function_path': function_path,
+            'function_path': func_to_str(function),
             'execute_at': execute_at.isoformat(),
             'add_at': datetime.now().isoformat(),
             'args': json.dumps(args),
             'kwargs': json.dumps(kwargs),
-
-            'repeat': repeat
+            'repeat': repeat,
+            'delete_on_shutdown': delete_on_shutdown
         }
 
         return self.db.insert('time_schedule', task_data)
+
+    def cleanup_shutdown_tasks(self):
+        """
+        Удаляет все задачи, помеченные для удаления при завершении работы API.
+        Этот метод следует вызывать при завершении работы приложения.
+        """
+        try:
+            deleted_count = self.db.delete('time_schedule', delete_on_shutdown=True)
+            print(f"Удалено {deleted_count} задач при завершении работы")
+            return deleted_count
+        except Exception as e:
+            print(f"Ошибка при удалении задач завершения: {e}")
+            return 0
 
 
 scheduler = TaskScheduler()
