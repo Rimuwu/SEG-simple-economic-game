@@ -3,6 +3,8 @@ from modules.json_database import just_db
 from modules.generate import generate_code
 from enum import Enum
 from modules.baseclass import BaseClass
+import asyncio
+import asyncio
 
 class SessionStages(Enum):
     WaitWebConnect = "WaitWebConnect" # Ждём пока появится сайт для работы
@@ -21,4 +23,26 @@ class Session(BaseClass):
         self.companies_id = []
         self.users_id = []
 
-        self.save_data()
+        self.save_to_base()
+        self.reupdate()
+
+        return self
+
+
+class SessionsManager():
+    def __init__(self):
+        self.sessions = {}
+
+    def create_session(self):
+        session = Session().start()
+        self.sessions[session.session_id] = session
+        return session.session_id
+
+    def get_session(self, session_id):
+        return self.sessions.get(session_id)
+
+    def remove_session(self, session_id):
+        if session_id in self.sessions:
+            del self.sessions[session_id]
+
+session_manager = SessionsManager()
