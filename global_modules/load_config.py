@@ -51,3 +51,5 @@ def get_configs(config_dir: str = "config"):
     }
 
     return ALL_CONFIGS
+
+ALL_CONFIGS = get_configs()
