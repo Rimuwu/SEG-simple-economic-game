@@ -7,8 +7,7 @@ class BaseClass:
     __unique_id__: str = "id"  # Поле, которое будет использоваться как уникальный идентификатор
 
     def load_from_base(self, data: dict):
-        for key, value in data.items():
-            if hasattr(self, key): setattr(self, key, value)
+        for key, value in data.items(): setattr(self, key, value)
 
     def save_to_base(self) -> dict:
         # Фильтруем данные, исключая атрибуты, начинающиеся с _
@@ -16,7 +15,7 @@ class BaseClass:
 
         if just_db.find_one(self.__tablename__, 
                 **{self.__unique_id__: 
-                    data_to_save[self.__unique_id__]}
+                    self.__dict__[self.__unique_id__]}
                             ) is None:
             just_db.insert(self.__tablename__, data_to_save)
             return
