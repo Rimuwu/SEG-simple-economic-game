@@ -15,6 +15,22 @@ services:
     networks:
       - seg_network
 
+  bot:
+    build: 
+      context: .
+      dockerfile: bot/Dockerfile.bot
+    environment:
+      - DEBUG=${DEBUG}
+      - BOT_TOKEN=${BOT_TOKEN}
+      - WS_SERVER_URI=${WS_SERVER_URI}
+    restart: unless-stopped
+    volumes:
+      - ./logs:/logs:rw
+    depends_on:
+      - api
+    networks:
+      - seg_network
+
 networks:
   seg_network:
     driver: bridge
