@@ -5,6 +5,7 @@ import time
 from typing import Callable, Dict, Any, Optional
 from os import getenv
 import logging
+import uuid
 
 
 class WebSocketClient:
@@ -22,6 +23,9 @@ class WebSocketClient:
 
         self._on_connect: Optional[Callable] = None
         self._on_disconnect: Optional[Callable] = None
+
+        # Для ожидания ответов на сообщения
+        self.pending_requests: Dict[str, asyncio.Future] = {}
 
         # Регистрируем базовые обработчики
         self._register_base_handlers()
@@ -112,8 +116,17 @@ class WebSocketClient:
         try:
             data = json.loads(message)
             message_type = data.get("type", "unknown")
-            
-            # Вызываем зарегистрированный обработчик
+            request_id = data.get("request_id")
+
+            # Если это ответ на наш запрос
+            if request_id and request_id in self.pending_requests:
+                future = self.pending_requests[request_id]
+                if not future.done():
+                    future.set_result(data)
+                del self.pending_requests[request_id]
+                return
+
+            # Обычная обработка сообщений
             if message_type in self.message_handlers:
                 handler = self.message_handlers[message_type]
                 if asyncio.iscoroutinefunction(handler):
@@ -121,7 +134,6 @@ class WebSocketClient:
                 else:
                     handler(data)
             else:
-                # Обработчик по умолчанию
                 if getenv("DEBUG") == 'true':
                     self.logger.debug(f"Нет обработчика для типа '{message_type}': {data}")
 
@@ -130,20 +142,28 @@ class WebSocketClient:
         except Exception as e:
             self.logger.error(f"Ошибка обработки сообщения: {e}")
 
-    async def send_message(self, message_type: str, content: str = "", **kwargs) -> bool:
+    async def send_message(self, message_type: str, 
+                           content: Any = "", 
+                           wait_for_response: bool = False, timeout: float = 5.0, 
+                           **kwargs) -> Any:
         """
         Отправка сообщения на сервер
-        
+
         Args:
             message_type: Тип сообщения (ping, broadcast, private, echo)
             content: Содержимое сообщения
-            **kwargs: Дополнительные параметры (например, target для private)
+            wait_for_response: Ожидать ли ответ от сервера
+            timeout: Время ожидания ответа в секундах
+            **kwargs: Дополнительные параметры
         """
         if not self.connected or not self.websocket:
             self.logger.error("Нет подключения к серверу")
             return False
 
         try:
+            # Генерируем уникальный ID для запроса если нужен ответ
+            request_id = str(uuid.uuid4()) if wait_for_response else None
+
             message = {
                 "type": message_type,
                 "content": content,
@@ -151,12 +171,31 @@ class WebSocketClient:
                 **kwargs
             }
 
+            if request_id:
+                message["request_id"] = request_id
+                # Создаем Future для ожидания ответа
+                future = asyncio.Future()
+                self.pending_requests[request_id] = future
+
             await self.websocket.send(json.dumps(message, ensure_ascii=False))
 
             if getenv("DEBUG") == 'true':
                 self.logger.debug(f"Отправлено: {message_type}")
 
-            return True
+            # Если не нужен ответ, возвращаем True
+            if not wait_for_response:
+                return True
+ 
+            # Ждем ответ с таймаутом
+            try:
+                response = await asyncio.wait_for(future, timeout=timeout)
+                return response['data'] if 'data' in response else response
+
+            except asyncio.TimeoutError:
+                self.logger.error(f"Таймаут ожидания ответа для {message_type}")
+                if request_id in self.pending_requests:
+                    del self.pending_requests[request_id]
+                return None
 
         except Exception as e:
             self.logger.error(f"Ошибка отправки сообщения: {e}")

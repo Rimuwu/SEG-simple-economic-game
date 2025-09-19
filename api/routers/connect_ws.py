@@ -73,13 +73,28 @@ async def get_websocket_status():
     try:
         connected_clients = websocket_manager.get_connected_clients()
         connection_count = websocket_manager.get_connection_count()
+
+        available_types = []
+        for m_type, info in get_registered_handlers().items():
+            available_types.append({
+                "type": m_type
+            })
+
+            if info.get("doc"):
+                available_types[-1]["description"] = info["doc"]
+
+            if not info.get("datatypes"):
+                available_types[-1]["args"] = "Нет аргументов"
+
+            elif len(info["datatypes"]) > 0:
+                available_types[-1]["args"] = ', '.join(info.get("datatypes", []))
         
         return JSONResponse({
             "status": "ok",
             "total_connections": connection_count,
             "connected_clients": connected_clients,
             "server_status": "running",
-            "supported_message_types": get_registered_handlers()
+            "supported_message_types": available_types
         })
     
     except Exception as e:
