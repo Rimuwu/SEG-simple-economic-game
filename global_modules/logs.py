@@ -123,3 +123,5 @@ class Logger:
     def critical(cls, message, app_name="seg"):
         """Логировать critical сообщение"""
         cls.get_logger(app_name).critical(message)
+
+main_logger = Logger().get_logger("main")
