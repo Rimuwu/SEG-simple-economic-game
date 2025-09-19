@@ -1,0 +1,20 @@
+services:
+
+  api:
+    build: 
+      context: .
+      dockerfile: api/Dockerfile.api
+    environment:
+      - DEBUG=${DEBUG}
+    ports:
+      - "8000:8000"
+    restart: unless-stopped
+    volumes:
+      - ./logs:/logs:rw
+      - ./data:/data:rw
+    networks:
+      - seg_network
+
+networks:
+  seg_network:
+    driver: bridge
