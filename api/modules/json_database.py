@@ -194,6 +194,15 @@ class JSONDatabase:
         if table_name not in self._data:
             return 0
         
+        if not isinstance(conditions, dict):
+            raise ValueError(f"conditions must be a dictionary, got {type(conditions)} ({conditions})")
+        
+        if not isinstance(updates, dict):
+            raise ValueError(f"updates must be a dictionary, got {type(updates)} ({updates})")
+
+        if not updates:
+            raise ValueError("updates cannot be empty")
+
         with self._lock:
             updated_count = 0
             
@@ -282,5 +291,19 @@ class JSONDatabase:
             
             if self.auto_save:
                 self.save()
+    
+    def drop_all(self):
+        """Удаляет все таблицы"""
+        with self._lock:
+            self._data = {}
+            self._indexes = {}
+            if self.auto_save:
+                self.save()
+
+    def max_id_in_table(self, table_name: str) -> int:
+        """Возвращает максимальный ID в таблице"""
+        if table_name not in self._data or not self._data[table_name]:
+            return 0
+        return max(record.get('id', 0) for record in self._data[table_name])
 
 just_db = JSONDatabase()
