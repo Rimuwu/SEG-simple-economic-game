@@ -5,23 +5,22 @@ from datetime import datetime
 import threading
 from copy import deepcopy
 
-
 class JSONDatabase:
     """Простая JSON база данных с поддержкой индексов и кэширования"""
     
-    def __init__(self, db_path: str = "data/sessions.json", auto_save: bool = True):
+    def __init__(self, db_path: str = "data/just_db.json", auto_save: bool = True):
         self.db_path = Path(db_path)
         self.auto_save = auto_save
         self._data: Dict[str, List[Dict]] = {}
         self._indexes: Dict[str, Dict[str, List[int]]] = {}
         self._lock = threading.RLock()
-        
+
         # Создаём директорию если её нет
         self.db_path.parent.mkdir(parents=True, exist_ok=True)
-        
+
         # Загружаем данные
         self.load()
-    
+
     def load(self):
         """Загружает данные из файла"""
         if self.db_path.exists():
@@ -75,7 +74,7 @@ class JSONDatabase:
                         self._indexes[table_name][key][str_value] = []
                     
                     self._indexes[table_name][key][str_value].append(i)
-    
+
     def create_table(self, table_name: str):
         """Создаёт новую таблицу"""
         with self._lock:
@@ -84,13 +83,13 @@ class JSONDatabase:
                 self._indexes[table_name] = {}
                 if self.auto_save:
                     self.save()
-    
+
     def insert(self, table_name: str, record: Dict[str, Any]) -> int:
         """Вставляет запись в таблицу"""
         with self._lock:
             if table_name not in self._data:
                 self.create_table(table_name)
-            
+
             # Добавляем автоматические поля
             record = deepcopy(record)
             if 'id' not in record:
@@ -120,23 +119,31 @@ class JSONDatabase:
                 self.save()
                 
             return record['id']
-    
-    def find(self, table_name: str, **conditions) -> List[Dict[str, Any]]:
-        """Находит записи по условиям"""
+
+    def find(self, table_name: str, 
+             to_class: Optional['BaseClass'] = None,
+             **conditions
+             ) -> List[Dict[str, Any]]:
+
+        """Находит записи по условиям
+        
+            to_class: если указать класс, то записи будут возвращены как экземпляры этого класса
+
+        """
         if table_name not in self._data:
             return []
-        
+
         if not conditions:
             return deepcopy(self._data[table_name])
-        
+
         # Используем индексы для быстрого поиска
         result_indexes = None
-        
+
         for key, value in conditions.items():
             if (table_name in self._indexes and 
                 key in self._indexes[table_name] and 
                 str(value) in self._indexes[table_name][key]):
-                
+
                 indexes = set(self._indexes[table_name][key][str(value)])
                 if result_indexes is None:
                     result_indexes = indexes
@@ -145,10 +152,18 @@ class JSONDatabase:
             else:
                 result_indexes = set()
                 break
-        
+
         if result_indexes is not None:
-            return [deepcopy(self._data[table_name][i]) for i in result_indexes]
-        
+            results = []
+            for i in result_indexes:
+                if to_class:
+                    instance = to_class()
+                    instance.load_from_base(self._data[table_name][i])
+                    results.append(instance)
+                else:
+                    results.append(deepcopy(self._data[table_name][i]))
+                return results
+
         # Fallback к линейному поиску
         results = []
         for record in self._data[table_name]:
@@ -158,15 +173,22 @@ class JSONDatabase:
                     match = False
                     break
             if match:
-                results.append(deepcopy(record))
-        
+                if to_class:
+                    instance = to_class()
+                    instance.load_from_base(record)
+                    results.append(instance)
+                else:
+                    results.append(deepcopy(record))
+
         return results
-    
-    def find_one(self, table_name: str, **conditions) -> Optional[Dict[str, Any]]:
+
+    def find_one(self, table_name: str, 
+                 to_class: Optional['BaseClass'] = None,
+                 **conditions) -> Optional[Dict[str, Any]]:
         """Находит одну запись"""
-        results = self.find(table_name, **conditions)
+        results = self.find(table_name, to_class, **conditions)
         return results[0] if results else None
-    
+
     def update(self, table_name: str, conditions: Dict[str, Any], updates: Dict[str, Any]) -> int:
         """Обновляет записи"""
         if table_name not in self._data:
@@ -261,4 +283,4 @@ class JSONDatabase:
             if self.auto_save:
                 self.save()
 
-db_sessions = JSONDatabase()
+just_db = JSONDatabase()

@@ -31,7 +31,8 @@ async def ping_command(message: types.Message):
     """Обработчик команды /ping"""
     try:
         # Отправляем ping через клиент
-        response = await ws_client.send_message("ping", {'from': message.from_user.id})
+        response = await ws_client.send_message(
+            "ping", {'from': message.from_user.id})
         print(f"Ответ от сервера: {response}")
     except Exception as e:
         await message.answer(f"Ошибка при выполнении ping: {str(e)}")
