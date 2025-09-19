@@ -1,11 +1,6 @@
-"""
-Лёгкая JSON база данных для игры
-Поддерживает CRUD операции, индексы и кэширование
-"""
 import json
-import os
 from pathlib import Path
-from typing import Any, Dict, List, Optional, Union
+from typing import Any, Dict, List, Optional
 from datetime import datetime
 import threading
 from copy import deepcopy
