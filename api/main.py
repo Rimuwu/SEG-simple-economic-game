@@ -1,3 +1,4 @@
+from datetime import datetime, timedelta
 from fastapi import FastAPI, Request
 from contextlib import asynccontextmanager
 
@@ -14,6 +15,8 @@ async def lifespan(app: FastAPI):
     # Startup
     main_logger.info("API is starting up...")
     main_logger.info("Creating missing tables on startup...")
+    
+    # just_db.drop_all() # Тестово
 
     just_db.create_table('sessions') # Таблица сессий
     just_db.create_table('users') # Таблица пользователей
@@ -28,11 +31,17 @@ async def lifespan(app: FastAPI):
     just_db.create_table('warehouse') # Таблица с складом
 
     main_logger.info("Starting task scheduler...")
-    scheduler.start()
+    await scheduler.start()
+    
+    # await initial_setup()
 
     yield
+    
+    main_logger.info("API is shutting down...")
 
-    # Shutdown
+    main_logger.info("Stopping task scheduler...")
+    scheduler.stop()
+    scheduler.cleanup_shutdown_tasks()
 
 app = get_fastapi_app(
     title="API",
@@ -53,12 +62,25 @@ async def root(request: Request):
     return {"message": f"{app.description} is running! v{app.version}"}
 
 
-from game.user import User
+async def initial_setup():
 
-user = User().create(user_id=123, username="TestUser")
-user.save_to_base()
+    from game.user import User
+    from game.session import Session, session_manager, SessionStages
+    from game.company import Company
 
-from modules.json_database import just_db
+    # try:
+    session = session_manager.create_session()
 
-res = just_db.find_one('users', user_id=123, to_class=User)
-print(res)
+    session.update_stage(SessionStages.FreeUserConnect)
+    user = User().create(user_id=1, username="TestUser")
+
+    company = Company().create(name="TestCompany")
+    company.add_user(user.id)
+
+    session.add_company(company.id)
+
+    session.update_stage(SessionStages.CellSelect)
+
+    # except Exception as e:
+    #     main_logger.error(f"Error during initial setup: {e}")
+
