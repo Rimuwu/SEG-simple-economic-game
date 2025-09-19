@@ -4,6 +4,7 @@ from contextlib import asynccontextmanager
 from global_modules.api_configurate import get_fastapi_app
 from global_modules.logs import main_logger
 from modules.json_database import just_db
+from modules.sheduler import scheduler
 
 # Импортируем роуты
 from routers import connect_ws
@@ -25,6 +26,9 @@ async def lifespan(app: FastAPI):
     just_db.create_table('exchange') # Таблица с биржей
     just_db.create_table('factories') # Таблица с заводами
     just_db.create_table('warehouse') # Таблица с складом
+
+    main_logger.info("Starting task scheduler...")
+    scheduler.start()
 
     yield
 
