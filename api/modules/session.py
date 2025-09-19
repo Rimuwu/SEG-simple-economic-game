@@ -1,3 +1,4 @@
+import random
 from modules.json_database import db_sessions
 from modules.generate import generate_code
 
@@ -70,6 +71,4 @@ class Session:
 
     def start(self):
         self.session_id = generate_code(32, use_letters=True, use_numbers=True, use_uppercase=True)
-        self.data = {}
-
         self.save_data()
