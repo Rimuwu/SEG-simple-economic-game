@@ -23,7 +23,7 @@ class Company(BaseClass):
         self.warehouses: dict = {}
 
         self.session_id: str = ""
-        self.cell_positions: str = ""
+        self.cell_position: str = "" # 3.1
 
     def create(self, name: str, session_id: str):
         self.name = name
@@ -60,3 +60,25 @@ class Company(BaseClass):
         return [User(_id=u_id
                      ).reupdate() for u_id in just_db.find(
             "users", company_id=self.id)]
+
+    def set_position(self, x: int, y: int):
+        if isinstance(x, int) is False or isinstance(y, int) is False:
+            raise ValueError("Coordinates must be integers.")
+
+        session = session_manager.get_session(self.session_id)
+        if not session or not session.can_select_cell(x, y):
+            return False
+
+        self.cell_position = f"{x}.{y}"
+        self.save_to_base()
+        self.reupdate()
+        return True
+
+    def get_position(self):
+        if not self.cell_position:
+            return None
+        try:
+            x, y = map(int, self.cell_position.split('.'))
+            return (x, y)
+        except Exception:
+            return None
