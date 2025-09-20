@@ -25,6 +25,26 @@ ws_client = create_client(
             uri=os.getenv("WS_SERVER_URI", "ws://localhost:8000/ws/connect"),
             logger=bot_logger)
 
+@dp.message(Command("sessions"))
+async def sessions_command(message: types.Message):
+    """Обработчик команды /sessions"""
+    try:
+        # Отправляем запрос на получение списка сессий
+        response = await ws_client.send_message(
+            "get-sessions",
+            stage='FreeUserConnect',
+            wait_for_response=True,
+            )
+        for session in response:
+            await message.answer(
+                f"ID: {session['session_id']}, Stage: {session['stage']}, Created At: {session['created_at']}"
+                )
+        else:
+            if not response:
+                await message.answer("Нет активных сессий.")
+    except Exception as e:
+        await message.answer(f"Ошибка при выполнении команды /sessions: {str(e)}")
+
 # http://localhost:8000/ws/status - тут можно посмотреть статус вебсокета и доступные типы для отправки сообщений через send_message
 @dp.message(Command("ping"))
 async def ping_command(message: types.Message):
