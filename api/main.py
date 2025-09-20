@@ -1,4 +1,5 @@
 from datetime import datetime, timedelta
+import pprint
 from fastapi import FastAPI, Request
 from contextlib import asynccontextmanager
 
@@ -16,7 +17,7 @@ async def lifespan(app: FastAPI):
     main_logger.info("API is starting up...")
     main_logger.info("Creating missing tables on startup...")
     
-    # just_db.drop_all() # Тестово
+    just_db.drop_all() # Тестово
 
     just_db.create_table('sessions') # Таблица сессий
     just_db.create_table('users') # Таблица пользователей
@@ -33,7 +34,7 @@ async def lifespan(app: FastAPI):
     main_logger.info("Starting task scheduler...")
     await scheduler.start()
     
-    # await initial_setup()
+    await initial_setup()
 
     yield
     
@@ -67,19 +68,35 @@ async def initial_setup():
     from game.user import User
     from game.session import Session, session_manager, SessionStages
     from game.company import Company
+    
+    print("Performing initial setup...")
 
     # try:
-    session = session_manager.create_session()
+    session = session_manager.create_session('AFRIKA')
 
     session.update_stage(SessionStages.FreeUserConnect)
-    user = User().create(user_id=1, username="TestUser")
+    user: User = User().create(_id=1, 
+                         username="TestUser", 
+                         session_id=session.session_id)
+    user2: User = User().create(_id=2, 
+                         username="TestUser2", 
+                         session_id=session.session_id)
 
-    company = Company().create(name="TestCompany")
-    company.add_user(user.id)
-
-    session.add_company(company.id)
+    company = user.create_company("TestCompany")
+    user2.add_to_company(company.id)
 
     session.update_stage(SessionStages.CellSelect)
+    cells = session.generate_cells()
+    rows = session.map_size['rows']
+    cols = session.map_size['cols']
+
+    a = 0
+    for r in range(rows):
+        row = []
+        for c in range(cols):
+            row.append(cells[a])
+            a += 1
+        pprint.pprint(row)
 
     # except Exception as e:
     #     main_logger.error(f"Error during initial setup: {e}")
