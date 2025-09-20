@@ -6,6 +6,7 @@ services:
       dockerfile: api/Dockerfile.api
     environment:
       - DEBUG=${DEBUG}
+      - UPDATE_PASSWORD=${UPDATE_PASSWORD}
     ports:
       - "8000:8000"
     restart: unless-stopped
@@ -23,6 +24,7 @@ services:
       - DEBUG=${DEBUG}
       - BOT_TOKEN=${BOT_TOKEN}
       - WS_SERVER_URI=${WS_SERVER_URI}
+      - UPDATE_PASSWORD=${UPDATE_PASSWORD}
     restart: unless-stopped
     volumes:
       - ./logs:/logs:rw

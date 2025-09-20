@@ -1,5 +1,8 @@
+from modules import websocket_manager
 from modules.ws_hadnler import message_handler
 from modules.json_database import just_db
+from game.session import session_manager, Session, SessionStages
+from modules.check_password import check_password
 
 @message_handler(
     "get-sessions", 
@@ -42,3 +45,78 @@ async def handle_get_session(client_id: str, message: dict):
                          **{k: v for k, v in conditions.items() if v is not None})
 
     return session
+
+@message_handler(
+    "create-session", 
+    doc="Обработчик создания сессии. Отправляет ответ на request_id. Требуется пароль для взаимодействия.",
+    datatypes=[
+        "session_id: Optional[str]",
+        "password: str",
+        "request_id: str"
+    ]
+)
+async def handle_create_session(client_id: str, message: dict):
+    """Обработчик создания сессии"""
+
+    session_id = message.get("session_id", "")
+    password = message.get("password", "")
+    
+    try:
+        check_password(password)
+    except ValueError as e:
+        return {"error": str(e)}
+
+    try:
+        session = session_manager.create_session(session_id=session_id)
+    except ValueError as e:
+        return {"error": str(e)}
+
+    return {"session": session.__dict__}
+
+@message_handler(
+    "update-session-stage", 
+    doc="Обработчик обновления стадии сессии. Требуется пароль для взаимодействия.",
+    datatypes=[
+        "session_id: Optional[str]",
+        "stage: Literal['WaitWebConnect', 'FreeUserConnect', 'CellSelect', 'Game', 'End']",
+        "password: str",
+    ],
+    messages=["api-update_session_stage (broadcast)"]
+)
+async def handle_update_session_stage(client_id: str, message: dict):
+    """Обработчик обновления стадии сессии"""
+
+    session_id = message.get("session_id", "")
+    stage: str = message.get("stage", "")
+    password = message.get("password", "")
+
+    stages_to_types = {
+        "WaitWebConnect": SessionStages.WaitWebConnect,
+        "FreeUserConnect": SessionStages.FreeUserConnect,
+        "CellSelect": SessionStages.CellSelect,
+        "Game": SessionStages.Game,
+        "End": SessionStages.End
+    }
+
+    try:
+        check_password(password)
+
+        session = session_manager.get_session(session_id=session_id)
+        old_stage = session.stage
+        if not session: raise ValueError("Session not found.")
+
+        if stage not in stages_to_types:
+            raise ValueError("Invalid stage value.")
+
+        session.update_stage(stages_to_types[stage])
+    except ValueError as e:
+        return {"error": str(e)}
+
+    await websocket_manager.broadcast({
+        "type": "api-update_session_stage",
+        "data": {
+            "session_id": session_id,
+            "new_stage": stage,
+            "old_stage": old_stage
+        }
+    })

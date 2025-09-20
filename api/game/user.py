@@ -1,5 +1,5 @@
 from modules.baseclass import BaseClass
-
+from modules.json_database import just_db
 
 class User(BaseClass):
 
@@ -22,7 +22,12 @@ class User(BaseClass):
             raise ValueError("Invalid or inactive session for user connection.")
 
         self.id = _id
+
+        with_this_name = just_db.find_one("users", username=username, session_id=session_id)
+        if with_this_name:
+            raise ValueError(f"Username '{username}' is already taken in this session.")
         self.username = username
+
         self.session_id = session_id
 
         self.save_to_base()
