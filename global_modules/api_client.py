@@ -144,7 +144,7 @@ class WebSocketClient:
 
     async def send_message(self, message_type: str, 
                            content: Any = "", 
-                           wait_for_response: bool = False, timeout: float = 5.0, 
+                           wait_for_response: bool = False, timeout: float = 20.0, 
                            **kwargs) -> Any:
         """
         Отправка сообщения на сервер
