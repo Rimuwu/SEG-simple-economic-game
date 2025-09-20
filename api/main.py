@@ -1,3 +1,4 @@
+from asyncio import sleep
 from datetime import datetime, timedelta
 import pprint
 from fastapi import FastAPI, Request
@@ -32,12 +33,14 @@ async def lifespan(app: FastAPI):
     just_db.create_table('warehouse') # Таблица с складом
 
     main_logger.info("Starting task scheduler...")
-    await scheduler.start()
-    
+
     await initial_setup()
 
+    await sleep(5)
+    await scheduler.start()
+
     yield
-    
+
     main_logger.info("API is shutting down...")
 
     main_logger.info("Stopping task scheduler...")
@@ -85,7 +88,6 @@ async def initial_setup():
     company = user.create_company("TestCompany")
     user2.add_to_company(company.id)
 
-    session.update_stage(SessionStages.CellSelect)
     cells = session.generate_cells()
     rows = session.map_size['rows']
     cols = session.map_size['cols']
@@ -97,6 +99,16 @@ async def initial_setup():
             row.append(cells[a])
             a += 1
         pprint.pprint(row)
+
+    session.update_stage(SessionStages.CellSelect)
+
+    free_cells = session.get_free_cells()
+    print(len(free_cells))
+
+    print(company.get_position())
+    company.set_position(0, 0)
+    print(company.get_position())
+    print(len(session.get_free_cells()))
 
     # except Exception as e:
     #     main_logger.error(f"Error during initial setup: {e}")
