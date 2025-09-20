@@ -112,11 +112,27 @@ async def handle_update_session_stage(client_id: str, message: dict):
     except ValueError as e:
         return {"error": str(e)}
 
-    await websocket_manager.broadcast({
-        "type": "api-update_session_stage",
-        "data": {
-            "session_id": session_id,
-            "new_stage": stage,
-            "old_stage": old_stage
-        }
-    })
+
+@message_handler(
+    "get-sessions-free-cells", 
+    doc="Обработчик получения свободных клеток сессии. Отправляет ответ на request_id",
+    datatypes=[
+        "session_id: str",
+        "request_id: str",
+    ]
+)
+async def handle_get_sessions_free_cells(
+    client_id: str, message: dict):
+    """Обработчик получения свободных клеток сессии"""
+
+    session_id = message.get("session_id", "")
+
+    try:
+        session = session_manager.get_session(session_id=session_id)
+        if not session: raise ValueError("Session not found.")
+
+        free_cells = session.get_free_cells()
+        return {"free_cells": free_cells}
+
+    except ValueError as e:
+        return {"error": str(e)}

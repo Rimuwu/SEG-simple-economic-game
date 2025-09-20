@@ -68,25 +68,44 @@ class WebSocketClient:
             return func
         return decorator
 
-    async def connect(self) -> bool:
-        """Подключение к WebSocket серверу"""
-        try:
-            full_uri = f"{self.uri}?client_id={self.client_id}"
-            self.logger.info(f"Подключение к {full_uri}")
+    async def connect(self, max_attempts: int = 5, 
+                      retry_delay: float = 0.5) -> bool:
+        """
+        Подключение к WebSocket серверу с несколькими попытками
+        
+        Args:
+            max_attempts: Максимальное количество попыток подключения
+            retry_delay: Задержка между попытками в секундах
+        """
+        for attempt in range(1, max_attempts + 1):
+            try:
+                full_uri = f"{self.uri}?client_id={self.client_id}"
+                self.logger.info(f"Подключение к {full_uri} (попытка {attempt}/{max_attempts})")
 
-            self.websocket = await websockets.connect(full_uri)
-            self.connected = True
+                self.websocket = await websockets.connect(full_uri)
+                self.connected = True
 
-            if self._on_connect: await self._on_connect()
+                if self._on_connect: 
+                    await self._on_connect()
 
-            # Запускаем прослушивание сообщений в фоне
-            asyncio.create_task(self._listen_messages())
+                # Запускаем прослушивание сообщений в фоне
+                asyncio.create_task(self._listen_messages())
 
-            return True
+                self.logger.info(f"Успешно подключен с попытки {attempt}")
+                return True
 
-        except Exception as e:
-            self.logger.error(f"Ошибка подключения: {e}")
-            return False
+            except Exception as e:
+                self.logger.error(f"Ошибка подключения (попытка {attempt}/{max_attempts}): {e}")
+                
+                if attempt < max_attempts:
+                    self.logger.info(f"Ожидание {retry_delay} сек. перед следующей попыткой...")
+                    await asyncio.sleep(retry_delay)
+                    # Увеличиваем задержку для следующей попытки
+                    retry_delay *= 1.5
+                else:
+                    self.logger.error("Все попытки подключения исчерпаны")
+        
+        return False
 
     async def disconnect(self):
         """Отключение от сервера"""

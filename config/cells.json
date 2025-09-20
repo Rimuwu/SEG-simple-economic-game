@@ -44,12 +44,6 @@
         "locations": [
             "center" // Задаёт местоположение на карте в центре
         ]
-    },
-
-    "null": {
-        "label": "Пусто",
-        "max_amount": 0,
-        "pickable": false
     }
 
 }

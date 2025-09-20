@@ -93,10 +93,10 @@ class JSONDatabase:
             # Добавляем автоматические поля
             record = deepcopy(record)
             if 'id' not in record:
-                record['id'] = len(self._data[table_name]) + 1
+                record['id'] = self.max_id_in_table(table_name) + 1
             record['created_at'] = datetime.now().isoformat()
             record['updated_at'] = datetime.now().isoformat()
-            
+
             # Добавляем запись
             index = len(self._data[table_name])
             self._data[table_name].append(record)

@@ -1,13 +1,20 @@
+import asyncio
+from datetime import datetime, timedelta
 import random
+from game.stages import stage_game_updater
 from global_modules.models.cells import CellType, Cells
 from modules.json_database import just_db
 from modules.generate import generate_code
 from enum import Enum
 from modules.baseclass import BaseClass
-from global_modules.load_config import ALL_CONFIGS
+from global_modules.load_config import ALL_CONFIGS, Settings
 from collections import Counter
 from global_modules.logs import main_logger
+from modules.websocket_manager import websocket_manager
+from modules.sheduler import scheduler
 
+
+settings: Settings = ALL_CONFIGS['settings']
 cells: Cells = ALL_CONFIGS['cells']
 cells_types = cells.types
 
@@ -32,6 +39,8 @@ class Session(BaseClass):
         self.map_pattern: str = "random"
         self.cell_counts: dict = {}
         self.stage: str = SessionStages.WaitWebConnect.value
+        self.step: int = 0
+        self.max_steps: int = 15
 
     def start(self):
         if not self.session_id:
@@ -47,9 +56,29 @@ class Session(BaseClass):
         if not isinstance(new_stage, SessionStages):
             raise ValueError("new_stage must be an instance of SessionStages Enum")
 
+        if new_stage.value == SessionStages.CellSelect.value:
+            scheduler.schedule_task(
+                stage_game_updater, 
+                datetime.now() + timedelta(
+                    seconds=settings.turn_cell_time_minutes * 60
+                    ),
+                kwargs={"session_id": self.session_id}
+            )
+
+        old_stage = self.stage
         self.stage = new_stage.value
         self.save_to_base()
         self.reupdate()
+
+        asyncio.create_task(websocket_manager.broadcast({
+            "type": "api-update_session_stage",
+            "data": {
+                "session_id": self.session_id,
+                "new_stage": self.stage,
+                "old_stage": old_stage
+            }
+        }))
+
         return self
 
     def can_user_connect(self):
@@ -57,6 +86,9 @@ class Session(BaseClass):
 
     def can_add_company(self):
         return self.stage == SessionStages.FreeUserConnect.value
+
+    def can_select_cells(self):
+        return self.stage == SessionStages.CellSelect.value
 
     @property
     def companies(self):
@@ -177,6 +209,37 @@ class Session(BaseClass):
         self.save_to_base()
         return self.cells
 
+    def can_select_cell(self, x: int, y: int):
+        """ Проверяет, можно ли выбрать клетку с координатами (x, y) для компании.
+        """
+        if not self.can_select_cells():
+            raise ValueError("Current session stage does not allow cell selection.")
+
+        index = x * self.map_size["cols"] + y
+        cell_type_key = self.cells[index]
+        cell_type = cells.types.get(cell_type_key)
+
+        if not cell_type or not cell_type.pickable or self.get_company_oncell(x, y):
+            return False
+
+        return True
+
+    def get_company_oncell(self, x: int, y: int):
+        """ Возвращает компанию, которая занимает клетку с координатами (x, y)
+        """
+        company = just_db.find_one(
+            "companies", session_id=self.session_id, cell_position=f"{x}.{y}")
+        return company
+
+    def get_free_cells(self):
+        """ Возвращает список свободных клеток (без компаний)
+        """
+        free_cells = []
+        for x in range(self.map_size["rows"]):
+            for y in range(self.map_size["cols"]):
+                if self.can_select_cell(x, y):
+                    free_cells.append((x, y))
+        return free_cells
 
 
 class SessionsManager():
@@ -191,7 +254,9 @@ class SessionsManager():
         return session
 
     def get_session(self, session_id) -> Session | None:
-        return self.sessions.get(session_id)
+        session = self.sessions.get(session_id)
+        if session: return session.reupdate()
+        return None
 
     def remove_session(self, session_id):
         if session_id in self.sessions:
