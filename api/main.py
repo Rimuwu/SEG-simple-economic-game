@@ -110,6 +110,9 @@ async def initial_setup():
     print(company.get_position())
     print(len(session.get_free_cells()))
 
+
+    session.delete()
+    print("Session deleted")
     # except Exception as e:
     #     main_logger.error(f"Error during initial setup: {e}")
 

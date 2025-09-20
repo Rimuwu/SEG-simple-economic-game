@@ -1,3 +1,5 @@
+import asyncio
+from modules.websocket_manager import websocket_manager
 from modules.baseclass import BaseClass
 from modules.json_database import just_db
 from game.session import session_manager
@@ -57,9 +59,8 @@ class Company(BaseClass):
     def users(self):
         from game.user import User
 
-        return [User(_id=u_id
-                     ).reupdate() for u_id in just_db.find(
-            "users", company_id=self.id)]
+        return [user for user in just_db.find(
+            "users", to_class=User, company_id=self.id)]
 
     def set_position(self, x: int, y: int):
         if isinstance(x, int) is False or isinstance(y, int) is False:
@@ -82,3 +83,14 @@ class Company(BaseClass):
             return (x, y)
         except Exception:
             return None
+
+    def delete(self):
+        just_db.delete(self.__tablename__, **{self.__unique_id__: self.id})
+        
+        asyncio.create_task(websocket_manager.broadcast({
+            "type": "api-company_deleted",
+            "data": {
+                "company_id": self.id
+            }
+        }))
+        return True
