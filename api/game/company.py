@@ -5,35 +5,40 @@ from game.session import session_manager
 class Company(BaseClass):
 
     __tablename__ = "companies"
-    __unique_id__ = "company_id"
+    __unique_id__ = "id"
 
-    def __init__(self):
-        self.company_id: int = 0
+    def __init__(self, _id: int = 0):
+        self.id: int = _id
         self.name: str = ""
-        
+
         self.reputation: int = 0
         self.balance: int = 0
-        
+
         self.in_prison: bool = False
-        
+
         self.credits: list = []
         self.deposits: list = []
 
         self.improvements: dict = {}
         self.warehouses: dict = {}
-        self.users_id: list = []
 
-        self.users_enter: bool = True
+        self.session_id: str = ""
+        self.cell_positions: str = ""
 
-    def create(self, name: str = ""):
+    def create(self, name: str, session_id: str):
         self.name = name
-        self.company_id = just_db.max_id_in_table(
+        self.id = just_db.max_id_in_table(
             self.__tablename__) + 1
 
         with_this_name = just_db.find_one(
             self.__tablename__, name=name)
         if with_this_name:
             raise ValueError(f"Company with name '{name}' already exists.")
+
+        session = session_manager.get_session(session_id)
+        if not session or not session.can_add_company():
+            raise ValueError("Invalid or inactive session for adding a company.")
+        self.session_id = session_id
 
         self.name = name
 
@@ -42,14 +47,16 @@ class Company(BaseClass):
 
         return self
 
-    def add_user(self, user_id):
+    def can_user_enter(self):
+        session = session_manager.get_session(self.session_id)
+        if not session or session.stage != "FreeUserConnect":
+            return False
+        return True
 
-        if not self.users_enter:
-            raise ValueError("Adding users is disabled for this company.")
+    @property
+    def users(self):
+        from game.user import User
 
-        if user_id not in self.users_id:
-            self.users_id.append(user_id)
-            self.save_to_base()
-            self.reupdate()
-            return True
-        return False
+        return [User(_id=u_id
+                     ).reupdate() for u_id in just_db.find(
+            "users", company_id=self.id)]
