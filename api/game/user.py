@@ -4,18 +4,63 @@ from modules.baseclass import BaseClass
 class User(BaseClass):
 
     __tablename__ = "users"
-    __unique_id__ = "user_id"
+    __unique_id__ = "id"
 
-    user_id: int
-    username: str
+    def __init__(self, _id: int = 0):
+        self.id: int = _id
+        self.username: str = ""
+        self.company_id: int = 0
+        self.session_id: str = ""
 
-    def __init__(self): pass
+    def create(self, _id: int, 
+               username: str, 
+               session_id: str):
+        from game.session import session_manager
+        session = session_manager.get_session(session_id)
 
-    def create(self, user_id: int = 0, username: str = ""):
-        self.user_id = user_id
+        if not session or not session.can_user_connect():
+            raise ValueError("Invalid or inactive session for user connection.")
+
+        self.id = _id
         self.username = username
+        self.session_id = session_id
 
         self.save_to_base()
         self.reupdate()
-
         return self
+
+    def create_company(self, name: str):
+        from game.company import Company
+        from game.session import session_manager
+        session = session_manager.get_session(self.session_id)
+
+        if self.company_id != 0:
+            raise ValueError("User is already in a company.")
+
+        company = Company().create(name=name, 
+                                   session_id=self.session_id)
+        if not session.can_add_company():
+            raise ValueError("Cannot add company at this stage.")
+
+        self.company_id = company.id
+
+        self.save_to_base()
+        self.reupdate()
+        return company
+
+    def add_to_company(self, company_id: int):
+        from game.company import Company
+        if self.company_id != 0:
+            raise ValueError("User is already in a company.")
+
+        company = Company(_id=company_id).reupdate()
+        if not company:
+            raise ValueError(f"Company with id '{company_id}' does not exist.")
+
+        if company.can_user_enter() is False:
+            raise ValueError("Company is not accepting new users at the moment.")
+
+        self.company_id = company.id
+        self.save_to_base()
+        self.reupdate()
+        return company

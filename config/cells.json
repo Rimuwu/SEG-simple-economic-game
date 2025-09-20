@@ -1,50 +1,55 @@
 {
-    "types": {
-        "mountain": {
-            "label": "Горы",
-            "resource": "metal",
-            "max_amount": 11, // Максимальное количество клеток на карте
-            "pickable": true // Можно ли размещать вручную
-        },
-        "water": {
-            "label": "Воды",
-            "resource": "oil",
-            "max_amount": 11,
-            "pickable": true
-        },
-        "forest": {
-            "label": "Леса",
-            "resource": "wood",
-            "max_amount": 11,
-            "pickable": true
-        },
-        "field": {
-            "label": "Поля",
-            "resource": "cotton",
-            "max_amount": 11,
-            "pickable": true
-        },
+    "mountain": {
+        "label": "Горы",
+        "resource": "metal",
+        "max_amount": 11, // Максимальное количество клеток на карте
+        "pickable": true // Можно ли размещать вручную
+    },
+    "water": {
+        "label": "Воды",
+        "resource": "oil",
+        "max_amount": 11,
+        "pickable": true
+    },
+    "forest": {
+        "label": "Леса",
+        "resource": "wood",
+        "max_amount": 11,
+        "pickable": true
+    },
+    "field": {
+        "label": "Поля",
+        "resource": "cotton",
+        "max_amount": 11,
+        "pickable": true
+    },
 
-        "city": {
-            "label": "Город",
-            "max_amount": 4,
-            "pickable": false,
+    "city": {
+        "label": "Город",
+        "max_amount": 4,
+        "pickable": false,
 
-            "locations": [
-                "center_-1_-1", // Задаёт местоположение на карте в центре, смещённое на 1 клетку по X и Y
-                "center_-1_1",
-                "center_1_-1",
-                "center_1_1"
-            ]
-        },
-        "bank": {
-            "label": "Банк",
-            "max_amount": 1,
-            "pickable": false,
+        "locations": [
+            "center_-2_-2", // Задаёт местоположение на карте в центре, смещённое на 2 клетку по X и Y
+            "center_-2_2",
+            "center_2_-2",
+            "center_2_2"
+        ]
+    },
+    "bank": {
+        "label": "Банк",
+        "max_amount": 1,
+        "pickable": false,
 
-            "locations": [
-                "center" // Задаёт местоположение на карте в центре
-            ]
-        }
+        "locations": [
+            "center" // Задаёт местоположение на карте в центре
+        ]
+    },
+
+    "null": {
+        "label": "Пусто",
+        "max_amount": 0,
+        "pickable": false
     }
+
 }
