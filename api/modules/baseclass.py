@@ -1,3 +1,4 @@
+from modules import websocket_manager
 from modules.json_database import just_db
 
 class BaseClass:
@@ -44,3 +45,13 @@ class BaseClass:
 
     def __repr__(self):
         return f"<{self.__class__.__name__}({self.__dict__})>"
+
+    def update(self, **kwargs):
+        """ Обновляет атрибуты объекта из переданных ключевых словарей.
+        """
+        for key, value in kwargs.items():
+            if hasattr(self, key):
+                setattr(self, key, value)
+        self.save_to_base()
+        self.reupdate()
+        return self
