@@ -7,7 +7,8 @@ MESSAGE_HANDLERS: Dict[str, dict[str, Union[Callable, str]]] = {}
 
 def message_handler(message_type: str, 
                     doc: str = "", 
-                    datatypes: list[str] = []
+                    datatypes: list[str] = [],
+                    messages: list[dict] = []
                     ):
     """
     Декоратор для регистрации обработчиков сообщений
@@ -22,11 +23,13 @@ def message_handler(message_type: str,
         message_type: Тип сообщения, который будет обрабатываться
         doc: Описание обработчика
         datatypes: Список типов данных, которые ожидает обработчик [user_id: int, action: Optional[str], ...]
+        messages: На какие типы сообщений отправляет ответ при обработке
     """
     def decorator(func: Callable):
         MESSAGE_HANDLERS[message_type] = {
             "handler": func, "doc": doc,
-            "datatypes": datatypes
+            "datatypes": datatypes,
+            "messages": messages
             }
         main_logger.info(f"Зарегистрирован обработчик для типа сообщения: {message_type}")
         return func
