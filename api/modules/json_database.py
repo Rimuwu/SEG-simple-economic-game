@@ -162,7 +162,7 @@ class JSONDatabase:
                     results.append(instance)
                 else:
                     results.append(deepcopy(self._data[table_name][i]))
-                return results
+            return results
 
         # Fallback к линейному поиску
         results = []
@@ -243,15 +243,15 @@ class JSONDatabase:
                 self.save()
             
             return updated_count
-    
+
     def delete(self, table_name: str, **conditions) -> int:
         """Удаляет записи"""
         if table_name not in self._data:
             return 0
-        
+
         with self._lock:
             records_to_delete = []
-            
+
             for i, record in enumerate(self._data[table_name]):
                 match = True
                 for key, value in conditions.items():
@@ -260,27 +260,27 @@ class JSONDatabase:
                         break
                 if match:
                     records_to_delete.append(i)
-            
+
             # Удаляем записи (в обратном порядке чтобы не сбить индексы)
             for i in reversed(records_to_delete):
                 del self._data[table_name][i]
-            
+
             # Перестраиваем индексы
             self._rebuild_indexes()
-            
+
             if records_to_delete and self.auto_save:
                 self.save()
-            
+
             return len(records_to_delete)
-    
+
     def count(self, table_name: str, **conditions) -> int:
         """Считает количество записей"""
         return len(self.find(table_name, **conditions))
-    
+
     def get_tables(self) -> List[str]:
         """Возвращает список таблиц"""
         return list(self._data.keys())
-    
+
     def drop_table(self, table_name: str):
         """Удаляет таблицу"""
         with self._lock:
@@ -291,7 +291,7 @@ class JSONDatabase:
             
             if self.auto_save:
                 self.save()
-    
+
     def drop_all(self):
         """Удаляет все таблицы"""
         with self._lock:
