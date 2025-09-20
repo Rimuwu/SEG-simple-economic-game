@@ -185,10 +185,12 @@ class SessionsManager():
 
     def create_session(self, session_id: str = ""):
         session = Session(session_id=session_id).start()
+        if session.session_id in self.sessions:
+            raise ValueError("Session with this ID already exists in memory.")
         self.sessions[session.session_id] = session
         return session
 
-    def get_session(self, session_id):
+    def get_session(self, session_id) -> Session | None:
         return self.sessions.get(session_id)
 
     def remove_session(self, session_id):
