@@ -3,6 +3,7 @@ from modules import websocket_manager
 from modules import check_password
 from modules.ws_hadnler import message_handler
 from modules.json_database import just_db
+from game.company import Company
 
 @message_handler(
     "get-companies", 
@@ -10,7 +11,7 @@ from modules.json_database import just_db
     datatypes=[
         "session_id: Optional[int]", 
         "in_prison: Optional[bool]",
-        "cell_positions: Optional[str]",
+        "cell_position: Optional[str]",
         "request_id: str"
         ])
 async def handle_get_companies(client_id: str, message: dict):
@@ -18,7 +19,7 @@ async def handle_get_companies(client_id: str, message: dict):
 
     conditions = {
         "in_prison": message.get("in_prison"),
-        "cell_positions": message.get("cell_positions"),
+        "cell_position": message.get("cell_position"),
         "session_id": message.get("session_id")
     }
 
@@ -38,7 +39,7 @@ async def handle_get_companies(client_id: str, message: dict):
         "balance: Optional[int]",
         "in_prison: Optional[bool]",
         "session_id: Optional[str]",
-        "cell_positions: Optional[str]",
+        "cell_position: Optional[str]",
         "request_id: str"
         ])
 async def handle_get_company(client_id: str, message: dict):
@@ -51,7 +52,7 @@ async def handle_get_company(client_id: str, message: dict):
         "balance": message.get("balance"),
         "in_prison": message.get("in_prison"),
         "session_id": message.get("session_id"),
-        "cell_positions": message.get("cell_positions")
+        "cell_position": message.get("cell_position")
     }
 
     # Получаем компанию из базы данных
@@ -144,3 +145,58 @@ async def handle_update_company_add_user(client_id: str, message: dict):
         "type": "api-update-company-add-user",
         "data": data
     })
+
+@message_handler(
+    "set-company-position", 
+    doc="Обработчик обновления компании. Требуется пароль для взаимодействия. Отправляет ответ на request_id (получилось или нет)",
+    datatypes=[
+        "company_id: int",
+        "x: int",
+        "y: int",
+
+        "password: str",
+        "request_id: str"
+    ],
+    messages=["api-set-company-position (broadcast)"]
+)
+async def handle_set_company_position(client_id: str, message: dict):
+    """Обработчик обновления компании"""
+
+    password = message.get("password")
+    company_id = message.get("company_id")
+    x = message.get("x")
+    y = message.get("y")
+
+    result = False
+    old_position = None
+
+    for i in [company_id, password, x, y]:
+        if i is None: return {"error": "Missing required fields."}
+
+    try:
+        check_password(password)
+
+        company = Company(_id=company_id).reupdate()
+        if not company: raise ValueError("Company not found.")
+
+        old_position = company.cell_position
+        result = company.set_position(x=x, y=y)
+
+    except ValueError as e:
+        return {"error": str(e)}
+
+    data = {
+        'company_id': company.id,
+        'old_position': old_position,
+        'new_position': company.cell_position
+    }
+
+    await websocket_manager.broadcast({
+        "type": "api-update-company-add-user",
+        "data": data
+    })
+
+    return {
+        "result": result, 
+        "position_now": company.cell_position
+            }
