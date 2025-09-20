@@ -33,16 +33,16 @@ class TaskScheduler:
             except Exception as e:
                 print(f"Ошибка в планировщике: {e}")
             await asyncio.sleep(1)
-    
+
     async def _check_and_execute_tasks(self):
         current_time = datetime.now()
         tasks = self.db.find('time_schedule')
-        
+
         for task in tasks:
             task_time = datetime.fromisoformat(task['execute_at'])
             if task_time <= current_time:
                 await self._execute_task(task)
-    
+
     async def _execute_task(self, task):
         func = str_to_func(task['function_path'])
         args = json.loads(task.get('args', '[]'))
