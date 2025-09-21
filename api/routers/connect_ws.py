@@ -88,7 +88,12 @@ async def get_websocket_status():
 
             elif len(info["datatypes"]) > 0:
                 available_types[-1]["args"] = ', '.join(info.get("datatypes", []))
-        
+
+            if info.get("messages") and len(info["messages"]) > 0:
+                available_types[-1]["responses"] = info.get("messages", [])
+            else:
+                available_types[-1]["responses"] = "Не отправляет никакие сообщения. (Не учитывается работа с request_id)"
+
         return JSONResponse({
             "status": "ok",
             "total_connections": connection_count,

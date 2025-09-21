@@ -123,7 +123,7 @@ class WebSocketManager:
                 if await self.send_message(client_id, message):
                     success_count += 1
 
-        main_logger.info(f"Широковещательное сообщение отправлено {success_count} клиентам")
+        main_logger.info(f"Broadcast ({message['type']}) for {success_count} clients")
         return success_count
 
     def get_connected_clients(self) -> List[str]:

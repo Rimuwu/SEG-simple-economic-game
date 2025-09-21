@@ -4,8 +4,8 @@ from dataclasses import dataclass, field
 @dataclass
 class SetLocation:
     start_point: str | None = field(default=None)
-    x: int | None = field(default=None)
-    y: int | None = field(default=None)
+    x: int = field(default=0)
+    y: int = field(default=0)
 
 @dataclass
 class CellType:
@@ -61,4 +61,5 @@ class Cells:
         for cell_id, cell_data in data.items():
             cell_data["id"] = cell_id
             types[cell_id] = CellType.load_from_json(cell_data)
+
         return cls(types=types)

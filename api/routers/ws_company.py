@@ -1,0 +1,319 @@
+from game.user import User
+from modules import websocket_manager
+from modules.check_password import check_password
+from modules.ws_hadnler import message_handler
+from modules.json_database import just_db
+from game.company import Company
+
+@message_handler(
+    "get-companies", 
+    doc="Обработчик получения списка компаний. Отправляет ответ на request_id", 
+    datatypes=[
+        "session_id: Optional[int]", 
+        "in_prison: Optional[bool]",
+        "cell_position: Optional[str]",
+        "request_id: str"
+        ])
+async def handle_get_companies(client_id: str, message: dict):
+    """Обработчик получения списка компаний"""
+
+    conditions = {
+        "in_prison": message.get("in_prison"),
+        "cell_position": message.get("cell_position"),
+        "session_id": message.get("session_id")
+    }
+
+    # Получаем список компаний из базы данных
+    companies = just_db.find('companies',
+                         **{k: v for k, v in conditions.items() if v is not None})
+
+    return companies
+
+@message_handler(
+    "get-company", 
+    doc="Обработчик получения компании. Отправляет ответ на request_id.", 
+    datatypes=[
+        "id: Optional[int]", 
+        "name: Optional[str]", 
+        "reputation: Optional[int]", 
+        "balance: Optional[int]",
+        "in_prison: Optional[bool]",
+        "session_id: Optional[str]",
+        "cell_position: Optional[str]",
+        "request_id: str"
+        ])
+async def handle_get_company(client_id: str, message: dict):
+    """Обработчик получения компании"""
+
+    conditions = {
+        "id": message.get("id"),
+        "name": message.get("name"),
+        "reputation": message.get("reputation"),
+        "balance": message.get("balance"),
+        "in_prison": message.get("in_prison"),
+        "session_id": message.get("session_id"),
+        "cell_position": message.get("cell_position")
+    }
+
+    # Получаем компанию из базы данных
+    company = just_db.find_one('companies',
+                         **{k: v for k, v in conditions.items() if v is not None})
+
+    return company
+
+@message_handler(
+    "create-company", 
+    doc="Обработчик создания компании. Отправляет ответ на request_id. Требуется пароль для взаимодействия.",
+    datatypes=[
+        "name: str",
+        "who_create: int",
+
+        "password: str",
+        "request_id: str"
+    ],
+    messages=["api-create_company (broadcast)"]
+)
+async def handle_create_company(client_id: str, message: dict):
+    """Обработчик создания компании"""
+
+    password = message.get("password")
+    name = message.get("name")
+    who_create = message.get("who_create")
+
+    for i in [name, password, who_create]:
+        if i is None: return {"error": "Missing required fields."}
+
+    try:
+        check_password(password)
+
+        user = User(_id=who_create).reupdate()
+        if not user: raise ValueError("User not found.")
+        company = user.create_company(name=name)
+
+    except ValueError as e:
+        return {"error": str(e)}
+
+    return {
+        'session_id': company.session_id,
+        'company': company.__dict__
+    }
+
+
+@message_handler(
+    "update-company-add-user", 
+    doc="Обработчик добавления пользователя в компанию. Требуется пароль для взаимодействия.",
+    datatypes=[
+        "user_id: int",
+        "secret_code: int",
+
+        "password: str"
+    ],
+    messages=["api-user_added_to_company (broadcast)"]
+)
+async def handle_update_company_add_user(client_id: str, message: dict):
+    """Обработчик обновления компании"""
+
+    password = message.get("password")
+    user_id = message.get("user_id")
+    secret_code = message.get("secret_code")
+
+    for i in [user_id, secret_code, password]:
+        if i is None: return {"error": "Missing required fields."}
+
+    try:
+        check_password(password)
+
+        user = User(_id=user_id).reupdate()
+        if not user: raise ValueError("User not found.")
+
+        user.add_to_company(secret_code=secret_code)
+
+    except ValueError as e:
+        return {"error": str(e)}
+
+@message_handler(
+    "set-company-position", 
+    doc="Обработчик обновления местоположения компании. Требуется пароль для взаимодействия. Отправляет ответ на request_id (получилось или нет)",
+    datatypes=[
+        "company_id: int",
+        "x: int",
+        "y: int",
+
+        "password: str",
+        "request_id: str"
+    ],
+    messages=["api-company_set_position (broadcast)"]
+)
+async def handle_set_company_position(client_id: str, message: dict):
+    """Обработчик обновления компании"""
+
+    password = message.get("password")
+    company_id = message.get("company_id")
+    x = message.get("x")
+    y = message.get("y")
+
+    result = False
+
+    for i in [company_id, password, x, y]:
+        if i is None: return {"error": "Missing required fields."}
+
+    try:
+        check_password(password)
+
+        company = Company(_id=company_id).reupdate()
+        if not company: raise ValueError("Company not found.")
+
+        result = company.set_position(x=x, y=y)
+
+    except ValueError as e:
+        return {"error": str(e)}
+
+    return {
+        "result": result, 
+        "position_now": company.cell_position
+            }
+
+@message_handler(
+    "update-company-left-user", 
+    doc="Обработчик выхода пользователя из компании. Требуется пароль для взаимодействия.",
+    datatypes=[
+        "user_id: int",
+        "company_id: str",
+
+        "password: str"
+    ],
+    messages=["api-user_left_company (broadcast)"]
+)
+async def handle_update_company_left_user(client_id: str, message: dict):
+    """Обработчик выхода пользователя из компании"""
+
+    password = message.get("password")
+    user_id = message.get("user_id")
+    company_id = message.get("company_id")
+
+    for i in [user_id, company_id, password]:
+        if i is None: return {"error": "Missing required fields."}
+
+    try:
+        check_password(password)
+
+        user = User(_id=user_id).reupdate()
+        if not user: raise ValueError("User not found.")
+        user.leave_from_company()
+
+    except ValueError as e:
+        return {"error": str(e)}
+
+@message_handler(
+    "delete-company", 
+    doc="Обработчик удаления компании. Требуется пароль для взаимодействия.",
+    datatypes=[
+        "company_id: str",
+
+        "password: str"
+    ],
+    messages=["api-company_deleted (broadcast)"]
+)
+async def handle_delete_company(client_id: str, message: dict):
+    """Обработчик удаления компании."""
+
+    password = message.get("password")
+    company_id = message.get("company_id")
+
+    for i in [company_id, password]:
+        if i is None: return {"error": "Missing required fields."}
+
+    try:
+        check_password(password)
+
+        company = Company(_id=company_id).reupdate()
+        if not company: raise ValueError("Company not found.")
+
+        company.delete()
+
+    except ValueError as e:
+        return {"error": str(e)}
+
+@message_handler(
+    "get-company-cell-info", 
+    doc="Обработчик получения информации о ячейке компании. Отправляет ответ на request_id", 
+    datatypes=[
+        "company_id: int", 
+        "request_id: str"
+        ])
+async def handle_get_my_cell_info(client_id: str, message: dict):
+    """Обработчик получения информации о моей ячейке"""
+
+    conditions = {
+        "company_id": message.get("company_id")
+    }
+    
+    for i in conditions.values():
+        if i is None: return {"error": "Missing required fields."}
+
+    company = Company(_id=conditions["company_id"]).reupdate()
+    if not company: return {"error": "Company not found."}
+
+    cell_info = company.get_my_cell_info()
+    if cell_info is not None:
+        return {
+            "data": cell_info.__dict__,
+            "type": company.get_cell_type()
+        }
+    else:
+        return None
+
+@message_handler(
+    "get-company-improvement-info", 
+    doc="Обработчик получения информации о улучшениях компании. Отправляет ответ на request_id", 
+    datatypes=[
+        "company_id: int", 
+        "request_id: str"
+        ])
+async def handle_get_company_improvement_info(client_id: str, message: dict):
+    """Обработчик получения информации о улучшениях компании"""
+
+    conditions = {
+        "company_id": message.get("company_id")
+    }
+
+    for i in conditions.values():
+        if i is None: return {"error": "Missing required fields."}
+
+    company = Company(_id=conditions["company_id"]).reupdate()
+    if not company: return {"error": "Company not found."}
+
+    imp = company.get_improvements()
+    return imp
+
+@message_handler(
+    "update-company-improve", 
+    doc="Обработчик улучшения компании. Требуется пароль для взаимодействия.",
+    datatypes=[
+        "company_id: str",
+        "improvement_type: str",
+
+        "password: str"
+    ],
+    messages=["api-company_improvement_upgraded (broadcast)"]
+)
+async def handle_update_company_improve(client_id: str, message: dict):
+    """Обработчик улучшения компании"""
+
+    password = message.get("password")
+    company_id = message.get("company_id")
+    improvement_type = message.get("improvement_type")
+
+    for i in [company_id, improvement_type, password]:
+        if i is None: return {"error": "Missing required fields."}
+
+    try:
+        check_password(password)
+
+        company = Company(_id=company_id).reupdate()
+        if not company: raise ValueError("Company not found.")
+
+        company.improve(improvement_type)
+
+    except ValueError as e:
+        return {"error": str(e)}

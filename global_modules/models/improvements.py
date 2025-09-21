@@ -65,3 +65,13 @@ class Improvements:
             water=water,
             field=field
         )
+
+    def get_improvement(self, 
+                        cell_type: str, type: str, 
+                        level: str) -> ImprovementLevel | None:
+        cell_improvements = self.__dict__.get(cell_type, None).__dict__.get(type, None) # Если у нас разные улучшения для разных типов клеток
+        if not cell_improvements:
+            cell_improvements = self.__dict__.get(type, None) # Если у нас одинаковые улучшения для всех типов клеток
+
+        if not cell_improvements: return None
+        else: return cell_improvements.levels.get(level, None)

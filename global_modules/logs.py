@@ -53,7 +53,7 @@ class Logger:
         uvicorn_access_logger.disabled = True
 
     @classmethod
-    def get_logger(cls, name="seg"):
+    def get_logger(cls, name="seg") -> logging.Logger:
         """
         Получить именованный логгер для приложения
 
