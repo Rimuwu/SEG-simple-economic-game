@@ -3,3 +3,6 @@ data/
 .env
 logs/
 .venv
+web/ist
+web/.vscoe
+web/node_modules
