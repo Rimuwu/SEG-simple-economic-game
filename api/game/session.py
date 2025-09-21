@@ -6,7 +6,7 @@ from global_modules.models.cells import CellType, Cells
 from modules.json_database import just_db
 from modules.generate import generate_code
 from enum import Enum
-from modules.baseclass import BaseClass
+from global_modules.db.baseclass import BaseClass
 from global_modules.load_config import ALL_CONFIGS, Settings
 from collections import Counter
 from global_modules.logs import main_logger
@@ -31,6 +31,7 @@ class Session(BaseClass):
 
     __tablename__ = "sessions"
     __unique_id__ = "session_id"
+    __db_object__ = just_db
 
     def __init__(self, session_id: str = ""): 
         self.session_id = session_id

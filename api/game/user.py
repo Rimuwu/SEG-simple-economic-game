@@ -1,5 +1,5 @@
 import asyncio
-from modules.baseclass import BaseClass
+from global_modules.db.baseclass import BaseClass
 from modules.json_database import just_db
 from modules.websocket_manager import websocket_manager
 
@@ -7,6 +7,7 @@ class User(BaseClass):
 
     __tablename__ = "users"
     __unique_id__ = "id"
+    __db_object__ = just_db
 
     def __init__(self, _id: int = 0):
         self.id: int = _id
