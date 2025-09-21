@@ -93,31 +93,99 @@ async def handle_create_company(client_id: str, message: dict):
     except ValueError as e:
         return {"error": str(e)}
 
-    data = {
+    return {
         'session_id': company.session_id,
         'company': company.__dict__
     }
 
-    await websocket_manager.broadcast({
-        "type": "api-create_company",
-        "data": data
-    })
-    return data
-
 
 @message_handler(
     "update-company-add-user", 
-    doc="Обработчик обновления компании. Требуется пароль для взаимодействия.",
+    doc="Обработчик добавления пользователя в компанию. Требуется пароль для взаимодействия.",
+    datatypes=[
+        "user_id: int",
+        "secret_code: int",
+
+        "password: str"
+    ],
+    messages=["api-user_added_to_company (broadcast)"]
+)
+async def handle_update_company_add_user(client_id: str, message: dict):
+    """Обработчик обновления компании"""
+
+    password = message.get("password")
+    user_id = message.get("user_id")
+    secret_code = message.get("secret_code")
+
+    for i in [user_id, secret_code, password]:
+        if i is None: return {"error": "Missing required fields."}
+
+    try:
+        check_password(password)
+
+        user = User(_id=user_id).reupdate()
+        if not user: raise ValueError("User not found.")
+
+        user.add_to_company(secret_code=secret_code)
+
+    except ValueError as e:
+        return {"error": str(e)}
+
+@message_handler(
+    "set-company-position", 
+    doc="Обработчик обновления местоположения компании. Требуется пароль для взаимодействия. Отправляет ответ на request_id (получилось или нет)",
+    datatypes=[
+        "company_id: int",
+        "x: int",
+        "y: int",
+
+        "password: str",
+        "request_id: str"
+    ],
+    messages=["api-company_set_position (broadcast)"]
+)
+async def handle_set_company_position(client_id: str, message: dict):
+    """Обработчик обновления компании"""
+
+    password = message.get("password")
+    company_id = message.get("company_id")
+    x = message.get("x")
+    y = message.get("y")
+
+    result = False
+
+    for i in [company_id, password, x, y]:
+        if i is None: return {"error": "Missing required fields."}
+
+    try:
+        check_password(password)
+
+        company = Company(_id=company_id).reupdate()
+        if not company: raise ValueError("Company not found.")
+
+        result = company.set_position(x=x, y=y)
+
+    except ValueError as e:
+        return {"error": str(e)}
+
+    return {
+        "result": result, 
+        "position_now": company.cell_position
+            }
+
+@message_handler(
+    "update-company-left-user", 
+    doc="Обработчик выхода пользователя из компании. Требуется пароль для взаимодействия.",
     datatypes=[
         "user_id: int",
         "company_id: str",
 
         "password: str"
     ],
-    messages=["api-update-company-add-user (broadcast)"]
+    messages=["api-user_left_company (broadcast)"]
 )
-async def handle_update_company_add_user(client_id: str, message: dict):
-    """Обработчик обновления компании"""
+async def handle_update_company_left_user(client_id: str, message: dict):
+    """Обработчик выхода пользователя из компании"""
 
     password = message.get("password")
     user_id = message.get("user_id")
@@ -131,46 +199,28 @@ async def handle_update_company_add_user(client_id: str, message: dict):
 
         user = User(_id=user_id).reupdate()
         if not user: raise ValueError("User not found.")
-        company = user.add_to_company(company_id=company_id)
+        user.leave_from_company()
 
     except ValueError as e:
         return {"error": str(e)}
 
-    data = {
-        'company_id': company.id,
-        'user_id': user.id
-    }
-
-    await websocket_manager.broadcast({
-        "type": "api-update-company-add-user",
-        "data": data
-    })
-
 @message_handler(
-    "set-company-position", 
-    doc="Обработчик обновления компании. Требуется пароль для взаимодействия. Отправляет ответ на request_id (получилось или нет)",
+    "delete-company", 
+    doc="Обработчик удаления компании. Требуется пароль для взаимодействия.",
     datatypes=[
-        "company_id: int",
-        "x: int",
-        "y: int",
+        "company_id: str",
 
-        "password: str",
-        "request_id: str"
+        "password: str"
     ],
-    messages=["api-set-company-position (broadcast)"]
+    messages=["api-company_deleted (broadcast)"]
 )
-async def handle_set_company_position(client_id: str, message: dict):
-    """Обработчик обновления компании"""
+async def handle_delete_company(client_id: str, message: dict):
+    """Обработчик удаления компании."""
 
     password = message.get("password")
     company_id = message.get("company_id")
-    x = message.get("x")
-    y = message.get("y")
 
-    result = False
-    old_position = None
-
-    for i in [company_id, password, x, y]:
+    for i in [company_id, password]:
         if i is None: return {"error": "Missing required fields."}
 
     try:
@@ -179,24 +229,7 @@ async def handle_set_company_position(client_id: str, message: dict):
         company = Company(_id=company_id).reupdate()
         if not company: raise ValueError("Company not found.")
 
-        old_position = company.cell_position
-        result = company.set_position(x=x, y=y)
+        company.delete()
 
     except ValueError as e:
         return {"error": str(e)}
-
-    data = {
-        'company_id': company.id,
-        'old_position': old_position,
-        'new_position': company.cell_position
-    }
-
-    await websocket_manager.broadcast({
-        "type": "api-update-company-add-user",
-        "data": data
-    })
-
-    return {
-        "result": result, 
-        "position_now": company.cell_position
-            }
