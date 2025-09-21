@@ -8,7 +8,7 @@ MESSAGE_HANDLERS: Dict[str, dict[str, Union[Callable, str]]] = {}
 def message_handler(message_type: str, 
                     doc: str = "", 
                     datatypes: list[str] = [],
-                    messages: list[dict] = []
+                    messages: list[str] = []
                     ):
     """
     Декоратор для регистрации обработчиков сообщений
@@ -83,6 +83,6 @@ async def handle_message(client_id: str, message: dict):
         await websocket_manager.send_message(client_id, error_message)
 
 # Функция для получения списка зарегистрированных обработчиков
-def get_registered_handlers() -> List[str]:
+def get_registered_handlers():
     """Получить список всех зарегистрированных типов сообщений"""
     return MESSAGE_HANDLERS

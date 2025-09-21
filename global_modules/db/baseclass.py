@@ -1,3 +1,4 @@
+from typing import Optional
 from global_modules.db.json_database import JSONDatabase
 
 class BaseClass:
@@ -5,15 +6,15 @@ class BaseClass:
     """
     __tablename__: str = "base" # Имя таблицы в базе данных
     __unique_id__: str = "id"  # Поле, которое будет использоваться как уникальный идентификатор
-    __db_object__: JSONDatabase = None  # Экземпляр JSONDatabase, должен быть установлен в подклассе
+    __db_object__: JSONDatabase  # Экземпляр JSONDatabase, должен быть установлен в подклассе
 
-    def load_from_base(self, data: dict):
+    def load_from_base(self, data: Optional[dict]):
         """ Загружает данные из словаря в атрибуты объекта.
         """
         if data is None: return None
         for key, value in data.items(): setattr(self, key, value)
 
-    def save_to_base(self) -> dict:
+    def save_to_base(self):
         """ Сохраняет текущие атрибуты объекта в базу данных.
         """
         # Фильтруем данные, исключая атрибуты, начинающиеся с _
