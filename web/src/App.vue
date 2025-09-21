@@ -3,6 +3,7 @@ import { ref } from 'vue'
 import Preparation from './components/Preparation.vue'
 import Game from './components/Game.vue'
 import Between from './components/Between.vue'
+import Endgame from './components/Endgame.vue'
 import AdminPanel from './components/AdminPanel.vue'
 
 const currentView = ref('Game')
@@ -30,7 +31,14 @@ function handleAdminLeave() {
       @show="handleShow"
       @mouseleave="handleAdminLeave"
       style="position: fixed; left: 0; top: 0; width: 320px; z-index: 1000;"/>
-    <component :is="currentView === 'Preparation' ? Preparation : currentView === 'Between' ? Between : Game" />
+    <component
+      :is="
+        currentView === 'Preparation' ? Preparation :
+        currentView === 'Between' ? Between :
+        currentView === 'Endgame' ? Endgame :
+        Game
+      "
+    />
   </div>
 </template>
 

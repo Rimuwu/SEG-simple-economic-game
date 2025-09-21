@@ -4,6 +4,7 @@
     <button @click="$emit('show', 'Preparation')">Show Preparation</button>
     <button @click="$emit('show', 'Game')">Show Game</button>
     <button @click="$emit('show', 'Between')">Show Between</button>
+    <button @click="$emit('show', 'Endgame')">Show Endgame</button>
   </div>
 </template>
 
