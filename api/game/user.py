@@ -53,6 +53,9 @@ class User(BaseClass):
         if self.company_id != 0:
             raise ValueError("User is already in a company.")
 
+        if not session: 
+            raise ValueError("User is not in a valid session.")
+
         company = Company().create(name=name, 
                                    session_id=self.session_id)
         if not session.can_add_company():
@@ -69,7 +72,7 @@ class User(BaseClass):
         if self.company_id != 0:
             raise ValueError("User is already in a company.")
 
-        company = just_db.find_one("companies", 
+        company: Company = just_db.find_one("companies", 
                     to_class=Company, secret_code=secret_code)
         if not company: 
             raise ValueError("Company with this secret code not found.")

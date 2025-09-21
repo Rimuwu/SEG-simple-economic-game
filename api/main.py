@@ -125,6 +125,16 @@ async def initial_setup():
     print(company.get_resources())
 
 
+    print(company.get_my_cell_info())
+    print(company.get_cell_type())
+    
+    print(company.get_improvements())
+
+    print(company.improvements)
+    company.improve('warehouse')
+    
+    print(company.improvements)
+
     # except Exception as e:
     #     main_logger.error(f"Error during initial setup: {e}")
 

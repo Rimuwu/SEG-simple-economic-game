@@ -91,7 +91,7 @@ class Session(BaseClass):
         return self.stage == SessionStages.CellSelect.value
 
     @property
-    def companies(self):
+    def companies(self) -> list['Company']:
         from game.company import Company
 
         return [comp for comp in just_db.find(
@@ -99,7 +99,7 @@ class Session(BaseClass):
                         ]
 
     @property
-    def users(self):
+    def users(self) -> list['User']:
         from game.user import User
 
         return [us for us in just_db.find(

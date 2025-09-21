@@ -1,6 +1,6 @@
 import json
 from pathlib import Path
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List, Optional, Union
 from datetime import datetime
 import threading
 from copy import deepcopy
@@ -184,7 +184,7 @@ class JSONDatabase:
 
     def find_one(self, table_name: str, 
                  to_class: Optional['BaseClass'] = None,
-                 **conditions) -> Optional[Dict[str, Any]]:
+                 **conditions) -> Optional[Union[Dict[str, Any], 'BaseClass']]:
         """Находит одну запись"""
         results = self.find(table_name, to_class, **conditions)
         return results[0] if results else None

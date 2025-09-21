@@ -1,12 +1,17 @@
 import asyncio
+from global_modules.models.cells import Cells
 from modules.generate import generate_number
 from modules.websocket_manager import websocket_manager
 from global_modules.db.baseclass import BaseClass
 from modules.json_database import just_db
 from game.session import session_manager
-from global_modules.load_config import ALL_CONFIGS, Resources
+from global_modules.load_config import ALL_CONFIGS, Resources, Improvements, Settings, Capital
 
-resources: Resources = ALL_CONFIGS["resources"]
+RESOURCES: Resources = ALL_CONFIGS["resources"]
+CELLS: Cells = ALL_CONFIGS['cells']
+IMPROVEMENTS: Improvements = ALL_CONFIGS['improvements']
+SETTINGS: Settings = ALL_CONFIGS['settings']
+CAPITAL: Capital = ALL_CONFIGS['capital']
 
 class Company(BaseClass):
 
@@ -58,6 +63,10 @@ class Company(BaseClass):
             if not just_db.find_one("companies", 
                                     secret_code=self.secret_code):
                 not_in_use = False
+
+        self.improvements = SETTINGS.start_improvements_level.__dict__
+
+        self.balance = CAPITAL.start
 
         self.save_to_base()
         self.reupdate()
@@ -134,7 +143,7 @@ class Company(BaseClass):
         return 100
 
     def add_resource(self, resource: str, amount: int):
-        if resources.get_resource(resource) is None:
+        if RESOURCES.get_resource(resource) is None:
             raise ValueError(f"Resource '{resource}' does not exist.")
         if amount <= 0:
             raise ValueError("Amount must be a positive integer.")
@@ -160,7 +169,7 @@ class Company(BaseClass):
         return True
 
     def remove_resource(self, resource: str, amount: int):
-        if resources.get_resource(resource) is None:
+        if RESOURCES.get_resource(resource) is None:
             raise ValueError(f"Resource '{resource}' does not exist.")
         if amount <= 0:
             raise ValueError("Amount must be a positive integer.")
@@ -185,10 +194,131 @@ class Company(BaseClass):
         return True
 
     def get_resources(self):
-        return {res_id: resources.get_resource(res_id) for res_id in self.warehouses.keys()}
+        return {res_id: RESOURCES.get_resource(res_id) for res_id in self.warehouses.keys()}
 
     def get_resources_amount(self):
         count = 0
         for amount in self.warehouses.values(): 
             count += amount
         return count
+
+    def get_my_cell_info(self):
+        cell_type_key = self.get_cell_type()
+        if not cell_type_key: return None
+
+        result = CELLS.types.get(cell_type_key)
+        return result
+
+    def get_cell_type(self):
+        position = self.get_position()
+        if not position:
+            return None
+        x, y = position
+        session = session_manager.get_session(self.session_id)
+        if not session:
+            return None
+        index = x * session.map_size["cols"] + y
+
+        if index < 0 or index >= len(session.cells):
+            return None
+        return session.cells[index]
+
+    def get_improvements(self):
+        """ Возвращает данные улучшений для компании
+        """
+        cell_type = self.get_cell_type()
+        if cell_type is None: return {}
+
+        data = {}
+
+        for iml_key in self.improvements.keys():
+            data[iml_key] = IMPROVEMENTS.get_improvement(
+                cell_type, iml_key, str(self.improvements[iml_key])
+            ).__dict__
+
+        return data
+
+    def add_balance(self, amount: int):
+        if not isinstance(amount, int):
+            raise ValueError("Amount must be an integer.")
+        if amount <= 0:
+            raise ValueError("Amount must be a positive integer.")
+
+        old_balance = self.balance
+        self.balance += amount
+        self.save_to_base()
+        self.reupdate()
+
+        asyncio.create_task(websocket_manager.broadcast({
+            "type": "api-company_balance_changed",
+            "data": {
+                "company_id": self.id,
+                "old_balance": old_balance,
+                "new_balance": self.balance
+            }
+        }))
+        return True
+
+    def remove_balance(self, amount: int):
+        if not isinstance(amount, int):
+            raise ValueError("Amount must be an integer.")
+        if amount <= 0:
+            raise ValueError("Amount must be a positive integer.")
+        if self.balance < amount:
+            raise ValueError("Not enough balance to remove.")
+
+        old_balance = self.balance
+        self.balance -= amount
+        self.save_to_base()
+        self.reupdate()
+
+        asyncio.create_task(websocket_manager.broadcast({
+            "type": "api-company_balance_changed",
+            "data": {
+                "company_id": self.id,
+                "old_balance": old_balance,
+                "new_balance": self.balance
+            }
+        }))
+        return True
+
+    def improve(self, improvement_type: str):
+        """ Улучшает указанное улучшение на 1 уровень, если это возможно.
+        """
+
+        # my_improvements = self.get_improvements()
+        imp_lvl_now = self.improvements.get(
+            improvement_type, None)
+        cell_type = self.get_cell_type()
+
+        if cell_type is None:
+            raise ValueError("Cannot determine cell type for improvements.")
+
+        if imp_lvl_now is None:
+            raise ValueError(f"Improvement type '{improvement_type}' not found.")
+
+        imp_next_lvl = IMPROVEMENTS.get_improvement(
+                cell_type, improvement_type, 
+                str(imp_lvl_now + 1)
+            )
+
+        if imp_next_lvl is None:
+            raise ValueError(f"No next level for improvement '{improvement_type}'.")
+
+        cost = imp_next_lvl.cost
+        self.remove_balance(cost)
+
+        self.improvements[improvement_type] = imp_lvl_now + 1
+        self.save_to_base()
+        self.reupdate()
+
+        asyncio.create_task(websocket_manager.broadcast({
+            "type": "api-company_improvement_upgraded",
+            "data": {
+                "company_id": self.id,
+                "improvement_type": improvement_type,
+                "new_level": self.improvements[improvement_type]
+            }
+        }))
+        return True
+
