@@ -1,10 +1,13 @@
-from modules.baseclass import BaseClass
+import asyncio
+from global_modules.db.baseclass import BaseClass
 from modules.json_database import just_db
+from modules.websocket_manager import websocket_manager
 
 class User(BaseClass):
 
     __tablename__ = "users"
     __unique_id__ = "id"
+    __db_object__ = just_db
 
     def __init__(self, _id: int = 0):
         self.id: int = _id
@@ -69,3 +72,14 @@ class User(BaseClass):
         self.save_to_base()
         self.reupdate()
         return company
+
+    def delete(self):
+        just_db.delete(self.__tablename__, id=self.id)
+
+        asyncio.create_task(websocket_manager.broadcast({
+            "type": "api-user_deleted",
+            "data": {
+                "user_id": self.id
+            }
+        }))
+        return True
