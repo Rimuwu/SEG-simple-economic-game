@@ -79,7 +79,6 @@ class Session(BaseClass):
                 "old_stage": old_stage
             }
         }))
-
         return self
 
     def can_user_connect(self):
@@ -248,9 +247,9 @@ class Session(BaseClass):
         session_manager.remove_session(self.session_id)
 
         asyncio.create_task(websocket_manager.broadcast({
-            "type": "api-company_deleted",
+            "type": "api-session_deleted",
             "data": {
-                "company_id": self.id
+                "session_id": self.session_id
             }
         }))
         return True

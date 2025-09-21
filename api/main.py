@@ -86,19 +86,20 @@ async def initial_setup():
                          session_id=session.session_id)
 
     company = user.create_company("TestCompany")
-    user2.add_to_company(company.id)
+    print(company.secret_code)
+    user2.add_to_company(company.secret_code)
 
     cells = session.generate_cells()
     rows = session.map_size['rows']
     cols = session.map_size['cols']
 
-    a = 0
-    for r in range(rows):
-        row = []
-        for c in range(cols):
-            row.append(cells[a])
-            a += 1
-        pprint.pprint(row)
+    # a = 0
+    # for r in range(rows):
+    #     row = []
+    #     for c in range(cols):
+    #         row.append(cells[a])
+    #         a += 1
+    #     pprint.pprint(row)
 
     session.update_stage(SessionStages.CellSelect)
 
@@ -109,10 +110,21 @@ async def initial_setup():
     company.set_position(0, 0)
     print(company.get_position())
     print(len(session.get_free_cells()))
+    
+    company.add_resource('wood', 10)
+    company.add_resource('oil', 90)
+
+    print(company.get_resources())
+    
+    try:
+        company.add_resource('wood', 5)
+    except Exception as e:
+        print(e)
+    
+    company.remove_resource('wood', 5)
+    print(company.get_resources())
 
 
-    session.delete()
-    print("Session deleted")
     # except Exception as e:
     #     main_logger.error(f"Error during initial setup: {e}")
 
