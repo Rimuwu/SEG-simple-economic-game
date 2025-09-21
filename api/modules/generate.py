@@ -5,11 +5,11 @@ def generate_number(length):
     """Генерирует случайное число заданной длины"""
     if length <= 0:
         return ""
-    
+
     # Первая цифра не может быть 0
     first_digit = random.randint(1, 9)
     remaining_digits = ''.join([str(random.randint(0, 9)) for _ in range(length - 1)])
-    
+
     return first_digit + int(remaining_digits)
 
 def generate_code(length, use_letters=True, use_numbers=True, use_uppercase=True):
