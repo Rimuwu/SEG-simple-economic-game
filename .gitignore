@@ -3,3 +3,8 @@ data/
 .env
 logs/
 .vscode/
+
+.venv
+webd/ist
+web/.vscode
+web/node_modules

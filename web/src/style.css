@@ -1,0 +1,38 @@
+:root {
+  /* Responsive text sizes for large screen displays */
+  --text-xs: clamp(0.8rem, min(0.8vw, 1vh), 2rem);       /* Small text */
+  --text-sm: clamp(1rem, min(1.2vw, 1.5vh), 2.5rem);     /* Regular text */
+  --text-md: clamp(1.2rem, min(1.6vw, 2vh), 3rem);       /* Medium text */
+  --text-lg: clamp(1.5rem, min(2vw, 2.5vh), 4rem);       /* Large text */
+  --text-xl: clamp(2rem, min(2.7vw, 3.3vh), 5rem);       /* Extra large text */
+  --text-2xl: clamp(2.5rem, min(3.3vw, 4.1vh), 6rem);    /* Buttons and headers */
+  
+  /* Responsive spacing */
+  --spacing-xs: clamp(0.25rem, min(0.27vw, 0.33vh), 1rem);
+  --spacing-sm: clamp(0.5rem, min(0.53vw, 0.67vh), 1.5rem);
+  --spacing-md: clamp(1rem, min(1.07vw, 1.33vh), 2.5rem);
+  --spacing-lg: clamp(1.5rem, min(1.6vw, 2vh), 4rem);
+
+  /* Responsive border radius */
+  --border-radius: clamp(4px, min(0.53vw, 0.67vh), 12px);
+  --border-width: clamp(2px, min(0.33vw, 0.4vh), 6px);
+}
+
+body {
+  margin: 0;
+  padding: 0;
+  min-width: 320px;
+  width: 100vw;
+  height: 100vh;
+
+  font-family: "Montserrat", sans-serif;
+  font-optical-sizing: auto;
+  font-weight: 700;
+  font-style: normal;
+  font-size: var(--text-sm);
+}
+
+#app {
+  width: 100vw;
+  height: 100vh;
+}
