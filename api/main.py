@@ -34,10 +34,11 @@ async def lifespan(app: FastAPI):
 
     main_logger.info("Starting task scheduler...")
 
-    await initial_setup()
-
     await sleep(5)
     await scheduler.start()
+    
+    await sleep(10) # Ждем 10 секунд, чтобы все успели подключиться
+    await initial_setup()
 
     yield
 
