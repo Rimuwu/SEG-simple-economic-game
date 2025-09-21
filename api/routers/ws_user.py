@@ -57,7 +57,7 @@ async def handle_get_user(client_id: str, message: dict):
     "create-user", 
     doc="Обработчик создания пользователя. Отправляет ответ на request_id. Требуется пароль для взаимодействия.",
     datatypes=[
-        "_id: int",
+        "user_id: int",
         "username: str",
         "password: str",
         "session_id: str",
@@ -70,39 +70,33 @@ async def handle_create_user(client_id: str, message: dict):
 
     session_id = message.get("session_id")
     password = message.get("password")
-    _id = message.get("_id")
+    user_id = message.get("user_id")
     username = message.get("username")
 
-    for i in [_id, username, session_id]:
+    for i in [user_id, username, session_id]:
         if i is None: return {"error": "Missing required fields."}
 
     try:
         check_password(password)
 
-        user = User().create(_id=_id, 
+        user = User().create(_id=user_id, 
                             username=username, 
                             session_id=session_id)
 
     except ValueError as e:
         return {"error": str(e)}
 
-    data = {
+    return {
         'session_id': user.session_id,
         'user': user.__dict__
     }
-
-    await websocket_manager.broadcast({
-        "type": "api-create_user",
-        "data": data
-    })
-    return data
 
 @message_handler(
     "update-user", 
     doc="Обработчик обновления пользователя. Требуется пароль для взаимодействия.",
     datatypes=[
         # find
-        "_id: int",
+        "user_id: int",
         # update
         'username: Optional[str]',
         'company_id: Optional[int]',
@@ -115,7 +109,7 @@ async def handle_update_user(client_id: str, message: dict):
     """Обработчик обновления пользователя"""
 
     password = message.get("password", "")
-    _id = message.get("_id", None)
+    user_id = message.get("user_id", None)
 
     updates = {
         "username": message.get("username", None),
@@ -125,15 +119,15 @@ async def handle_update_user(client_id: str, message: dict):
     try:
         check_password(password)
 
-        old_user = User(_id=_id).reupdate()
+        old_user = User(_id=user_id).reupdate()
         if not old_user: raise ValueError("User not found.")
 
         just_db.update("users",
-                {"id": _id}, 
+                {"id": user_id}, 
             {k: v for k, v in updates.items() if v is not None}
                        )
 
-        new_user = User(_id=_id).reupdate()
+        new_user = User(_id=user_id).reupdate()
 
     except ValueError as e:
         return {"error": str(e)}
@@ -148,3 +142,32 @@ async def handle_update_user(client_id: str, message: dict):
         "data": data
     })
     return data
+
+@message_handler(
+    "delete-user", 
+    doc="Обработчик удаления пользователя. Требуется пароль для взаимодействия.",
+    datatypes=[
+        "user_id: int",
+        "password: str"
+    ],
+    messages=["api-user_deleted (broadcast)"]
+)
+async def handle_delete_user(client_id: str, message: dict):
+    """Обработчик удаления пользователя"""
+
+    user_id = message.get("user_id")
+    password = message.get("password")
+
+    for i in [user_id, password]:
+        if i is None: return {"error": "Missing required fields."}
+
+    try:
+        check_password(password)
+
+        user = User(_id=user_id).reupdate()
+        if not user: raise ValueError("User not found.")
+
+        user.delete()
+
+    except ValueError as e:
+        return {"error": str(e)}
