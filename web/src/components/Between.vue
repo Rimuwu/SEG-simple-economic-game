@@ -1,64 +1,5 @@
 <script setup>
-import { ref, onMounted, nextTick } from 'vue'
-
-
-const rows = 7
-const cols = 7
-const total = rows * cols
-const letters = "ABCDEFGHIJKLMNOPQRSTUVWXYZ"
-
-
-const tiles = Array.from({ length: total }, (_, i) => ({
-  id: `t-${i}`,
-  label: letters[i % rows] + (Math.floor(i / cols) + 1),
-}))
-
-const tileRefs = ref([])
-
-const TileTypes = {
-  MOUNTAINS: 0,
-  WATER: 1,
-  FOREST: 2,
-  FIELD: 3,
-  CITY: 4,
-  BANK: 5
-}
-
-const tileStyles = {
-  [TileTypes.MOUNTAINS]: { color: "Gray" },
-  [TileTypes.WATER]: { color: "dodgerBlue" },
-  [TileTypes.FOREST]: { color: "ForestGreen" },
-  [TileTypes.FIELD]: { color: "Khaki" },
-  [TileTypes.CITY]: { color: "orange" },
-  [TileTypes.BANK]: { color: "red" },
-}
-
-// Called after the DOM has been loaded
-onMounted(async () => {
-  await nextTick()
-  // console.log('tile DOM nodes count:', tileRefs.value.length)
-  tileRefs.value[0].style.borderTopLeftRadius = "4px"
-  tileRefs.value[cols - 1].style.borderTopRightRadius = "4px"
-  tileRefs.value[(rows - 1) * cols].style.borderBottomLeftRadius = "4px"
-  tileRefs.value[rows * cols - 1].style.borderBottomRightRadius = "4px"
-
-  setTile(1, 1, TileTypes.CITY, "ГОРОД А")
-  setTile(5, 1, TileTypes.CITY, "ГОРОД В")
-  setTile(1, 5, TileTypes.CITY, "ГОРОД Б")
-  setTile(5, 5, TileTypes.CITY, "ГОРОД Г")
-  setTile(3, 3, TileTypes.BANK, "ЦЕНТР. БАНК", "var(--text-xs)")
-})
-
-function setTile(row, col, tileType, text, font_size) {
-  if (row < 0 || row >= rows || col < 0 || col >= cols) return
-  const idx = row * cols + col
-  const tile = tileRefs.value[idx]
-  if (!tile) return
-  if (tileType) tile.style.backgroundColor = tileStyles[tileType].color
-  if (text) tile.textContent = text
-  if (font_size) tile.style.fontSize = font_size
-}
-
+import Map from './Map.vue'
 </script>
 
 <template>
@@ -68,11 +9,7 @@ function setTile(row, col, tileType, text, font_size) {
         Карта мира
       </div>
 
-      <div id="map">
-        <div v-for="(tile, idx) in tiles" :key="tile.id" class="tile" :data-index="idx" ref="tileRefs">
-          {{ tile.label }}
-        </div>
-      </div>
+      <Map />
 
       <div id="round-info">
         <div id="timer">
@@ -218,33 +155,7 @@ function setTile(row, col, tileType, text, font_size) {
 }
 
 
-#map {
-  display: grid;
-  grid-template-columns: repeat(7, 1fr);
-  aspect-ratio: 1/1;
+Map {
   margin: 0;
-  background: #333;
-  border-radius: 6px;
-  gap: 4px;
-  padding: 4px;
-
-  align-content: center;
-  justify-content: center;
-}
-
-.tile {
-  aspect-ratio: 1/1;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  background: #f3f4f6;
-  user-select: none;
-  cursor: pointer;
-  font-weight: 600;
-  font-size: var(--text-sm);
-  margin: 0;
-  padding: 3px;
-  word-wrap: break-word;
-  text-align: center;
 }
 </style>

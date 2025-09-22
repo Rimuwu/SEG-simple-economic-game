@@ -114,35 +114,4 @@ import { ref, onMounted, nextTick } from 'vue'
   border-radius: var(--border-radius);
   border: var(--border-width) solid gray;
 }
-
-
-#map {
-  display: grid;
-  grid-template-columns: repeat(7, 1fr);
-  aspect-ratio: 1/1;
-  margin: 0;
-  background: #333;
-  border-radius: 6px;
-  gap: 4px;
-  padding: 4px;
-
-  align-content: center;
-  justify-content: center;
-}
-
-.tile {
-  aspect-ratio: 1/1;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  background: #f3f4f6;
-  user-select: none;
-  cursor: pointer;
-  font-weight: 600;
-  font-size: var(--text-sm);
-  margin: 0;
-  padding: 3px;
-  word-wrap: break-word;
-  text-align: center;
-}
 </style>

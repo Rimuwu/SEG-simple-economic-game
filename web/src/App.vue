@@ -1,5 +1,13 @@
 <script setup>
-import { ref } from 'vue'
+import { ref, reactive, provide } from 'vue'
+// Shared map state for singleton Map
+const mapState = reactive({
+  tiles: Array.from({ length: 49 }, (_, i) => ({
+    id: `t-${i}`,
+    label: String.fromCharCode(65 + (i % 7)) + (Math.floor(i / 7) + 1)
+  }))
+})
+provide('mapState', mapState)
 import Preparation from './components/Preparation.vue'
 import Game from './components/Game.vue'
 import Between from './components/Between.vue'
