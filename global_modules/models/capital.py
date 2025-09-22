@@ -47,7 +47,7 @@ class Bank:
 class Capital:
     start: int
     bank: Bank
-    
+
     @classmethod
     def load_from_json(cls, data: dict) -> 'Capital':
         bank_data = data['bank']

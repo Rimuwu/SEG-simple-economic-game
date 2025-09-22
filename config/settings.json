@@ -12,5 +12,6 @@
         "contracts": 1,
         "station": 1,
         "factory": 1
-    }
+    },
+    "max_credits_per_company": 2 // Максимальное количество кредитов на компанию
 }
