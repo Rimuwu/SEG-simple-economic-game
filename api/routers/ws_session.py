@@ -102,7 +102,6 @@ async def handle_update_session_stage(client_id: str, message: dict):
         check_password(password)
 
         session = session_manager.get_session(session_id=session_id)
-        old_stage = session.stage
         if not session: raise ValueError("Session not found.")
 
         if stage not in stages_to_types:
@@ -134,5 +133,36 @@ async def handle_get_sessions_free_cells(
         free_cells = session.get_free_cells()
         return {"free_cells": free_cells}
 
+    except ValueError as e:
+        return {"error": str(e)}
+
+@message_handler(
+    "delete-session", 
+    doc="Обработчик удаления сессии. ВНИМАНИЕ! Это приведёт к удалению всех привязанных игроков и компаний. Требуется пароль для взаимодействия. Требуется `really=true` для подтверждения удаления.",
+    datatypes=[
+        "session_id: str",
+        "password: str",
+        "really: bool"
+    ],
+    messages=["api-session_deleted (broadcast)"]
+)
+async def handle_delete_session(
+    client_id: str, message: dict):
+    """Обработчик удаления сессии"""
+
+    session_id = message.get("session_id", "")
+    password = message.get("password", "")
+    really = message.get("really", False)
+
+    try:
+        check_password(password)
+
+        session = session_manager.get_session(session_id=session_id)
+        if not session: raise ValueError("Session not found.")
+
+        if not really:
+            raise ValueError("Confirmation required to delete session.")
+
+        session.delete()
     except ValueError as e:
         return {"error": str(e)}

@@ -12,6 +12,9 @@ from aiogram.filters import Command
 from global_modules.api_client import create_client
 from global_modules.logs import Logger
 
+from modules.db import db
+from modules.message import Message
+
 # Настройка логирования
 bot_logger = Logger.get_logger("bot")
 
@@ -57,13 +60,29 @@ async def ping_command(message: types.Message):
     except Exception as e:
         await message.answer(f"Ошибка при выполнении ping: {str(e)}")
 
+@dp.message(Command("save_my_message"))
+async def save_my_message_command(message: types.Message):
+    """Обработчик команды /save_my_message"""
+
+    msg = Message(_id=message.message_id)
+    msg.user_id = message.from_user.id
+    msg.save_to_base()
+
+    # or
+
+    msg = Message().create(
+        _id=message.message_id, user_id=message.from_user.id
+        )
+
+    # Тут не будет создано 2 записи, т.к. id сообщения будет уникальным в базе 
+
 @ws_client.on_message('pong')
 async def on_pong(message: dict):
     """Обработчик ответа pong от сервера"""
     print(f"Получен pong от сервера: {message}")
-    
+
     from_id = message.get('content', {}).get('from')
-    
+
     await bot.send_message(from_id, "Pong! 🏓")
 
 @ws_client.on_event("connect")
@@ -91,6 +110,9 @@ async def main():
     bot_logger.info("Запуск бота...")
 
     try:
+
+        db.create_table('messages') # После запуска посмотреть файл data/bot_database.json
+
         await ws_client.connect() # Подключаемся к WebSocket серверу
         await dp.start_polling(bot)
     finally:

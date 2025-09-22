@@ -25,7 +25,7 @@ class Resource:
         production = None
         if "production" in data:
             production = Production(**data["production"])
-        
+
         return cls(
             label=data["label"],
             emoji=data["emoji"],

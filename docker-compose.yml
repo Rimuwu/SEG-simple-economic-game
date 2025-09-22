@@ -28,6 +28,7 @@ services:
     restart: unless-stopped
     volumes:
       - ./logs:/logs:rw
+      - ./data:/data:rw
     depends_on:
       - api
     networks:

@@ -6,7 +6,7 @@ from global_modules.models.cells import CellType, Cells
 from modules.json_database import just_db
 from modules.generate import generate_code
 from enum import Enum
-from modules.baseclass import BaseClass
+from global_modules.db.baseclass import BaseClass
 from global_modules.load_config import ALL_CONFIGS, Settings
 from collections import Counter
 from global_modules.logs import main_logger
@@ -31,6 +31,7 @@ class Session(BaseClass):
 
     __tablename__ = "sessions"
     __unique_id__ = "session_id"
+    __db_object__ = just_db
 
     def __init__(self, session_id: str = ""): 
         self.session_id = session_id
@@ -78,7 +79,6 @@ class Session(BaseClass):
                 "old_stage": old_stage
             }
         }))
-
         return self
 
     def can_user_connect(self):
@@ -91,21 +91,19 @@ class Session(BaseClass):
         return self.stage == SessionStages.CellSelect.value
 
     @property
-    def companies(self):
+    def companies(self) -> list['Company']:
         from game.company import Company
 
-        return [Company(_id=c_id
-                        ).reupdate() for c_id in just_db.find(
-            "companies", session_id=self.session_id)
+        return [comp for comp in just_db.find(
+            "companies", to_class=Company, session_id=self.session_id)
                         ]
 
     @property
-    def users(self):
+    def users(self) -> list['User']:
         from game.user import User
 
-        return [User(_id=u_id
-                     ).reupdate() for u_id in just_db.find(
-            "users", session_id=self.session_id)
+        return [us for us in just_db.find(
+            "users", to_class=User, session_id=self.session_id)
                      ]
 
     def get_cell_with_label(self, label: str, 
@@ -240,6 +238,21 @@ class Session(BaseClass):
                 if self.can_select_cell(x, y):
                     free_cells.append((x, y))
         return free_cells
+
+    def delete(self):
+        for company in self.companies: company.delete()
+        for user in self.users: user.delete()
+
+        just_db.delete(self.__tablename__, session_id=self.session_id)
+        session_manager.remove_session(self.session_id)
+
+        asyncio.create_task(websocket_manager.broadcast({
+            "type": "api-session_deleted",
+            "data": {
+                "session_id": self.session_id
+            }
+        }))
+        return True
 
 
 class SessionsManager():
