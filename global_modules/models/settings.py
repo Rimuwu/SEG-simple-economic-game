@@ -23,11 +23,12 @@ class Settings:
     time_on_change_stage: int  # Время на смену этапа в минутах
     max_players_in_company: int  # Максимальное количество игроков в компании
     start_improvements_level: StartImprovementsLevel  # Начальные уровни улучшений
+    max_credits_per_company: int  # Максимальное количество кредитов на компанию
 
     @classmethod
     def load_from_json(cls, data: dict):
         start_improvements = StartImprovementsLevel(**data["start_improvements_level"])
-        
+
         return cls(
             players_wait_minutes=data["players_wait_minutes"],
             max_companies=data["max_companies"],
@@ -37,5 +38,6 @@ class Settings:
             time_on_game_stage=data["time_on_game_stage"],
             time_on_change_stage=data["time_on_change_stage"],
             max_players_in_company=data["max_players_in_company"],
-            start_improvements_level=start_improvements
+            start_improvements_level=start_improvements,
+            max_credits_per_company=data['max_credits_per_company']
         )
