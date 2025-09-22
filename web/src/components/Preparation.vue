@@ -137,9 +137,9 @@ function setTile(row, col, tileType, text, font_size) {
 }
 
 .list-item {
-  background-color: #555;
-  color: white;
-  border: var(--border-width) solid #444;
+  background-color: lightgray;
+  color: black;
+  border: var(--border-width) solid gray;
   border-radius: var(--border-radius);
   padding: var(--spacing-sm) 0;
   font-size: var(--text-md);
