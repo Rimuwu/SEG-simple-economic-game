@@ -38,6 +38,9 @@ class Company(BaseClass):
         self.session_id: str = ""
         self.cell_position: str = "" # 3.1
 
+        self.tax_debt: int = 0  # Задолженность по налогам
+        self.overdue_steps: int = 0  # Количество просроченных ходов
+
         self.secret_code: int = 0 # Для вступления другими игроками
 
     def create(self, name: str, session_id: str):
@@ -322,7 +325,7 @@ class Company(BaseClass):
             }
         }))
         return True
-    
+
     def add_reputation(self, amount: int):
         if not isinstance(amount, int):
             raise ValueError("Amount must be an integer.")
@@ -365,6 +368,8 @@ class Company(BaseClass):
                 "new_reputation": self.reputation
             }
         }))
+
+        if self.reputation <= 0: self.to_prison()
         return True
 
     def take_credit(self, c_sum: int, steps: int):
@@ -403,9 +408,134 @@ class Company(BaseClass):
                 "total_to_pay": total,
                 "pay_per_turn": pay_per_turn,
                 "steps_total": steps,
+                "steps_now": 0,
                 "paid": 0,
                 "overdue": 0,
             }
         )
 
+    def credit_paid_step(self):
+        """ Вызывается при каждом шаге игры для компании.
+            Начисляет плату по кредитам, если они есть.
+        """
 
+        pass
+
+    def pay_credit(self, credit_index: int, amount: int):
+        """ Платит указанную сумму по кредиту с индексом credit_index.
+        """
+
+        pass
+
+    def apply_credit_penalty(self):
+        """ Применяет наказание за неуплату кредитов
+        """
+
+        pass
+
+    def to_prison(self):
+        """ Сажает компанию в тюрьму за неуплату кредитов
+        """
+
+        # Сажается на Х ходов и после шедулером выкидывается с пустой компанией
+
+        pass
+
+    def business_type(self):
+        """ Тип бизнеса в соответсвии с доходов за прошлый ход (малый, большой)
+        """
+
+        pass
+
+    def taxate(self):
+        """ Начисляет налоги в зависимости от типа бизнеса. Вызывается каждый ход.
+        """
+
+        pass
+
+    def pay_taxes(self, amount: int):
+        """ Платит указанную сумму по налогам.
+        """
+
+        pass
+
+    def take_deposit(self, d_sum: int):
+        """ 
+            Сумма депозита у нас между минимумом и максимумом
+        """
+
+        pass
+
+    def withdraw_deposit(self, deposit_index: int):
+        """ Забирает депозит с индексом deposit_index.
+        """
+
+        pass
+
+
+    def get_factories(self):
+    
+        pass
+
+    def complect_factory(self, factory_id: str, resource: str):
+    
+        pass
+
+    def auto_manufacturing(self, factory_id: str):
+        """ Запускает автоматическое производство на фабрике с указанным ID.
+        """
+
+        pass
+
+    def sell_on_market(self, 
+                       resource: str, amount: int, price_per_unit: int | str,
+                       type: str  # "sell" | "exchange"
+                       ):
+        """ Выставляет товар на биржу от компании. (Продажа)
+        """
+
+        pass
+
+    def buy_from_market(self, 
+                         order_id: int, amount: int
+                         ):
+        """ Покупает товар с биржи от компании.
+        """
+
+        pass
+
+    def create_contract(self, 
+                        company_id: int | None, 
+                        resource: str, amount: int, price_per_unit: int | str,
+                        type: str,  # "sell" | "exchange" 
+                        steps: int
+                        ):
+        """ Создает контракт с другой компанией.
+        """
+
+        pass
+
+    def take_contract(self, contract_id: int):
+        """ Принимает контракт от другой компании.
+        """
+
+        pass
+
+    def cancel_contract(self, contract_id: int):
+        """ Отменяет контракт. (Предложенный)
+        """
+
+        pass
+
+    def sell_resource_to_city(self, resource: str, 
+                              amount: int, city_id: int):
+        """ Продает ресурс городу.
+        """
+
+        pass
+
+    def get_logistics_resources(self):
+        """ Возвращает список логистических транспортных средств компании.
+        """
+
+        pass
