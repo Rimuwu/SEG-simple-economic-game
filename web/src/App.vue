@@ -1,5 +1,6 @@
 <script setup>
-import { ref, reactive, provide } from 'vue'
+import { ref, reactive, provide} from 'vue'
+
 // Shared map state for singleton Map
 const mapState = reactive({
   tiles: Array.from({ length: 49 }, (_, i) => ({
@@ -8,6 +9,7 @@ const mapState = reactive({
   }))
 })
 provide('mapState', mapState)
+
 import Preparation from './components/Preparation.vue'
 import Game from './components/Game.vue'
 import Between from './components/Between.vue'
@@ -30,25 +32,54 @@ function handleMouseMove(e) {
 function handleAdminLeave() {
   showAdmin.value = false
 }
+
+function handleBeforeLeave(el) {
+  // Trigger exit animation for the leaving component
+  const exitEvent = new CustomEvent('triggerExit')
+  el.dispatchEvent(exitEvent)
+}
+
+function handleEnter(el) {
+  // The enter animation is handled by each component's onMounted
+}
 </script>
 
 <template>
-  <div @mousemove="handleMouseMove" style="position: relative; min-height: 100vh;">
+  <div @mousemove="handleMouseMove" style="position: relative; min-height: 100vh; overflow: hidden;">
     <AdminPanel
       v-if="showAdmin"
       @show="handleShow"
       @mouseleave="handleAdminLeave"
       style="position: fixed; left: 0; top: 0; width: 320px; z-index: 1000;"/>
-    <component
-      :is="
-        currentView === 'Preparation' ? Preparation :
-        currentView === 'Between' ? Between :
-        currentView === 'Endgame' ? Endgame :
-        Game
-      "
-    />
+    <Transition 
+      name="page" 
+      mode="out-in"
+      @before-leave="handleBeforeLeave"
+      @enter="handleEnter"
+    >
+      <component
+        :is="
+          currentView === 'Preparation' ? Preparation :
+          currentView === 'Between' ? Between :
+          currentView === 'Endgame' ? Endgame :
+          Game
+        "
+        :key="currentView"
+      />
+    </Transition>
   </div>
 </template>
 
 <style scoped>
+.page-enter-active {
+  transition: opacity 0.1s ease;
+}
+
+.page-leave-active {
+  transition: opacity 0.3s ease;
+}
+
+.page-enter-from, .page-leave-to {
+  opacity: 0;
+}
 </style>

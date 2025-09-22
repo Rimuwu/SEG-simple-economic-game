@@ -1,24 +1,76 @@
 <script setup>
 import './mapScripts.js'
 import Map from './Map.vue'
+import { onMounted, onUnmounted, ref } from 'vue'
+import { gsap } from 'gsap'
+import { animationConfig, getDuration, getDelay, logTimelineDuration } from '../animationConfig.js'
+
+const pageRef = ref(null)
+
+function playEntranceAnimation() {
+  // Set initial positions (elements start off-screen)
+  gsap.set('#start-btn', { y: -100, opacity: 0 })
+  gsap.set('#session-key', { y: 100, opacity: 0 })
+  gsap.set('#column-right .column:first-child', { x: -200, opacity: 0 })
+  gsap.set('#column-right .column:last-child', { x: 200, opacity: 0 })
+  gsap.set('#map', { scale: 0.5, opacity: 0 })
+
+
+  // Create entrance animation timeline
+  const tl = gsap.timeline({ delay: getDelay(animationConfig.durations.delay) })
+
+  tl.to('#start-btn', { y: 0, opacity: 1, duration: getDuration(animationConfig.durations.entrance), ease: animationConfig.ease.bounce })
+    .to('#map', { scale: 1, opacity: 1, duration: getDuration(animationConfig.durations.map), ease: animationConfig.ease.mapBounce }, '-=0.4').to('#session-key', { y: 0, opacity: 1, duration: getDuration(animationConfig.durations.entrance), ease: animationConfig.ease.bounce }, '-=0.6')
+    .to('#column-right .column:first-child', { x: 0, opacity: 1, duration: getDuration(animationConfig.durations.slide), ease: animationConfig.ease.smooth }, '-=0.5')
+    .to('#column-right .column:last-child', { x: 0, opacity: 1, duration: getDuration(animationConfig.durations.slide), ease: animationConfig.ease.smooth }, '-=0.6')
+    .to('.list-item', { y: 0, opacity: 1, duration: getDuration(animationConfig.durations.listItem), ease: animationConfig.ease.smooth, stagger: getDuration(animationConfig.durations.stagger) }, '-=0.3')
+  
+  // Log total duration
+  logTimelineDuration(tl, 'Preparation', 'entrance')
+}
+
+function playExitAnimation() {
+  const tl = gsap.timeline()
+
+  tl.to('.list-item', { y: 20, opacity: 0, duration: getDuration(animationConfig.durations.listItemExit), ease: animationConfig.ease.exitSmooth, stagger: getDuration(0.02) })
+    .to('#column-right .column:first-child', { x: -100, opacity: 0, duration: getDuration(animationConfig.durations.exit), ease: animationConfig.ease.exitSmooth }, '-=0.1')
+    .to('#column-right .column:last-child', { x: 100, opacity: 0, duration: getDuration(animationConfig.durations.exit), ease: animationConfig.ease.exitSmooth }, '-=0.4')
+    .to('#start-btn', { y: -50, opacity: 0, duration: getDuration(animationConfig.durations.exit), ease: animationConfig.ease.exitSmooth }, '-=0.3')
+    .to('#session-key', { y: 50, opacity: 0, duration: getDuration(animationConfig.durations.exit), ease: animationConfig.ease.exitSmooth }, '-=0.4')
+    .to('#map', { scale: 0.8, opacity: 0, duration: getDuration(animationConfig.durations.exit), ease: animationConfig.ease.exitSmooth }, '-=0.3')
+
+  // Log total duration
+  logTimelineDuration(tl, 'Preparation', 'exit')
+}
+
+onMounted(() => {
+  playEntranceAnimation()
+
+  // Listen for exit animation trigger
+  pageRef.value?.addEventListener('triggerExit', playExitAnimation)
+})
+
+onUnmounted(() => {
+  pageRef.value?.removeEventListener('triggerExit', playExitAnimation)
+})
 </script>
 
 <template>
-  <div id="page">
+  <div id="page" ref="pageRef">
     <div id="column-left">
       <div id="start-btn">
         НАЧАТЬ ИГРУ
       </div>
 
       <Map />
-      
+
       <div id="session-key">
         КЛЮЧ СЕССИИ
       </div>
     </div>
 
     <div id="column-right">
-      <div id="list-col-left"  class="column">
+      <div id="list-col-left" class="column">
         <div v-for="n in 7" :key="n" class="list-item" :id="'item-left-' + n">
           Item {{ n }}
         </div>
@@ -34,7 +86,6 @@ import Map from './Map.vue'
 </template>
 
 <style scoped>
-
 #page {
   display: flex;
   margin: 0;
@@ -75,12 +126,15 @@ import Map from './Map.vue'
   border-radius: var(--border-radius);
   padding: var(--spacing-sm) 0;
   font-size: var(--text-md);
-
   text-align: center;
   flex: 1;
+  /* Initial state for animation */
+  transform: translateY(20px);
+  opacity: 0;
 }
 
-#start-btn, #session-key {
+#start-btn,
+#session-key {
   font-size: var(--text-lg);
   text-align: center;
   margin: var(--spacing-sm);
@@ -88,6 +142,6 @@ import Map from './Map.vue'
   width: 90%;
   background: limegreen;
   border-radius: var(--border-radius);
-  border: var(--border-width) solid green; 
+  border: var(--border-width) solid green;
 }
 </style>

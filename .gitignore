@@ -4,7 +4,7 @@ data/
 logs/
 .vscode/
 
-.venv
-webd/ist
-web/.vscode
-web/node_modules
+.venv/
+web/dist/
+web/.vscode/
+web/node_modules/

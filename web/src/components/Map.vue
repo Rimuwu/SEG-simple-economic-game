@@ -37,8 +37,7 @@ onMounted(async () => {
     border-radius: 6px;
     gap: 4px;
     padding: 4px;
-    width: 100%;
-    max-width: 100%;
+    width: auto;
     height: auto;
     aspect-ratio: 1/1;
     max-height: 80vh;

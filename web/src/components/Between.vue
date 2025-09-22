@@ -1,9 +1,63 @@
 <script setup>
 import Map from './Map.vue'
+import { onMounted, onUnmounted, ref } from 'vue'
+import { gsap } from 'gsap'
+import { animationConfig, getDuration, getDelay } from '../animationConfig.js'
+
+const pageRef = ref(null)
+
+function playEntranceAnimation() {
+  // Set initial positions (elements start off-screen)
+  gsap.set('#map-title', { y: -100, opacity: 0 })
+  gsap.set('#round-info', { y: 100, opacity: 0 })
+  gsap.set('#column-right-header', { y: -80, opacity: 0 })
+  gsap.set('#column-right-content-top .column:first-child', { x: -200, opacity: 0 })
+  gsap.set('#column-right-content-top .column:last-child', { x: 200, opacity: 0 })
+  gsap.set('#column-right-content-bottom', { y: 150, opacity: 0 })
+
+  gsap.set('#map', { scale: 0.5, opacity: 0 })
+
+
+  // Create entrance animation timeline
+  const tl = gsap.timeline({ delay: getDelay(animationConfig.durations.delay) })
+
+  tl.to('#map-title', { y: 0, opacity: 1, duration: getDuration(animationConfig.durations.entrance), ease: animationConfig.ease.bounce })
+    .to('#map', { scale: 1, opacity: 1, duration: getDuration(animationConfig.durations.map), ease: animationConfig.ease.mapBounce }, '-=0.4')
+    .to('#round-info', { y: 0, opacity: 1, duration: getDuration(animationConfig.durations.entrance), ease: animationConfig.ease.bounce }, '-=0.6')
+    .to('#column-right-header', { y: 0, opacity: 1, duration: getDuration(animationConfig.durations.slide), ease: animationConfig.ease.smooth }, '-=0.5')
+    .to('#column-right-content-top .column:first-child', { x: 0, opacity: 1, duration: getDuration(animationConfig.durations.slide), ease: animationConfig.ease.smooth }, '-=0.4')
+    .to('#column-right-content-top .column:last-child', { x: 0, opacity: 1, duration: getDuration(animationConfig.durations.slide), ease: animationConfig.ease.smooth }, '-=0.6')
+    .to('#column-right-content-bottom', { y: 0, opacity: 1, duration: getDuration(0.6), ease: animationConfig.ease.smooth }, '-=0.4')
+    .to('.list-item', { y: 0, opacity: 1, duration: getDuration(animationConfig.durations.listItem), ease: animationConfig.ease.smooth, stagger: getDuration(animationConfig.durations.stagger) }, '-=0.3')
+}
+
+function playExitAnimation() {
+  const tl = gsap.timeline()
+
+  tl.to('.list-item', { y: 20, opacity: 0, duration: getDuration(animationConfig.durations.listItemExit), ease: animationConfig.ease.exitSmooth, stagger: getDuration(0.02) })
+    .to('#column-right-content-bottom', { y: 75, opacity: 0, duration: getDuration(animationConfig.durations.exit), ease: animationConfig.ease.exitSmooth }, '-=0.1')
+    .to('#column-right-content-top .column:first-child', { x: -100, opacity: 0, duration: getDuration(animationConfig.durations.exit), ease: animationConfig.ease.exitSmooth }, '-=0.3')
+    .to('#column-right-content-top .column:last-child', { x: 100, opacity: 0, duration: getDuration(animationConfig.durations.exit), ease: animationConfig.ease.exitSmooth }, '-=0.4')
+    .to('#column-right-header', { y: -40, opacity: 0, duration: getDuration(animationConfig.durations.exit), ease: animationConfig.ease.exitSmooth }, '-=0.3')
+    .to('#map-title', { y: -50, opacity: 0, duration: getDuration(animationConfig.durations.exit), ease: animationConfig.ease.exitSmooth }, '-=0.4')
+    .to('#round-info', { y: 50, opacity: 0, duration: getDuration(animationConfig.durations.exit), ease: animationConfig.ease.exitSmooth }, '-=0.4')
+    .to('#map', { scale: 0.8, opacity: 0, duration: getDuration(animationConfig.durations.exit), ease: animationConfig.ease.exitSmooth }, '-=0.3')
+}
+
+onMounted(() => {
+  playEntranceAnimation()
+
+  // Listen for exit animation trigger
+  pageRef.value?.addEventListener('triggerExit', playExitAnimation)
+})
+
+onUnmounted(() => {
+  pageRef.value?.removeEventListener('triggerExit', playExitAnimation)
+})
 </script>
 
 <template>
-  <div id="page">
+  <div id="page" ref="pageRef">
     <div id="column-left">
       <div id="map-title">
         Карта мира
@@ -121,9 +175,11 @@ import Map from './Map.vue'
   border-radius: var(--border-radius);
   padding: var(--spacing-sm) 0;
   font-size: var(--text-md);
-
   text-align: center;
   flex: 1;
+  /* Initial state for animation */
+  transform: translateY(20px);
+  opacity: 0;
 }
 
 #map-title {
