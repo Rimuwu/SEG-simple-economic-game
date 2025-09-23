@@ -6,7 +6,7 @@ import os
 import sys
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from modules.keyboards import *
-from modules.ws_client import ws_client
+from modules.ws_client import ws_client, get_sessions, create_user, create_company, update_company_add_user, create_session, update_session_stage
 from .states import *
 
 
@@ -55,11 +55,7 @@ async def process_session_id(message: Message, state: FSMContext):
     if len(session_id.split()) != 1:
         await message.answer("❌ ID сессии должен состоять из одного слова. Пожалуйста, введите корректный ID сессии:", reply_markup=cancel_kb)
         return
-    response = await ws_client.send_message(
-            "get-sessions",
-            stage='FreeUserConnect',
-            wait_for_response=True,
-            )
+    response = await get_sessions(stage='FreeUserConnect')
     for session in response:
         if session['session_id'] == session_id:
             break
@@ -67,12 +63,10 @@ async def process_session_id(message: Message, state: FSMContext):
         await message.answer("❌ ID сессии не найден. Пожалуйста, введите корректный ID сессии:", reply_markup=cancel_kb)
         return
 
-    await ws_client.send_message(
-        "create-user",
+    await create_user(
         user_id=message.from_user.id,
         username=username,
         session_id=session_id,
-        wait_for_response=True,
         password=UPDATE_PASSWORD
     )
     
@@ -104,11 +98,9 @@ async def process_session_id(message: Message, state: FSMContext):
     session_id = message.text.strip()
     
     # Пытаемся создать сессию
-    response = await ws_client.send_message(
-        "create-session",
+    response = await create_session(
         session_id=session_id,
-        password=UPDATE_PASSWORD,
-        wait_for_response=True,
+        password=UPDATE_PASSWORD
     )
     
     if response is None:
@@ -122,11 +114,9 @@ async def process_session_id(message: Message, state: FSMContext):
         return
     
     # Успешно создана сессия, обновляем её стадию
-    await ws_client.send_message(
-        "update-session-stage",
+    await update_session_stage(
         session_id=response["session"]['session_id'],
         stage='FreeUserConnect',
-        wait_for_response=True,
         password=UPDATE_PASSWORD
     )
 
@@ -171,11 +161,9 @@ async def process_company_name(message: Message, state: FSMContext):
     chat_id = data.get('chat_id')
     
     # Создаем компанию
-    response = await ws_client.send_message(
-        "create-company",
+    response = await create_company(
         name=company_name,
         who_create=message.from_user.id,
-        wait_for_response=True,
         password=UPDATE_PASSWORD
     )
     
@@ -236,11 +224,9 @@ async def process_secret_code(message: Message, state: FSMContext):
     chat_id = data.get('chat_id')
     
     # Присоединяемся к компании
-    response = await ws_client.send_message(
-        "update-company-add-user",
+    response = await update_company_add_user(
         user_id=message.from_user.id,
-        secret_code=secret_code,
-        wait_for_response=True,
+        secret_code=int(secret_code),
         password=UPDATE_PASSWORD
     )
     
