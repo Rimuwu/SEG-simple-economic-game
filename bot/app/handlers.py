@@ -6,7 +6,7 @@ import os
 import sys
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from modules.keyboards import *
-from modules.ws_client import ws_client, get_sessions, create_user, create_company, update_company_add_user, create_session, update_session_stage
+from modules.ws_client import *
 from .states import *
 
 
@@ -31,6 +31,15 @@ async def start(message: Message):
 
 @router.message(Command("connect"))
 async def connect(message: Message, state: FSMContext):
+    session = await get_sessions()
+    for s in session:
+        s_id = s['session_id']
+        user = await get_user(id=message.from_user.id, session_id=s_id)
+        if user is not None:
+            await message.delete()
+            await message.answer("❌ Вы уже подключены к сессии.")
+            return
+    await state.update_data(msg_id=message.message_id + 1, chat_id=message.chat.id)
     await message.answer(text="Введите ваш никнейм для подключения к игре: ", reply_markup=cancel_kb)
     await state.set_state(CreateUserStates.waiting_for_username)
 
@@ -38,11 +47,14 @@ async def connect(message: Message, state: FSMContext):
 @router.message(CreateUserStates.waiting_for_username)
 async def process_username(message: Message, state: FSMContext):
     username = message.text.strip()
+    data = await state.get_data()
+    msg_id = data.get("msg_id")
+    chat_id = data.get("chat_id")
     if not username:
         await message.answer("❌ Никнейм не может быть пустым. Пожалуйста, введите корректный никнейм:")
         return
-    
-    await message.answer(f"Теперь введите id сессии для подключения, {username}:", reply_markup=cancel_kb)
+    await message.delete()
+    await message.bot.edit_message_text(f"Теперь введите id сессии для подключения, {username}:", message_id=msg_id, chat_id=chat_id, reply_markup=cancel_kb)
     await state.update_data(username=username)
     await state.set_state(CreateUserStates.waiting_for_session_id)
 
@@ -52,15 +64,17 @@ async def process_session_id(message: Message, state: FSMContext):
     session_id = message.text
     data = await state.get_data()
     username = data.get("username")
+    msg_id = data['msg_id']
+    chat_id = data['chat_id']
     if len(session_id.split()) != 1:
-        await message.answer("❌ ID сессии должен состоять из одного слова. Пожалуйста, введите корректный ID сессии:", reply_markup=cancel_kb)
+        await message.bot.edit_message_text("❌ ID сессии должен состоять из одного слова. Пожалуйста, введите корректный ID сессии:", message_id=msg_id, chat_id=chat_id, reply_markup=cancel_kb)
         return
     response = await get_sessions(stage='FreeUserConnect')
     for session in response:
         if session['session_id'] == session_id:
             break
     else:
-        await message.answer("❌ ID сессии не найден. Пожалуйста, введите корректный ID сессии:", reply_markup=cancel_kb)
+        await message.bot.edit_message_text("❌ ID сессии не найден. Пожалуйста, введите корректный ID сессии:", message_id=msg_id, chat_id=chat_id, reply_markup=cancel_kb)
         return
 
     await create_user(
@@ -69,11 +83,13 @@ async def process_session_id(message: Message, state: FSMContext):
         session_id=session_id,
         password=UPDATE_PASSWORD
     )
-    
-    await message.answer(
+    await message.delete()
+    await message.bot.edit_message_text(
         f"✅ Вы успешно подключены к игре с ID сессии: {session_id}\n\n"
         f"Выберите действие:",
-        reply_markup=create_company_keyboard
+        reply_markup=create_company_keyboard,
+        message_id=msg_id,
+        chat_id=chat_id
     )
     await state.clear()
 
@@ -91,7 +107,6 @@ async def create_game_start(message: Message, state: FSMContext):
         original_message_id=message.message_id + 1,
         chat_id=message.chat.id
     )
-    await message.delete()
     await message.answer("Введите ID сессии для новой игры или '-' для генерации ID:")
     await state.set_state(CreateGameStates.waiting_for_session_id)
 
