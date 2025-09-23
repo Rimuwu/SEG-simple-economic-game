@@ -87,7 +87,12 @@ async def create_game_start(message: Message, state: FSMContext):
     if not is_admin(message):
         return
     
-    await message.answer("Введите ID сессии для новой игры:")
+    await state.update_data(
+        original_message_id=message.message_id + 1,
+        chat_id=message.chat.id
+    )
+    await message.delete()
+    await message.answer("Введите ID сессии для новой игры или '-' для генерации ID:")
     await state.set_state(CreateGameStates.waiting_for_session_id)
 
 @router.message(CreateGameStates.waiting_for_session_id)
@@ -96,10 +101,12 @@ async def process_session_id(message: Message, state: FSMContext):
     Обрабатываем введенный ID сессии и создаем игру
     """
     session_id = message.text.strip()
-    
+    data =  await state.get_data()
+    msg_id = data['original_message_id']
+    session_id_i = None if session_id == "-" else session_id
     # Пытаемся создать сессию
     response = await create_session(
-        session_id=session_id,
+        session_id=session_id_i,
         password=UPDATE_PASSWORD
     )
     
@@ -120,7 +127,13 @@ async def process_session_id(message: Message, state: FSMContext):
         password=UPDATE_PASSWORD
     )
 
-    await message.answer(f"✅ Успешно создана игровая сессия!\n🆔 Код сессии: `{response['session']['session_id']}`", parse_mode="Markdown")
+    await message.delete()
+    await message.bot.edit_message_text(
+        chat_id=message.chat.id,
+        message_id=msg_id,
+        text=f"✅ Успешно создана игровая сессия!\n🆔 Код сессии: `{response['session']['session_id']}`",
+        parse_mode="Markdown"
+    )
     await state.clear()
 
 
@@ -150,10 +163,6 @@ async def process_company_name(message: Message, state: FSMContext):
     Обрабатываем название компании и создаем её
     """
     company_name = message.text.strip()
-    
-    if not company_name:
-        await message.answer("❌ Название компании не может быть пустым. Введите корректное название:")
-        return
     
     # Получаем данные из состояния
     data = await state.get_data()
