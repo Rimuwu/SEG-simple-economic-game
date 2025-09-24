@@ -19,7 +19,6 @@ cells: Cells = ALL_CONFIGS['cells']
 cells_types = cells.types
 
 class SessionStages(Enum):
-    WaitWebConnect = "WaitWebConnect" # Ждём пока появится сайт для работы
     FreeUserConnect = "FreeUserConnect" # Подключаем пользователей
     CellSelect = "CellSelect" # Выбираем клетки
     Game = "Game" # Ход
@@ -39,14 +38,14 @@ class Session(BaseClass):
         self.map_size: dict = {"rows": 7, "cols": 7}
         self.map_pattern: str = "random"
         self.cell_counts: dict = {}
-        self.stage: str = SessionStages.WaitWebConnect.value
+        self.stage: str = SessionStages.FreeUserConnect.value
         self.step: int = 0
         self.max_steps: int = 15
 
     def start(self):
         if not self.session_id:
             self.session_id = generate_code(32, use_letters=True, use_numbers=True, use_uppercase=True)
-        self.stage = SessionStages.WaitWebConnect.value
+        self.stage = SessionStages.FreeUserConnect.value
 
         self.save_to_base()
         self.reupdate()
