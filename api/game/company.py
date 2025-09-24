@@ -5,7 +5,7 @@ from modules.websocket_manager import websocket_manager
 from global_modules.db.baseclass import BaseClass
 from modules.json_database import just_db
 from game.session import session_manager
-from global_modules.load_config import ALL_CONFIGS, Resources, Improvements, Settings, Capital
+from global_modules.load_config import ALL_CONFIGS, Resources, Improvements, Settings, Capital, Reputation
 from global_modules.bank import calc_credit, get_credit_conditions, check_max_credit_steps
 
 RESOURCES: Resources = ALL_CONFIGS["resources"]
@@ -13,6 +13,7 @@ CELLS: Cells = ALL_CONFIGS['cells']
 IMPROVEMENTS: Improvements = ALL_CONFIGS['improvements']
 SETTINGS: Settings = ALL_CONFIGS['settings']
 CAPITAL: Capital = ALL_CONFIGS['capital']
+REPUTATION: Reputation = ALL_CONFIGS['reputation']
 
 class Company(BaseClass):
 
@@ -404,13 +405,12 @@ class Company(BaseClass):
 
         self.credits.append(
             {
-                "initial_sum": c_sum,
                 "total_to_pay": total,
-                "pay_per_turn": pay_per_turn,
-                "steps_total": steps,
-                "steps_now": 0,
+                "need_pay": 0,
                 "paid": 0,
-                "overdue": 0,
+
+                "steps_total": steps,
+                "steps_now": 0
             }
         )
 
@@ -419,7 +419,44 @@ class Company(BaseClass):
             Начисляет плату по кредитам, если они есть.
         """
 
-        pass
+        for index, credit in enumerate(self.credits):
+
+            if credit["steps_now"] <= credit["steps_total"]:
+                credit["need_pay"] += credit["total_to_pay"] - credit['paid'] // (credit["steps_total"] - credit["steps_now"])
+
+            elif credit["steps_now"] > credit["steps_total"]:
+                credit["need_pay"] += credit["total_to_pay"] - credit['paid']
+                self.remove_reputation(REPUTATION.credit.lost)
+
+            if credit["steps_now"] - credit["steps_total"] > REPUTATION.credit.max_overdue:
+                self.remove_reputation(self.reputation)
+                self.remove_credit(index)
+                self.to_prison()
+
+            credit["steps_now"] += 1
+
+        self.save_to_base()
+        self.reupdate()
+
+    def remove_credit(self, credit_index: int):
+        """ Удаляет кредит с индексом credit_index.
+        """
+
+        if credit_index < 0 or credit_index >= len(self.credits):
+            raise ValueError("Invalid credit index.")
+
+        del self.credits[credit_index]
+        self.save_to_base()
+        self.reupdate()
+
+        asyncio.create_task(websocket_manager.broadcast({
+            "type": "api-company_credit_removed",
+            "data": {
+                "company_id": self.id,
+                "credit_index": credit_index
+            }
+        }))
+        return True
 
     def pay_credit(self, credit_index: int, amount: int):
         """ Платит указанную сумму по кредиту с индексом credit_index.
