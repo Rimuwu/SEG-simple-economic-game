@@ -7,19 +7,14 @@ import sys
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from modules.keyboards import *
 from modules.ws_client import *
+from filters.admins import *
 from .states import *
 
 
 
 
 # Список ID администраторов
-ADMIN_IDS = [admin_id for admin_id in os.getenv("ADMIN_IDS", "").split(",")]
 UPDATE_PASSWORD = os.getenv("UPDATE_PASSWORD", "default_password")
-
-def is_admin(message: Message) -> bool:
-    """Проверяет, является ли пользователь администратором"""
-    return str(message.from_user.id) in ADMIN_IDS
-
 
 router = Router()
 
@@ -94,14 +89,11 @@ async def process_session_id(message: Message, state: FSMContext):
     await state.clear()
 
 
-@router.message(Command("create_game"))
+@router.message(AdminFilter(), Command("create_game"))
 async def create_game_start(message: Message, state: FSMContext):
     """
     Начинаем процесс создания игры (только для админов)
     """
-    # Проверяем, является ли пользователь администратором
-    if not is_admin(message):
-        return
     
     await state.update_data(
         original_message_id=message.message_id + 1,
