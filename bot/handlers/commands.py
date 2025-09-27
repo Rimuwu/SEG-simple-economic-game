@@ -15,11 +15,6 @@ from bot_instance import dp, bot
 # Список ID администраторов
 UPDATE_PASSWORD = os.getenv("UPDATE_PASSWORD", "default_password")
 
-@dp.message(Command("start"))
-async def start(message: Message):
-    await message.answer("Ку")
-
-
 @dp.message(Command("connect"))
 async def connect(message: Message, state: FSMContext):
     session = await get_sessions()
@@ -86,31 +81,20 @@ async def process_session_id(message: Message, state: FSMContext):
 
 
 @dp.message(AdminFilter(), Command("create_game"))
-async def create_game_start(message: Message, state: FSMContext):
-    """
-    Начинаем процесс создания игры (только для админов)
-    """
-    
-    await state.update_data(
-        original_message_id=message.message_id + 1,
-        chat_id=message.chat.id
-    )
-    await message.answer("Введите ID сессии для новой игры или '-' для генерации ID:")
+async def create_game(message: Message, state: FSMContext):
+    msg = await message.answer("Введите ID сессии для новой игры или '-' для генерации ID:")
+    await state.update_data(msg_id=msg.message_id)
     await state.set_state(CreateGameStates.waiting_for_session_id)
+
 
 @dp.message(CreateGameStates.waiting_for_session_id)
 async def process_session_id(message: Message, state: FSMContext):
-    """
-    Обрабатываем введенный ID сессии и создаем игру
-    """
-    session_id = message.text.strip()
-    data =  await state.get_data()
-    msg_id = data['original_message_id']
+    session_id = message.text
+    data = await state.get_data()
+    msg_id = data['msg_id']
     session_id_i = None if session_id == "-" else session_id
-    # Пытаемся создать сессию
     response = await create_session(
-        session_id=session_id_i,
-        password=UPDATE_PASSWORD
+        session_id=session_id_i
     )
     
     if response is None:
@@ -123,13 +107,10 @@ async def process_session_id(message: Message, state: FSMContext):
         await state.clear()
         return
     
-    # Успешно создана сессия, обновляем её стадию
     await update_session_stage(
         session_id=response["session"]['session_id'],
         stage='FreeUserConnect',
-        password=UPDATE_PASSWORD
     )
-
     await message.delete()
     await message.bot.edit_message_text(
         chat_id=message.chat.id,

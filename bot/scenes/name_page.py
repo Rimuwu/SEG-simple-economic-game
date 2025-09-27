@@ -15,26 +15,23 @@ class UserName(Page):
         session_id = scene_data['session']
 
         text = message.text
-        users = await get_users(session_id=session_id)
-
+        users = await get_users(session_id=session_id)       
         flag_name = True
         for i in users:
             if i['username'] == text:
                 flag_name = False
                 break
-
+        
+        await message.delete()
         if flag_name:
             await create_user(
                 user_id=message.from_user.id,
                 username=text,
-                password=getenv("UPDATE_PASSWORD"),
                 session_id=session_id
             )
             await self.scene.update_page('company-option')
         else:
             self.content = self.__page__.content
-            self.content += "\nИмя занято"
+            self.content = self.content.replace("Введите ваше имя для продолжения: ", "Данное имя уже занято, введите другое: ")
 
             await self.scene.update_page(self.__page_name__)
-
-        await message.delete()

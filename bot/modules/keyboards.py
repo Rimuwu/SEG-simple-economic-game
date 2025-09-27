@@ -32,7 +32,7 @@ control_company_keyboard = InlineKeyboardMarkup(
             InlineKeyboardButton(text="📋 Контракты", callback_data="contracts")
         ],
         [
-            InlineKeyboardButton(text="🏭 Управление заводами", callback_data="factories")
+            InlineKeyboardButton(text="", callback_data="factories")
         ],
         [
             InlineKeyboardButton(text="Улучшение клетки", callback_data="upgrader_cell")
