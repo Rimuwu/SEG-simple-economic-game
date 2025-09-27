@@ -1,4 +1,5 @@
 import asyncio
+from game.stages import leave_from_prison
 from global_modules.models.cells import Cells
 from modules.generate import generate_number
 from modules.websocket_manager import websocket_manager
@@ -72,6 +73,7 @@ class Company(BaseClass):
         self.improvements = SETTINGS.start_improvements_level.__dict__
 
         self.balance = CAPITAL.start
+        self.reputation = REPUTATION.start
 
         self.save_to_base()
         self.reupdate()
@@ -353,25 +355,26 @@ class Company(BaseClass):
             raise ValueError("Amount must be an integer.")
         if amount <= 0:
             raise ValueError("Amount must be a positive integer.")
-        if self.reputation < amount:
-            raise ValueError("Not enough reputation to remove.")
 
         old_reputation = self.reputation
-        self.reputation -= amount
-        self.save_to_base()
-        self.reupdate()
+        self.reputation = max(0, self.reputation - amount)
+        
+        if self.reputation != old_reputation:
+            self.save_to_base()
+            self.reupdate()
 
-        asyncio.create_task(websocket_manager.broadcast({
-            "type": "api-company_reputation_changed",
-            "data": {
-                "company_id": self.id,
-                "old_reputation": old_reputation,
-                "new_reputation": self.reputation
-            }
-        }))
+            asyncio.create_task(websocket_manager.broadcast({
+                "type": "api-company_reputation_changed",
+                "data": {
+                    "company_id": self.id,
+                    "old_reputation": old_reputation,
+                    "new_reputation": self.reputation
+                }
+            }))
 
-        if self.reputation <= 0: self.to_prison()
-        return True
+            if self.reputation <= 0: self.to_prison()
+            return True
+        return False
 
     def take_credit(self, c_sum: int, steps: int):
         """ 
@@ -461,14 +464,45 @@ class Company(BaseClass):
     def pay_credit(self, credit_index: int, amount: int):
         """ Платит указанную сумму по кредиту с индексом credit_index.
         """
+        if not isinstance(credit_index, int) or not isinstance(amount, int):
+            raise ValueError("Credit index and amount must be integers.")
+        if credit_index < 0 or credit_index >= len(self.credits):
+            raise ValueError("Invalid credit index.")
+        if amount <= 0:
+            raise ValueError("Amount must be a positive integer.")
+        if self.balance < amount:
+            raise ValueError("Not enough balance to pay credit.")
 
-        pass
+        credit = self.credits[credit_index]
+        if credit["need_pay"] < amount:
+            raise ValueError("Payment amount exceeds required payment.")
 
-    def apply_credit_penalty(self):
-        """ Применяет наказание за неуплату кредитов
-        """
+        # Снимаем деньги с баланса
+        self.remove_balance(amount)
+        
+        # Обновляем информацию по кредиту
+        credit["need_pay"] -= amount
+        credit["paid"] += amount
+        
+        # Если кредит полностью выплачен, удаляем его
+        if credit["paid"] >= credit["total_to_pay"]:
+            self.remove_credit(credit_index)
+        else:
+            self.save_to_base()
+            self.reupdate()
 
-        pass
+        remaining = credit["total_to_pay"] - credit["paid"]
+
+        asyncio.create_task(websocket_manager.broadcast({
+            "type": "api-company_credit_paid",
+            "data": {
+                "company_id": self.id,
+                "credit_index": credit_index,
+                "amount": amount,
+                "remaining": remaining
+            }
+        }))
+        return True
 
     def to_prison(self):
         """ Сажает компанию в тюрьму за неуплату кредитов
@@ -476,7 +510,49 @@ class Company(BaseClass):
 
         # Сажается на Х ходов и после шедулером выкидывается с пустой компанией
 
+        session = session_manager.get_session(self.session_id)
+        if not session:
+            raise ValueError("Session not found.")
+
+        self.in_prison = True
+        self.save_to_base()
+        self.reupdate()
+
+        session.create_step_schedule(
+            session.step + REPUTATION.prison.stages,
+            leave_from_prison,
+            session_id=self.session_id,
+            company_id=self.id
+        )
+
         pass
+
+    def leave_prison(self):
+        """ Выход из тюрьмы по времени
+        """
+
+        if not self.in_prison:
+            raise ValueError("Company is not in prison.")
+
+        self.in_prison = False
+        self.save_to_base()
+        self.reupdate()
+
+        asyncio.create_task(websocket_manager.broadcast({
+            "type": "api-company_left_prison",
+            "data": {
+                "company_id": self.id
+            }
+        }))
+        return True
+
+    def in_prison_check(self):
+        """ Находится ли компания в тюрьме (Вызов ошибки для удобства)
+        """
+        if self.in_prison:
+            raise ValueError("Company is already in prison.")
+
+        return self.in_prison
 
     def business_type(self):
         """ Тип бизнеса в соответсвии с доходов за прошлый ход (малый, большой)
@@ -511,7 +587,7 @@ class Company(BaseClass):
 
 
     def get_factories(self):
-    
+
         pass
 
     def complect_factory(self, factory_id: str, resource: str):
