@@ -1,5 +1,8 @@
 from scenes.start_page import Start
 from scenes.name_page import UserName
+from scenes.company_create_page import CompanyCreate
+from scenes.company_join_page import CompanyJoin
+from scenes.main_page import MainPage
 from oms_dir import Scene
 from modules.db import db
 from oms_dir.models.scene import scenes_loader
@@ -9,7 +12,10 @@ class GameManger(Scene):
     __scene_name__ = 'scene-manager'
     __pages__ = [
         Start,
-        UserName
+        UserName,
+        CompanyCreate,
+        CompanyJoin,
+        MainPage
     ]
 
     async def save_to_db(self):

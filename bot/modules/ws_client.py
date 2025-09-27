@@ -4,6 +4,9 @@ from typing import Optional, Literal, Any
 from global_modules.api_client import create_client
 from global_modules.logs import Logger
 
+
+UPDATE_PASSWORD = os.getenv("UPDATE_PASSWORD", "default_password")
+
 # Настройка логирования
 bot_logger = Logger.get_logger("bot")
 
@@ -41,53 +44,53 @@ async def get_company(id: Optional[int] = None, name: Optional[str] = None, repu
         wait_for_response=True
     )
 
-async def create_company(name: str, who_create: int, password: str):
+async def create_company(name: str, who_create: int):
     """Создание компании"""
     return await ws_client.send_message(
         "create-company",
         name=name,
         who_create=who_create,
-        password=password,
+        password=UPDATE_PASSWORD,
         wait_for_response=True
     )
 
-async def update_company_add_user(user_id: int, secret_code: int, password: str):
+async def update_company_add_user(user_id: int, secret_code: int):
     """Добавление пользователя в компанию"""
     return await ws_client.send_message(
         "update-company-add-user",
         user_id=user_id,
         secret_code=secret_code,
-        password=password,
+        password=UPDATE_PASSWORD,
         wait_for_response=True
     )
 
-async def set_company_position(company_id: int, x: int, y: int, password: str):
+async def set_company_position(company_id: int, x: int, y: int):
     """Обновление местоположения компании"""
     return await ws_client.send_message(
         "set-company-position",
         company_id=company_id,
         x=x,
         y=y,
-        password=password,
+        password=UPDATE_PASSWORD,
         wait_for_response=True
     )
 
-async def update_company_left_user(user_id: int, company_id: str, password: str):
+async def update_company_left_user(user_id: int, company_id: str):
     """Выход пользователя из компании"""
     return await ws_client.send_message(
         "update-company-left-user",
         user_id=user_id,
         company_id=company_id,
-        password=password,
+        password=UPDATE_PASSWORD,
         wait_for_response=True
     )
 
-async def delete_company(company_id: str, password: str):
+async def delete_company(company_id: str):
     """Удаление компании"""
     return await ws_client.send_message(
         "delete-company",
         company_id=company_id,
-        password=password,
+        password=UPDATE_PASSWORD,
         wait_for_response=True
     )
 
@@ -107,13 +110,13 @@ async def get_company_improvement_info(company_id: int):
         wait_for_response=True
     )
 
-async def update_company_improve(company_id: str, improvement_type: str, password: str):
+async def update_company_improve(company_id: str, improvement_type: str):
     """Улучшение компании"""
     return await ws_client.send_message(
         "update-company-improve",
         company_id=company_id,
         improvement_type=improvement_type,
-        password=password,
+        password=UPDATE_PASSWORD,
         wait_for_response=True
     )
 
@@ -135,24 +138,23 @@ async def get_session(session_id: Optional[str] = None, stage: Optional[str] = N
         wait_for_response=True
     )
 
-async def create_session(session_id: Optional[str] = None, password: str = ""):
+async def create_session(session_id: Optional[str] = None):
     """Создание сессии"""
     return await ws_client.send_message(
         "create-session",
         session_id=session_id,
-        password=password,
+        password=UPDATE_PASSWORD,
         wait_for_response=True
     )
 
 async def update_session_stage(session_id: Optional[str] = None, 
-                              stage: Literal['FreeUserConnect', 'CellSelect', 'Game', 'End'] = 'FreeUserConnect', 
-                              password: str = ""):
+                              stage: Literal['FreeUserConnect', 'CellSelect', 'Game', 'End'] = 'FreeUserConnect'):
     """Обновление стадии сессии"""
     return await ws_client.send_message(
         "update-session-stage",
         session_id=session_id,
         stage=stage,
-        password=password,
+        password=UPDATE_PASSWORD,
         wait_for_response=True
     )
 
@@ -164,12 +166,12 @@ async def get_sessions_free_cells(session_id: str):
         wait_for_response=True
     )
 
-async def delete_session(session_id: str, password: str, really: bool = False):
+async def delete_session(session_id: str, really: bool = False):
     """Удаление сессии"""
     return await ws_client.send_message(
         "delete-session",
         session_id=session_id,
-        password=password,
+        password=UPDATE_PASSWORD,
         really=really,
         wait_for_response=True
     )
@@ -196,34 +198,34 @@ async def get_user(id: Optional[int] = None, username: Optional[str] = None,
         wait_for_response=True
     )
 
-async def create_user(user_id: int, username: str, password: str, session_id: str):
+async def create_user(user_id: int, username: str, session_id: str):
     """Создание пользователя"""
     return await ws_client.send_message(
         "create-user",
         user_id=user_id,
         username=username,
-        password=password,
+        password=UPDATE_PASSWORD,
         session_id=session_id,
         wait_for_response=True
     )
 
-async def update_user(user_id: int, password: str, username: Optional[str] = None, company_id: Optional[int] = None):
+async def update_user(user_id: int, username: Optional[str] = None, company_id: Optional[int] = None):
     """Обновление пользователя"""
     return await ws_client.send_message(
         "update-user",
         user_id=user_id,
         username=username,
         company_id=company_id,
-        password=password,
+        password=UPDATE_PASSWORD,
         wait_for_response=True
     )
 
-async def delete_user(user_id: int, password: str):
+async def delete_user(user_id: int):
     """Удаление пользователя"""
     return await ws_client.send_message(
         "delete-user",
         user_id=user_id,
-        password=password,
+        password=UPDATE_PASSWORD,
         wait_for_response=True
     )
 
