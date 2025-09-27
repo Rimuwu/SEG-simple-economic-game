@@ -1,0 +1,28 @@
+# Dockerfile для разработки
+FROM node:20-alpine
+
+# Устанавливаем openssl для генерации сертификатов
+RUN apk add --no-cache openssl
+
+# Устанавливаем переменные окружения для устранения warning'ов
+# ENV NODE_OPTIONS="--no-warnings"
+ENV NODE_ENV=development
+
+# Устанавливаем рабочую директорию
+WORKDIR /app
+
+# Копируем файлы package.json и package-lock.json
+COPY web/package*.json ./
+
+# Устанавливаем зависимости
+RUN npm install
+
+# Копируем исходный код
+COPY web/ .
+
+# Открываем порты для Vite dev server (HTTP и HTTPS)
+EXPOSE 5173
+EXPOSE 443
+
+# Команда для запуска в режиме разработки с подавлением warning'ов
+CMD ["npm", "run", "dev", "--", "--host", "0.0.0.0", "--no-open"]

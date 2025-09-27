@@ -1,7 +1,7 @@
 import asyncio
+import logging
 import os
-import time
-from aiogram import Bot, Dispatcher, types
+from aiogram import types
 from aiogram.filters import Command
 
 # from dotenv import load_dotenv # При запуске не из Docker
@@ -9,24 +9,16 @@ from aiogram.filters import Command
 
 # # Добавляем корневую папку проекта в sys.path для корректного импорта модулей
 # sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))) # При запуске не из Docker
-from global_modules.api_client import create_client
 from global_modules.logs import Logger
 
 from modules.db import db
 from modules.message import Message
+from modules.ws_client import ws_client
+from bot_instance import bot, dp
 
 # Настройка логирования
 bot_logger = Logger.get_logger("bot")
-
-# Инициализация бота и диспетчера
-bot = Bot(token=os.getenv("BOT_TOKEN"))
-dp = Dispatcher()
-
-# Создаем WebSocket клиента
-ws_client = create_client(
-            client_id=f"bot_client_{int(time.time())}", 
-            uri=os.getenv("WS_SERVER_URI", "ws://localhost:8000/ws/connect"),
-            logger=bot_logger)
+logging.basicConfig(level=logging.INFO)
 
 @dp.message(Command("sessions"))
 async def sessions_command(message: types.Message):
@@ -95,7 +87,7 @@ async def on_disconnect():
 
     for _ in range(15, 0, -1):
         print(f"🔄 Попытка подключения...")
-        await ws_client.connect()
+        await ws_client.connect(max_attempts=10)
         if ws_client.is_connected():
             print("✅ Повторное подключение успешно!")
             return
@@ -109,9 +101,13 @@ async def main():
     """Главная функция для запуска бота"""
     bot_logger.info("Запуск бота...")
 
+    import handlers
+    from oms_dir import oms_handler
+
     try:
 
-        db.create_table('messages') # После запуска посмотреть файл data/bot_database.json
+        db.create_table('messages')
+        db.create_table('scenes')
 
         await ws_client.connect() # Подключаемся к WebSocket серверу
         await dp.start_polling(bot)
