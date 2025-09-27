@@ -1,5 +1,5 @@
 from dataclasses import dataclass, field
-from typing import Dict, List, Optional, Any
+from typing import Dict, Optional, Any
 import json
 
 
@@ -11,14 +11,16 @@ class FunctionWorker:
 @dataclass
 class SceneSettings:
     """Настройки сцены"""
-    # worker_class: Optional[str] = None
+    parse_mode: Optional[str] = None
+    delete_after_send: bool = False
 
     @classmethod
     def from_dict(cls, data: Dict[str, Any]) -> 'SceneSettings':
         """Создание объекта из словаря"""
 
         return cls(
-            # worker_class=data.get('worker-class')
+            parse_mode=data.get('parse_mode', None),
+            delete_after_send=data.get('delete_after_send', False)
         )
 
 

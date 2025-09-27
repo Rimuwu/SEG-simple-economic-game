@@ -3,12 +3,12 @@ from scenes.name_page import UserName
 from scenes.company_create_page import CompanyCreate
 from scenes.company_join_page import CompanyJoin
 from scenes.main_page import MainPage
-from oms_dir import Scene
+from oms import Scene
 from modules.db import db
-from oms_dir.models.scene import scenes_loader
 
-class GameManger(Scene):
-    
+
+class GameManager(Scene):
+
     __scene_name__ = 'scene-manager'
     __pages__ = [
         Start,
@@ -17,43 +17,28 @@ class GameManger(Scene):
         CompanyJoin,
         MainPage
     ]
+    
+    @staticmethod
+    async def insert_to_db(user_id: int, data: dict):
+        db.insert('scenes', data)
 
-    async def save_to_db(self):
+    @staticmethod
+    async def load_from_db(user_id: int) -> dict:
+        data = db.find_one('scenes', user_id=user_id) or {}
+        return data
 
-        exist = db.find_one('scenes',
-                            user_id=self.user_id)
-        if not exist:
-            db.insert('scenes',
-                      {
-                        'page': self.page,
-                        'scene': self.__scene_name__,
-                        'message_id': self.message_id,
-                        'user_id': self.user_id,
-                        'data': self.data
-                      }
-                      )
-        else:
-            db.update('scenes',
-                {'user_id': self.user_id},
-                {
-                    'page': self.page,
-                    'scene': self.__scene_name__,
-                    'message_id': self.message_id,
-                    'user_id': self.user_id,
-                    'data': self.data
-                }
-            )
+    @staticmethod
+    async def update_to_db(user_id: int, data: dict):
+        db.update('scenes', {'user_id': user_id}, data)
 
-    async def load_from_db(self):
+    # Функция для вставки сцены в БД
+    # В функцию передаёт user_id: int, data: dict
+    __insert_function__ = insert_to_db
 
-        data = db.find_one('scenes',
-                                user_id=self.user_id)
-        if not data:
-            raise ValueError('Нет данных в базе')
+    # Функция для загрузки сцены из БД
+    # В функцию передаёт user_id: int, вернуть должна dict
+    __load_function__ = load_from_db
 
-        self.page = data.get('page', self.start_page)
-        self.message_id = data.get('message_id', 0)
-        self.scene = scenes_loader.get_scene(
-            self.__scene_name__) # type: ignore
-        self.user_id = data.get('user_id')
-        self.data = data.get('data')
+    # Функция для обновления сцены в БД
+    # В функцию передаёт user_id: int, data: dict
+    __update_function__ = update_to_db
