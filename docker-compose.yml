@@ -34,6 +34,18 @@ services:
       - api
     networks:
       - seg_network
+  
+  web:
+    build:
+      context: .
+      dockerfile: web/Dockerfile.web
+    ports:
+      - "5173:5173"
+      - "443:443"
+    environment:
+      VITE_API_URL: ${VITE_API_URL}
+      VITE_DEBUG: ${DEBUG}
+
 
 networks:
   seg_network:
