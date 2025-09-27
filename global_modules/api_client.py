@@ -68,7 +68,7 @@ class WebSocketClient:
             return func
         return decorator
 
-    async def connect(self, max_attempts: int = 5, 
+    async def connect(self, max_attempts: int = 10, 
                       retry_delay: float = 1) -> bool:
         """
         Подключение к WebSocket серверу с несколькими попытками

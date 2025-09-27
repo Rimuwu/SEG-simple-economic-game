@@ -1,32 +1,28 @@
 import asyncio
 import os
-import time
 from aiogram import Bot, Dispatcher, types
 from aiogram.filters import Command
+from aiogram.fsm.storage.memory import MemoryStorage
 
 # from dotenv import load_dotenv # При запуске не из Docker
 # load_dotenv() # Загружаем переменные окружения из .env файла
 
 # # Добавляем корневую папку проекта в sys.path для корректного импорта модулей
 # sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))) # При запуске не из Docker
-from global_modules.api_client import create_client
 from global_modules.logs import Logger
 
 from modules.db import db
 from modules.message import Message
+from modules.ws_client import ws_client
+from app.handlers import router
 
 # Настройка логирования
 bot_logger = Logger.get_logger("bot")
 
-# Инициализация бота и диспетчера
+# Инициализация бота и диспетчера с хранилищем для FSM
+storage = MemoryStorage()
 bot = Bot(token=os.getenv("BOT_TOKEN"))
-dp = Dispatcher()
-
-# Создаем WebSocket клиента
-ws_client = create_client(
-            client_id=f"bot_client_{int(time.time())}", 
-            uri=os.getenv("WS_SERVER_URI", "ws://localhost:8000/ws/connect"),
-            logger=bot_logger)
+dp = Dispatcher(storage=storage)
 
 @dp.message(Command("sessions"))
 async def sessions_command(message: types.Message):
@@ -95,7 +91,7 @@ async def on_disconnect():
 
     for _ in range(15, 0, -1):
         print(f"🔄 Попытка подключения...")
-        await ws_client.connect()
+        await ws_client.connect(max_attempts=10)
         if ws_client.is_connected():
             print("✅ Повторное подключение успешно!")
             return
@@ -108,6 +104,7 @@ async def on_disconnect():
 async def main():
     """Главная функция для запуска бота"""
     bot_logger.info("Запуск бота...")
+    dp.include_router(router)
 
     try:
 
