@@ -1,20 +1,16 @@
 import asyncio
 import logging
-import os
 from aiogram import types
 from aiogram.filters import Command
 
-# from dotenv import load_dotenv # При запуске не из Docker
-# load_dotenv() # Загружаем переменные окружения из .env файла
-
-# # Добавляем корневую папку проекта в sys.path для корректного импорта модулей
-# sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))) # При запуске не из Docker
 from global_modules.logs import Logger
 
 from modules.db import db
-from modules.message import Message
 from modules.ws_client import ws_client
 from bot_instance import bot, dp
+
+import handlers
+from oms import register_handlers
 
 # Настройка логирования
 bot_logger = Logger.get_logger("bot")
@@ -52,22 +48,6 @@ async def ping_command(message: types.Message):
     except Exception as e:
         await message.answer(f"Ошибка при выполнении ping: {str(e)}")
 
-@dp.message(Command("save_my_message"))
-async def save_my_message_command(message: types.Message):
-    """Обработчик команды /save_my_message"""
-
-    msg = Message(_id=message.message_id)
-    msg.user_id = message.from_user.id
-    msg.save_to_base()
-
-    # or
-
-    msg = Message().create(
-        _id=message.message_id, user_id=message.from_user.id
-        )
-
-    # Тут не будет создано 2 записи, т.к. id сообщения будет уникальным в базе 
-
 @ws_client.on_message('pong')
 async def on_pong(message: dict):
     """Обработчик ответа pong от сервера"""
@@ -101,13 +81,11 @@ async def main():
     """Главная функция для запуска бота"""
     bot_logger.info("Запуск бота...")
 
-    import handlers
-    from oms_dir import oms_handler
-
     try:
-
         db.create_table('messages')
         db.create_table('scenes')
+
+        register_handlers(dp)
 
         await ws_client.connect() # Подключаемся к WebSocket серверу
         await dp.start_polling(bot)
