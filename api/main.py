@@ -5,6 +5,7 @@ import pprint
 from fastapi import FastAPI, Request
 from contextlib import asynccontextmanager
 
+from game.stages import stage_game_updater
 from global_modules.api_configurate import get_fastapi_app
 from global_modules.logs import main_logger
 from modules.json_database import just_db
@@ -89,7 +90,6 @@ async def initial_setup():
                          session_id=session.session_id)
 
     company = user.create_company("TestCompany")
-    print(company.secret_code)
     user2.add_to_company(company.secret_code)
 
     cells = session.generate_cells()
@@ -107,36 +107,28 @@ async def initial_setup():
     session.update_stage(SessionStages.CellSelect)
 
     free_cells = session.get_free_cells()
-    print(len(free_cells))
 
-    print(company.get_position())
     company.set_position(0, 0)
-    print(company.get_position())
-    print(len(session.get_free_cells()))
+    
+    session.update_stage(SessionStages.Game)
     
     company.add_resource('wood', 10)
     company.add_resource('oil', 90)
 
-    print(company.get_resources())
-    
+
     try:
         company.add_resource('wood', 5)
     except Exception as e:
         print(e)
-    
+
     company.remove_resource('wood', 5)
-    print(company.get_resources())
 
-
-    print(company.get_my_cell_info())
-    print(company.get_cell_type())
-    
-    print(company.get_improvements())
-
-    print(company.improvements)
     company.improve('warehouse')
-    
-    print(company.improvements)
-    
-    
+
+    company.remove_reputation(20)
+
+    for i in range(10):
+        session.step += 1
+        session.update_stage(SessionStages.Game)
+        await sleep(0.5)
 
