@@ -25,6 +25,7 @@ services:
       - BOT_TOKEN=${BOT_TOKEN}
       - WS_SERVER_URI=${WS_SERVER_URI}
       - UPDATE_PASSWORD=${UPDATE_PASSWORD}
+      - ADMIN_IDS=${ADMIN_IDS}
     restart: unless-stopped
     volumes:
       - ./logs:/logs:rw

@@ -1,4 +1,5 @@
 from asyncio import sleep
+import asyncio
 from datetime import datetime, timedelta
 import pprint
 from fastapi import FastAPI, Request
@@ -34,10 +35,10 @@ async def lifespan(app: FastAPI):
 
     main_logger.info("Starting task scheduler...")
 
-    await initial_setup()
-
     await sleep(5)
-    await scheduler.start()
+
+    asyncio.create_task(scheduler.start())
+    asyncio.create_task(initial_setup())
 
     yield
 
@@ -71,7 +72,9 @@ async def initial_setup():
     from game.user import User
     from game.session import Session, session_manager, SessionStages
     from game.company import Company
-    
+
+    await asyncio.sleep(2)
+
     print("Performing initial setup...")
 
     # try:
@@ -134,7 +137,6 @@ async def initial_setup():
     company.improve('warehouse')
     
     print(company.improvements)
-
-    # except Exception as e:
-    #     main_logger.error(f"Error during initial setup: {e}")
+    
+    
 

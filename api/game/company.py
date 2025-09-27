@@ -6,6 +6,7 @@ from global_modules.db.baseclass import BaseClass
 from modules.json_database import just_db
 from game.session import session_manager
 from global_modules.load_config import ALL_CONFIGS, Resources, Improvements, Settings, Capital
+from global_modules.bank import calc_credit, get_credit_conditions, check_max_credit_steps
 
 RESOURCES: Resources = ALL_CONFIGS["resources"]
 CELLS: Cells = ALL_CONFIGS['cells']
@@ -321,4 +322,90 @@ class Company(BaseClass):
             }
         }))
         return True
+    
+    def add_reputation(self, amount: int):
+        if not isinstance(amount, int):
+            raise ValueError("Amount must be an integer.")
+        if amount <= 0:
+            raise ValueError("Amount must be a positive integer.")
+
+        old_reputation = self.reputation
+        self.reputation += amount
+        self.save_to_base()
+        self.reupdate()
+
+        asyncio.create_task(websocket_manager.broadcast({
+            "type": "api-company_reputation_changed",
+            "data": {
+                "company_id": self.id,
+                "old_reputation": old_reputation,
+                "new_reputation": self.reputation
+            }
+        }))
+        return True
+
+    def remove_reputation(self, amount: int):
+        if not isinstance(amount, int):
+            raise ValueError("Amount must be an integer.")
+        if amount <= 0:
+            raise ValueError("Amount must be a positive integer.")
+        if self.reputation < amount:
+            raise ValueError("Not enough reputation to remove.")
+
+        old_reputation = self.reputation
+        self.reputation -= amount
+        self.save_to_base()
+        self.reupdate()
+
+        asyncio.create_task(websocket_manager.broadcast({
+            "type": "api-company_reputation_changed",
+            "data": {
+                "company_id": self.id,
+                "old_reputation": old_reputation,
+                "new_reputation": self.reputation
+            }
+        }))
+        return True
+
+    def take_credit(self, c_sum: int, steps: int):
+        """ 
+            Сумма кредита у нас между минимумом и максимумом
+            Количество шагов у нас 
+        """
+        if not isinstance(c_sum, int) or not isinstance(steps, int):
+            raise ValueError("Sum and steps must be integers.")
+        if c_sum <= 0 or steps <= 0:
+            raise ValueError("Sum and steps must be positive integers.")
+
+        credit_condition = get_credit_conditions(self.reputation)
+        if not credit_condition.possible:
+            raise ValueError("Credit is not possible with the current reputation.")
+
+        total, pay_per_turn, extra = calc_credit(
+            c_sum, credit_condition.without_interest, credit_condition.percent, steps
+            )
+
+        session = session_manager.get_session(self.session_id)
+        if not session:
+            raise ValueError("Session not found.")
+
+        if not check_max_credit_steps(steps, 
+                                      session.step, 
+                                      session.max_steps):
+            raise ValueError("Credit duration exceeds the maximum game steps.")
+
+        if len(self.credits) >= SETTINGS.max_credits_per_company:
+            raise ValueError("Maximum number of active credits reached for this company.")
+
+        self.credits.append(
+            {
+                "initial_sum": c_sum,
+                "total_to_pay": total,
+                "pay_per_turn": pay_per_turn,
+                "steps_total": steps,
+                "paid": 0,
+                "overdue": 0,
+            }
+        )
+
 
