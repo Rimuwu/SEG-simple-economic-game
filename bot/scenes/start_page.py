@@ -12,11 +12,15 @@ class Start(Page):
 
         text = message.text
         response = await get_session(text)
-
+        await message.delete()
         if not response:
             self.content = self.__page__.content
-            self.content += "\nНеправильный код сессии"
+            self.content = self.content.replace("Введиие код для подключения к игровой сессии: ", "Неверный код, введите код заново: ")
+            await self.scene.update_page(self.__page_name__)
 
+        elif response.get("stage") != "FreeUserConnect":
+            self.content = self.__page__.content
+            self.content = self.content.replace("Введиие код для подключения к игровой сессии: ", "Сессия в процессе игры, введите другой код: ")
             await self.scene.update_page(self.__page_name__)
         else:
 
@@ -26,5 +30,3 @@ class Start(Page):
             await self.scene.update_page(
                 'name-enter'
             )
-        
-        await message.delete()
