@@ -1,4 +1,4 @@
-from typing import TYPE_CHECKING, Optional, Type
+from typing import Optional, Type
 
 class SceneManager:
     _instances = {}
