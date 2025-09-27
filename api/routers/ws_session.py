@@ -91,7 +91,6 @@ async def handle_update_session_stage(client_id: str, message: dict):
     password = message.get("password", "")
 
     stages_to_types = {
-        "WaitWebConnect": SessionStages.WaitWebConnect,
         "FreeUserConnect": SessionStages.FreeUserConnect,
         "CellSelect": SessionStages.CellSelect,
         "Game": SessionStages.Game,
