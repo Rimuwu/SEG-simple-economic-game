@@ -219,7 +219,8 @@ class JSONDatabase:
                         if (table_name in self._indexes and 
                             key in self._indexes[table_name] and 
                             str(value) in self._indexes[table_name][key]):
-                            self._indexes[table_name][key][str(value)].remove(i)
+                            if i in self._indexes[table_name][key][str(value)]:
+                                self._indexes[table_name][key][str(value)].remove(i)
                     
                     # Обновляем запись
                     record.update(updates)
