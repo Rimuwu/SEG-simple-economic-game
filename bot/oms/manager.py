@@ -1,4 +1,8 @@
-from typing import TYPE_CHECKING, Optional, Type
+from typing import Optional, Type, TYPE_CHECKING
+from aiogram import Bot
+
+if TYPE_CHECKING:
+    from oms import Scene
 
 class SceneManager:
     _instances = {}
@@ -9,10 +13,13 @@ class SceneManager:
         return cls._instances[user_id]
 
     @classmethod
-    def create_scene(cls, user_id: int, scene_class: Type['Scene']) -> 'Scene':
+    def create_scene(cls, user_id: int, 
+                     scene_class: 'Scene',
+                     bot_instance: 'Bot'
+                     ) -> 'Scene':
         if user_id in cls._instances:
             raise ValueError(f"Сцена для пользователя {user_id} уже существует")
-        cls._instances[user_id] = scene_class(user_id)
+        cls._instances[user_id] = scene_class(user_id, bot_instance)
         return cls._instances[user_id]
 
     @classmethod
@@ -24,4 +31,4 @@ class SceneManager:
     def has_scene(cls, user_id: int) -> bool:
         return user_id in cls._instances
 
-manager = SceneManager()
+scene_manager = SceneManager()

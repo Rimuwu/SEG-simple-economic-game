@@ -34,3 +34,22 @@ async def stage_game_updater(session_id: str):
             datetime.now() + timedelta(seconds=CHANGETURN_TIME),
             kwargs={"session_id": session_id}
         )
+
+async def leave_from_prison(session_id: str, company_id: int):
+    """ Фнукция для выхода из тюрьмы по времени
+    """
+    from game.company import Company
+    from game.session import session_manager
+    
+    print(f"Выполняется выход из тюрьмы для компании {company_id} в сессии {session_id}")
+
+    session = session_manager.get_session(session_id)
+    if not session: return 0
+
+    company = Company(company_id).reupdate()
+    if not company: return 0
+    
+    print(f"Компания {company_id} в тюрьме: {company.in_prison}")
+
+    company.leave_prison()
+    return 1

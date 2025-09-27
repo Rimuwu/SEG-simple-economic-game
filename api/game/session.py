@@ -57,6 +57,7 @@ class Session(BaseClass):
             raise ValueError("new_stage must be an instance of SessionStages Enum")
 
         if new_stage.value == SessionStages.CellSelect.value:
+            print("Scheduling cell selection timeout...")
             scheduler.schedule_task(
                 stage_game_updater, 
                 datetime.now() + timedelta(
@@ -64,6 +65,9 @@ class Session(BaseClass):
                     ),
                 kwargs={"session_id": self.session_id}
             )
+
+        if new_stage.value == SessionStages.Game.value:
+            self.execute_step_schedule()
 
         old_stage = self.stage
         self.stage = new_stage.value
@@ -78,7 +82,36 @@ class Session(BaseClass):
                 "old_stage": old_stage
             }
         }))
+
         return self
+
+    def execute_step_schedule(self):
+        from game.step_shedule import StepSchedule
+
+        schedules: list[StepSchedule] = just_db.find(
+            "step_schedule", session_id=self.session_id, in_step=self.step,
+            to_class=StepSchedule
+        ) # type: ignore
+
+        print(f"Executing step schedules for session {self.session_id} at step {self.step}: found {len(schedules)} schedules.")
+
+        for schedule in schedules:
+            res = asyncio.create_task(schedule.execute())
+            print(f"Executed schedule {schedule.id} with result: {res}")
+        return True
+
+    def create_step_schedule(self, in_step: int, 
+                             function, **kwargs):
+        from game.step_shedule import StepSchedule
+
+        if in_step < 0:
+            raise ValueError("in_step must be a non-negative integer.")
+
+        schedule = StepSchedule().create(
+            session_id=self.session_id, in_step=in_step)
+        schedule.add_function(function, **kwargs)
+
+        return schedule
 
     def can_user_connect(self):
         return self.stage == SessionStages.FreeUserConnect.value
