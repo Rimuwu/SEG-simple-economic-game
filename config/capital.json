@@ -9,11 +9,11 @@
 
             "conditions": [
                 {
-                    "on_reputation": {"min": 0, "max": 5},
+                    "on_reputation": {"min": 0, "max": 10},
                     "possible": false // Кредит не выдаётся
                 },
                 {
-                    "on_reputation": {"min": 100, "max": 0}, // 0 - нет ограничения
+                    "on_reputation": {"min": 101, "max": 1000000},
                     "possible": true, // Кредит выдается
 
                     "without_interest": 3, // Ходов с возможностью погасить без процентов
@@ -21,7 +21,7 @@
                 },
 
                 {
-                    "on_reputation": {"min": 10, "max": 50},
+                    "on_reputation": {"min": 11, "max": 50},
                     "possible": true,
 
                     "without_interest": 1,
@@ -43,23 +43,23 @@
 
             "conditions": [
                 {
-                    "on_reputation": {"min": 100, "max": 0}, // 0 - нет ограничения
+                    "on_reputation": {"min": 101, "max": 1000000},
                     "possible": true, // Вклад принимается
 
-                    "percent": 0.2 // Процентная ставка
+                    "percent": 0.15 // Процентная ставка
                 },
 
                 {
                     "on_reputation": {"min": 0, "max": 50},
                     "possible": true,
 
-                    "percent": 0.1
+                    "percent": 0.05
                 },
                 {
                     "on_reputation": {"min": 51, "max": 100},
                     "possible": true,
 
-                    "percent": 0.15
+                    "percent": 0.08
                 }
             ]
         },

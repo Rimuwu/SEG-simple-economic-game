@@ -145,7 +145,7 @@ async def create_session(session_id: Optional[str] = None, password: str = ""):
     )
 
 async def update_session_stage(session_id: Optional[str] = None, 
-                              stage: Literal['WaitWebConnect', 'FreeUserConnect', 'CellSelect', 'Game', 'End'] = 'FreeUserConnect', 
+                              stage: Literal['FreeUserConnect', 'CellSelect', 'Game', 'End'] = 'FreeUserConnect', 
                               password: str = ""):
     """Обновление стадии сессии"""
     return await ws_client.send_message(

@@ -5,13 +5,15 @@ from modules.websocket_manager import websocket_manager
 from global_modules.db.baseclass import BaseClass
 from modules.json_database import just_db
 from game.session import session_manager
-from global_modules.load_config import ALL_CONFIGS, Resources, Improvements, Settings, Capital
+from global_modules.load_config import ALL_CONFIGS, Resources, Improvements, Settings, Capital, Reputation
+from global_modules.bank import calc_credit, get_credit_conditions, check_max_credit_steps
 
 RESOURCES: Resources = ALL_CONFIGS["resources"]
 CELLS: Cells = ALL_CONFIGS['cells']
 IMPROVEMENTS: Improvements = ALL_CONFIGS['improvements']
 SETTINGS: Settings = ALL_CONFIGS['settings']
 CAPITAL: Capital = ALL_CONFIGS['capital']
+REPUTATION: Reputation = ALL_CONFIGS['reputation']
 
 class Company(BaseClass):
 
@@ -36,6 +38,9 @@ class Company(BaseClass):
 
         self.session_id: str = ""
         self.cell_position: str = "" # 3.1
+
+        self.tax_debt: int = 0  # Задолженность по налогам
+        self.overdue_steps: int = 0  # Количество просроченных ходов
 
         self.secret_code: int = 0 # Для вступления другими игроками
 
@@ -322,3 +327,252 @@ class Company(BaseClass):
         }))
         return True
 
+    def add_reputation(self, amount: int):
+        if not isinstance(amount, int):
+            raise ValueError("Amount must be an integer.")
+        if amount <= 0:
+            raise ValueError("Amount must be a positive integer.")
+
+        old_reputation = self.reputation
+        self.reputation += amount
+        self.save_to_base()
+        self.reupdate()
+
+        asyncio.create_task(websocket_manager.broadcast({
+            "type": "api-company_reputation_changed",
+            "data": {
+                "company_id": self.id,
+                "old_reputation": old_reputation,
+                "new_reputation": self.reputation
+            }
+        }))
+        return True
+
+    def remove_reputation(self, amount: int):
+        if not isinstance(amount, int):
+            raise ValueError("Amount must be an integer.")
+        if amount <= 0:
+            raise ValueError("Amount must be a positive integer.")
+        if self.reputation < amount:
+            raise ValueError("Not enough reputation to remove.")
+
+        old_reputation = self.reputation
+        self.reputation -= amount
+        self.save_to_base()
+        self.reupdate()
+
+        asyncio.create_task(websocket_manager.broadcast({
+            "type": "api-company_reputation_changed",
+            "data": {
+                "company_id": self.id,
+                "old_reputation": old_reputation,
+                "new_reputation": self.reputation
+            }
+        }))
+
+        if self.reputation <= 0: self.to_prison()
+        return True
+
+    def take_credit(self, c_sum: int, steps: int):
+        """ 
+            Сумма кредита у нас между минимумом и максимумом
+            Количество шагов у нас 
+        """
+        if not isinstance(c_sum, int) or not isinstance(steps, int):
+            raise ValueError("Sum and steps must be integers.")
+        if c_sum <= 0 or steps <= 0:
+            raise ValueError("Sum and steps must be positive integers.")
+
+        credit_condition = get_credit_conditions(self.reputation)
+        if not credit_condition.possible:
+            raise ValueError("Credit is not possible with the current reputation.")
+
+        total, pay_per_turn, extra = calc_credit(
+            c_sum, credit_condition.without_interest, credit_condition.percent, steps
+            )
+
+        session = session_manager.get_session(self.session_id)
+        if not session:
+            raise ValueError("Session not found.")
+
+        if not check_max_credit_steps(steps, 
+                                      session.step, 
+                                      session.max_steps):
+            raise ValueError("Credit duration exceeds the maximum game steps.")
+
+        if len(self.credits) >= SETTINGS.max_credits_per_company:
+            raise ValueError("Maximum number of active credits reached for this company.")
+
+        self.credits.append(
+            {
+                "total_to_pay": total,
+                "need_pay": 0,
+                "paid": 0,
+
+                "steps_total": steps,
+                "steps_now": 0
+            }
+        )
+
+    def credit_paid_step(self):
+        """ Вызывается при каждом шаге игры для компании.
+            Начисляет плату по кредитам, если они есть.
+        """
+
+        for index, credit in enumerate(self.credits):
+
+            if credit["steps_now"] <= credit["steps_total"]:
+                credit["need_pay"] += credit["total_to_pay"] - credit['paid'] // (credit["steps_total"] - credit["steps_now"])
+
+            elif credit["steps_now"] > credit["steps_total"]:
+                credit["need_pay"] += credit["total_to_pay"] - credit['paid']
+                self.remove_reputation(REPUTATION.credit.lost)
+
+            if credit["steps_now"] - credit["steps_total"] > REPUTATION.credit.max_overdue:
+                self.remove_reputation(self.reputation)
+                self.remove_credit(index)
+                self.to_prison()
+
+            credit["steps_now"] += 1
+
+        self.save_to_base()
+        self.reupdate()
+
+    def remove_credit(self, credit_index: int):
+        """ Удаляет кредит с индексом credit_index.
+        """
+
+        if credit_index < 0 or credit_index >= len(self.credits):
+            raise ValueError("Invalid credit index.")
+
+        del self.credits[credit_index]
+        self.save_to_base()
+        self.reupdate()
+
+        asyncio.create_task(websocket_manager.broadcast({
+            "type": "api-company_credit_removed",
+            "data": {
+                "company_id": self.id,
+                "credit_index": credit_index
+            }
+        }))
+        return True
+
+    def pay_credit(self, credit_index: int, amount: int):
+        """ Платит указанную сумму по кредиту с индексом credit_index.
+        """
+
+        pass
+
+    def apply_credit_penalty(self):
+        """ Применяет наказание за неуплату кредитов
+        """
+
+        pass
+
+    def to_prison(self):
+        """ Сажает компанию в тюрьму за неуплату кредитов
+        """
+
+        # Сажается на Х ходов и после шедулером выкидывается с пустой компанией
+
+        pass
+
+    def business_type(self):
+        """ Тип бизнеса в соответсвии с доходов за прошлый ход (малый, большой)
+        """
+
+        pass
+
+    def taxate(self):
+        """ Начисляет налоги в зависимости от типа бизнеса. Вызывается каждый ход.
+        """
+
+        pass
+
+    def pay_taxes(self, amount: int):
+        """ Платит указанную сумму по налогам.
+        """
+
+        pass
+
+    def take_deposit(self, d_sum: int):
+        """ 
+            Сумма депозита у нас между минимумом и максимумом
+        """
+
+        pass
+
+    def withdraw_deposit(self, deposit_index: int):
+        """ Забирает депозит с индексом deposit_index.
+        """
+
+        pass
+
+
+    def get_factories(self):
+    
+        pass
+
+    def complect_factory(self, factory_id: str, resource: str):
+    
+        pass
+
+    def auto_manufacturing(self, factory_id: str):
+        """ Запускает автоматическое производство на фабрике с указанным ID.
+        """
+
+        pass
+
+    def sell_on_market(self, 
+                       resource: str, amount: int, price_per_unit: int | str,
+                       type: str  # "sell" | "exchange"
+                       ):
+        """ Выставляет товар на биржу от компании. (Продажа)
+        """
+
+        pass
+
+    def buy_from_market(self, 
+                         order_id: int, amount: int
+                         ):
+        """ Покупает товар с биржи от компании.
+        """
+
+        pass
+
+    def create_contract(self, 
+                        company_id: int | None, 
+                        resource: str, amount: int, price_per_unit: int | str,
+                        type: str,  # "sell" | "exchange" 
+                        steps: int
+                        ):
+        """ Создает контракт с другой компанией.
+        """
+
+        pass
+
+    def take_contract(self, contract_id: int):
+        """ Принимает контракт от другой компании.
+        """
+
+        pass
+
+    def cancel_contract(self, contract_id: int):
+        """ Отменяет контракт. (Предложенный)
+        """
+
+        pass
+
+    def sell_resource_to_city(self, resource: str, 
+                              amount: int, city_id: int):
+        """ Продает ресурс городу.
+        """
+
+        pass
+
+    def get_logistics_resources(self):
+        """ Возвращает список логистических транспортных средств компании.
+        """
+
+        pass

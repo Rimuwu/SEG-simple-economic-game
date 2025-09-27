@@ -1,0 +1,48 @@
+{
+
+    "scene-manager": {
+        "settings": {},
+        "pages": {
+            "start": {
+                "title": "",
+                "content": "Введите код сессии: ",
+                "to_pages": {}
+            },
+            "name-enter": { // +
+                "title": "",
+                "content": "Введите имя ",
+                "to_pages": {
+                    "start": "Указать другой код"
+                }
+            },
+            "company-option": { 
+                "title": "",
+                "content": "Выберите - создать или присоединиться",
+                "to_pages": {
+                    "company-create": "Создать",
+                    "company-join": "Присоединится"
+                }
+            },
+            "company-create": {   // +
+                "title": "",
+                "content": "Введите название компании: ",
+                "to_pages": {
+                    "company-option": "Вернуться к выбору"
+                }
+            },
+            "company-join": {   // +
+                "title": "",
+                "content": "Введите секретный код: ",
+                "to_pages": {
+                    "company-option": "Вернуться к выбору"
+                }
+            },
+            "main-page":{ 
+                "title": "",
+                "content": "Главная страница",
+                "to_pages": {}
+            }
+        }
+    }
+
+}
