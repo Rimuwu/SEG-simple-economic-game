@@ -56,8 +56,13 @@ class Session(BaseClass):
         if not isinstance(new_stage, SessionStages):
             raise ValueError("new_stage must be an instance of SessionStages Enum")
 
-        if new_stage.value == SessionStages.CellSelect.value:
-            print("Scheduling cell selection timeout...")
+        if self.stage == SessionStages.End.value:
+            raise ValueError("Cannot change stage from End stage.")
+
+        elif self.step >= self.max_steps:
+            new_stage = SessionStages.End
+
+        elif new_stage == SessionStages.CellSelect:
             scheduler.schedule_task(
                 stage_game_updater, 
                 datetime.now() + timedelta(
@@ -66,8 +71,12 @@ class Session(BaseClass):
                 kwargs={"session_id": self.session_id}
             )
 
-        if new_stage.value == SessionStages.Game.value:
+        elif new_stage == SessionStages.Game:
+            self.step += 1
             self.execute_step_schedule()
+
+            for company in self.companies:
+                company.on_new_game_stage(self.step)
 
         old_stage = self.stage
         self.stage = new_stage.value
@@ -93,11 +102,8 @@ class Session(BaseClass):
             to_class=StepSchedule
         ) # type: ignore
 
-        print(f"Executing step schedules for session {self.session_id} at step {self.step}: found {len(schedules)} schedules.")
-
         for schedule in schedules:
-            res = asyncio.create_task(schedule.execute())
-            print(f"Executed schedule {schedule.id} with result: {res}")
+            asyncio.create_task(schedule.execute())
         return True
 
     def create_step_schedule(self, in_step: int, 

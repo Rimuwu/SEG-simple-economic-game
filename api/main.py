@@ -113,7 +113,7 @@ async def initial_setup():
     session.update_stage(SessionStages.Game)
     
     company.add_resource('wood', 10)
-    company.add_resource('oil', 90)
+    # company.add_resource('oil', 90)
 
 
     try:
@@ -122,13 +122,20 @@ async def initial_setup():
         print(e)
 
     company.remove_resource('wood', 5)
+    
+    print(
+        company.get_max_warehouse_size()
+    )
 
     company.improve('warehouse')
+    
+    print(
+        company.get_max_warehouse_size()
+    )
 
-    company.remove_reputation(20)
+    # company.remove_reputation(20)
 
-    for i in range(10):
-        session.step += 1
-        session.update_stage(SessionStages.Game)
-        await sleep(0.5)
+    # for i in range(15):
+    #     session.update_stage(SessionStages.Game)
+    #     await sleep(0.5)
 

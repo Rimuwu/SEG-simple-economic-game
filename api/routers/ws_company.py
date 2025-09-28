@@ -317,3 +317,103 @@ async def handle_update_company_improve(client_id: str, message: dict):
 
     except ValueError as e:
         return {"error": str(e)}
+
+@message_handler(
+    "company-take-credit", 
+    doc="Обработчик получения кредита компанией. Требуется пароль для взаимодействия.",
+    datatypes=[
+        "company_id: str",
+        "amount: int",
+        "period: int",
+
+        "password: str"
+    ],
+    messages=["api-company_credit_taken (broadcast)"]
+)
+async def handle_company_take_credit(client_id: str, message: dict):
+    """Обработчик получения кредита компанией"""
+
+    password = message.get("password")
+    company_id = message.get("company_id")
+    amount = message.get("amount")
+    period = message.get("period")
+
+    for i in [company_id, amount, period, password]:
+        if i is None: return {"error": "Missing required fields."}
+
+    try:
+        check_password(password)
+
+        company = Company(_id=company_id).reupdate()
+        if not company: raise ValueError("Company not found.")
+
+        company.take_credit(amount, period)
+
+    except ValueError as e:
+        return {"error": str(e)}
+
+@message_handler(
+    "company-pay-credit", 
+    doc="Обработчик погашения кредита компанией. Требуется пароль для взаимодействия.",
+    datatypes=[
+        "company_id: str",
+        "credit_index: int",
+        "amount: int",
+
+        "password: str"
+    ],
+    messages=["api-company_credit_paid (broadcast)"]
+)
+async def handle_company_pay_credit(client_id: str, message: dict):
+    """Обработчик погашения кредита компанией"""
+
+    password = message.get("password")
+    company_id = message.get("company_id")
+    credit_index = message.get("credit_index")
+    amount = message.get("amount")
+
+    for i in [company_id, credit_index, amount, password]:
+        if i is None: return {"error": "Missing required fields."}
+
+    try:
+        check_password(password)
+
+        company = Company(_id=company_id).reupdate()
+        if not company: raise ValueError("Company not found.")
+
+        company.pay_credit(credit_index, amount)
+
+    except ValueError as e:
+        return {"error": str(e)}
+
+@message_handler(
+    "company-pay-taxes", 
+    doc="Обработчик погашения налогов компанией. Требуется пароль для взаимодействия.",
+    datatypes=[
+        "company_id: str",
+        "amount: int",
+
+        "password: str"
+    ],
+    messages=["api-company_tax_paid (broadcast)"]
+)
+async def handle_company_pay_taxes(client_id: str, message: dict):
+    """Обработчик погашения налогов компанией"""
+
+    password = message.get("password")
+    company_id = message.get("company_id")
+    amount = message.get("amount")
+
+    for i in [company_id, amount, password]:
+        if i is None: return {"error": "Missing required fields."}
+
+    try:
+        check_password(password)
+
+        company = Company(_id=company_id).reupdate()
+        if not company: raise ValueError("Company not found.")
+
+        company.pay_taxes(amount)
+
+    except ValueError as e:
+        return {"error": str(e)}

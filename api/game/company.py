@@ -7,6 +7,7 @@ from global_modules.db.baseclass import BaseClass
 from modules.json_database import just_db
 from game.session import session_manager
 from global_modules.load_config import ALL_CONFIGS, Resources, Improvements, Settings, Capital, Reputation
+from global_modules.models.improvements import ImprovementType, ImprovementLevel
 from global_modules.bank import calc_credit, get_credit_conditions, check_max_credit_steps
 
 RESOURCES: Resources = ALL_CONFIGS["resources"]
@@ -44,6 +45,11 @@ class Company(BaseClass):
         self.overdue_steps: int = 0  # Количество просроченных ходов
 
         self.secret_code: int = 0 # Для вступления другими игроками
+
+        self.last_turn_income: int = 0  # Доход за прошлый ход
+        self.this_turn_income: int = 0  # Доход за текущий ход
+
+        self.business_type: str = "small"  # Тип бизнеса: "small" или "big"
 
     def create(self, name: str, session_id: str):
         self.name = name
@@ -145,9 +151,11 @@ class Company(BaseClass):
         }))
         return True
 
-    def get_max_warehouse_size(self):
-        # TODO: учитывать улучшения склада
-        return 100
+    def get_max_warehouse_size(self) -> int:
+        imps = self.get_improvements()
+        base_size = imps['warehouse']['capacity']
+
+        return base_size
 
     def add_resource(self, resource: str, amount: int):
         if RESOURCES.get_resource(resource) is None:
@@ -253,6 +261,8 @@ class Company(BaseClass):
 
         old_balance = self.balance
         self.balance += amount
+        self.this_turn_income += amount
+
         self.save_to_base()
         self.reupdate()
 
@@ -292,6 +302,8 @@ class Company(BaseClass):
     def improve(self, improvement_type: str):
         """ Улучшает указанное улучшение на 1 уровень, если это возможно.
         """
+
+        self.in_prison_check()
 
         # my_improvements = self.get_improvements()
         imp_lvl_now = self.improvements.get(
@@ -381,6 +393,8 @@ class Company(BaseClass):
             Сумма кредита у нас между минимумом и максимумом
             Количество шагов у нас 
         """
+        self.in_prison_check()
+
         if not isinstance(c_sum, int) or not isinstance(steps, int):
             raise ValueError("Sum and steps must be integers.")
         if c_sum <= 0 or steps <= 0:
@@ -416,6 +430,15 @@ class Company(BaseClass):
                 "steps_now": 0
             }
         )
+
+        asyncio.create_task(websocket_manager.broadcast({
+            "type": "api-company_credit_taken",
+            "data": {
+                "company_id": self.id,
+                "amount": c_sum,
+                "steps": steps
+            }
+        }))
 
     def credit_paid_step(self):
         """ Вызывается при каждом шаге игры для компании.
@@ -464,6 +487,9 @@ class Company(BaseClass):
     def pay_credit(self, credit_index: int, amount: int):
         """ Платит указанную сумму по кредиту с индексом credit_index.
         """
+
+        self.in_prison_check()
+
         if not isinstance(credit_index, int) or not isinstance(amount, int):
             raise ValueError("Credit index and amount must be integers.")
         if credit_index < 0 or credit_index >= len(self.credits):
@@ -479,14 +505,17 @@ class Company(BaseClass):
 
         # Снимаем деньги с баланса
         self.remove_balance(amount)
-        
+
         # Обновляем информацию по кредиту
         credit["need_pay"] -= amount
         credit["paid"] += amount
-        
+
         # Если кредит полностью выплачен, удаляем его
         if credit["paid"] >= credit["total_to_pay"]:
             self.remove_credit(credit_index)
+            self.add_reputation(
+                REPUTATION.credit.gained
+            )
         else:
             self.save_to_base()
             self.reupdate()
@@ -525,7 +554,12 @@ class Company(BaseClass):
             company_id=self.id
         )
 
-        pass
+        asyncio.create_task(websocket_manager.broadcast({
+            "type": "api-company_to_prison",
+            "data": {
+                "company_id": self.id
+            }
+        }))
 
     def leave_prison(self):
         """ Выход из тюрьмы по времени
@@ -554,23 +588,77 @@ class Company(BaseClass):
 
         return self.in_prison
 
-    def business_type(self):
-        """ Тип бизнеса в соответсвии с доходов за прошлый ход (малый, большой)
+    def business_tax(self):
+        """ Определяет налоговую ставку в зависимости от типа бизнеса.
         """
 
-        pass
+        if self.business_type == "big":
+            return Capital.bank.tax.big_on
+        return Capital.bank.tax.small_business
 
     def taxate(self):
         """ Начисляет налоги в зависимости от типа бизнеса. Вызывается каждый ход.
         """
 
-        pass
+        if self.tax_debt > 0:
+            self.overdue_steps += 1
+            self.remove_reputation(REPUTATION.tax.late * self.overdue_steps)
+
+        if self.overdue_steps > REPUTATION.tax.not_paid_stages:
+            self.overdue_steps = 0
+            self.tax_debt = 0
+
+            self.remove_reputation(self.reputation)
+            self.to_prison()
+            return
+
+        percent = self.business_tax()
+        tax_amount = int(self.last_turn_income * percent / 100)
+
+        self.tax_debt += tax_amount
+        self.save_to_base()
+        self.reupdate()
+
 
     def pay_taxes(self, amount: int):
         """ Платит указанную сумму по налогам.
         """
 
-        pass
+        self.in_prison_check()
+
+        if not isinstance(amount, int):
+            raise ValueError("Amount must be an integer.")
+        if amount <= 0:
+            raise ValueError("Amount must be a positive integer.")
+        if self.tax_debt <= 0:
+            raise ValueError("No tax debt to pay.")
+        if amount > self.tax_debt:
+            raise ValueError("Payment amount exceeds tax debt.")
+        if self.balance < amount:
+            raise ValueError("Not enough balance to pay taxes.")
+
+        # Снимаем деньги с баланса
+        self.remove_balance(amount)
+
+        # Обновляем информацию по налогам
+        self.tax_debt -= amount
+        if self.tax_debt <= 0:
+            self.tax_debt = 0
+            self.overdue_steps = 0
+            self.add_reputation(REPUTATION.tax.paid)
+
+        self.save_to_base()
+        self.reupdate()
+
+        asyncio.create_task(websocket_manager.broadcast({
+            "type": "api-company_tax_paid",
+            "data": {
+                "company_id": self.id,
+                "amount": amount,
+                "remaining": self.tax_debt
+            }
+        }))
+        return True
 
     def take_deposit(self, d_sum: int):
         """ 
@@ -652,3 +740,21 @@ class Company(BaseClass):
         """
 
         pass
+
+
+    def on_new_game_stage(self, step: int):
+        """ Вызывается при переходе на новый игровой этап.
+            Обновляет доходы, списывает налоги и т.д.
+        """
+
+        self.last_turn_income = self.this_turn_income
+        self.this_turn_income = 0
+
+        if step != 1:
+            if self.last_turn_income >= CAPITAL.bank.tax.big_on:
+                self.business_type = "big"
+                self.save_to_base()
+                self.reupdate()
+
+        self.credit_paid_step()
+        self.taxate()
