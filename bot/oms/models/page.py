@@ -276,6 +276,9 @@ class Page:
 
     # МОЖНО И НУЖНО МЕНЯТЬ !
 
+    # Количество кнопок в ряду (можно переопределить в наследниках)
+    row_width: int = 3
+
     async def content_worker(self) -> str:
         return self.content
 

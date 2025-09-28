@@ -43,3 +43,14 @@ async def update_page(session_id, user_company_id, user_id, page_name):
                     current_page_name = scene.page
                     if current_page_name == page_name:
                         await scene.update_message()
+
+
+def xy_into_cell(x, y):
+    alphabet = 'ABCDEFGH'
+    return f"{alphabet[x]}{y+1}"
+
+def cell_into_xy(cell):
+    alphabet = 'ABCDEFGH'
+    x = alphabet.index(cell[0].upper())
+    y = int(cell[1:]) - 1
+    return x, y
