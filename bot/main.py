@@ -62,6 +62,7 @@ async def on_pong(message: dict):
 async def on_connect():
     print("🔗 Подключено к WebSocket серверу")
 
+@ws_client.on_message('api-update_session_stage')
 async def on_update_session_stage(message: dict):
     """Обработчик обновления стадии сессии"""
     print(message)
