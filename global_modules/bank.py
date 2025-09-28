@@ -17,11 +17,10 @@ def calc_credit(S: int,
             extra - количество ходов с процентами
     """
     extra = max(0, T - free)
-    r = r_percent / 100
     if extra == 0:
         total = S
     else:
-        total = S + S * r * extra
+        total = S + S * r_percent * extra
     pay_per_turn = total / T
     return int(total), int(pay_per_turn), extra
 
