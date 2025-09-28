@@ -10,6 +10,7 @@ const mapState = reactive({
 })
 provide('mapState', mapState)
 
+import Introduction from './components/Introduction.vue'
 import Preparation from './components/Preparation.vue'
 import Game from './components/Game.vue'
 import Between from './components/Between.vue'
@@ -59,6 +60,7 @@ function handleEnter(el) {
     >
       <component
         :is="
+          currentView === 'Introduction' ? Introduction :
           currentView === 'Preparation' ? Preparation :
           currentView === 'Between' ? Between :
           currentView === 'Endgame' ? Endgame :

@@ -77,6 +77,7 @@ onUnmounted(() => {
   gap: var(--spacing-lg);
   width: calc(100vw - var(--spacing-sm) * 2);
   height: calc(100vh - var(--spacing-sm) * 2);
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
 }
 
 #column-left {
@@ -103,38 +104,59 @@ onUnmounted(() => {
 
 #graphs {
   flex: 1;
-  background: lightgray;
+  background: rgba(255, 255, 255, 0.95);
   border-radius: var(--border-radius);
-  border: var(--border-width) solid gray;
+  border: var(--border-width) solid rgba(255, 255, 255, 0.3);
+  backdrop-filter: blur(10px);
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+  margin: var(--spacing-sm);
 }
-
 
 .element {
   flex: 1;
-  padding: var(--spacing-sm);
-  background: lightgray;
+  padding: var(--spacing-lg);
+  background: rgba(255, 255, 255, 0.95);
   border-radius: var(--border-radius);
-  border: var(--border-width) solid gray;
+  border: var(--border-width) solid rgba(255, 255, 255, 0.3);
+  backdrop-filter: blur(10px);
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+  margin: var(--spacing-sm);
+  transition: all 0.2s ease;
+}
+
+.element:hover {
+  background: rgba(255, 255, 255, 1);
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
 }
 
 .column {
   flex: 1;
-  padding: var(--spacing-sm);
   display: flex;
   flex-direction: column;
   gap: var(--spacing-sm);
+  margin: var(--spacing-sm);
 }
 
 .list-item {
-  background-color: lightgray;
-  color: black;
-  border: var(--border-width) solid gray;
+  background: rgba(255, 255, 255, 0.95);
+  color: #333;
+  border: var(--border-width) solid rgba(255, 255, 255, 0.3);
   border-radius: var(--border-radius);
-  padding: var(--spacing-sm) 0;
+  padding: var(--spacing-sm);
   font-size: var(--text-md);
-
   text-align: center;
   flex: 1;
+  font-weight: 600;
+  transition: all 0.2s ease;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.15);
+  backdrop-filter: blur(10px);
+}
+
+.list-item:hover {
+  background: rgba(255, 255, 255, 1);
+  transform: translateY(-2px);
+  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.2);
 }
 
 #map-title {

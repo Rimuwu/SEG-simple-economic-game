@@ -58,8 +58,8 @@ onUnmounted(() => {
 <template>
   <div id="page" ref="pageRef">
     <div id="column-left">
-      <div id="start-btn">
-        НАЧАТЬ ИГРУ
+      <div id="title">
+        Этап подготовки
       </div>
 
       <Map />
@@ -94,6 +94,7 @@ onUnmounted(() => {
   gap: var(--spacing-lg);
   width: calc(100vw - var(--spacing-sm) * 2);
   height: calc(100vh - var(--spacing-sm) * 2);
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
 }
 
 #column-left {
@@ -113,35 +114,52 @@ onUnmounted(() => {
 
 .column {
   flex: 1;
-  padding: var(--spacing-sm);
   display: flex;
   flex-direction: column;
   gap: var(--spacing-sm);
+  margin: var(--spacing-sm);
 }
 
 .list-item {
-  background-color: lightgray;
-  color: black;
-  border: var(--border-width) solid gray;
+  background: rgba(255, 255, 255, 0.95);
+  color: #333;
+  border: var(--border-width) solid rgba(255, 255, 255, 0.3);
   border-radius: var(--border-radius);
-  padding: var(--spacing-sm) 0;
+  padding: var(--spacing-sm);
   font-size: var(--text-md);
   text-align: center;
   flex: 1;
+  font-weight: 600;
+  transition: all 0.2s ease;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.15);
+  backdrop-filter: blur(10px);
   /* Initial state for animation */
   transform: translateY(20px);
   opacity: 0;
 }
 
-#start-btn,
+.list-item:hover {
+  background: rgba(255, 255, 255, 1);
+  transform: translateY(-2px);
+  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.2);
+}
+
+#title,
 #session-key {
-  font-size: var(--text-lg);
+  font-size: var(--text-xl);
+  font-weight: 700;
   text-align: center;
-  margin: var(--spacing-sm);
+  margin: var(--spacing-sm) 0;
   padding: var(--spacing-sm) 0;
   width: 90%;
-  background: limegreen;
-  border-radius: var(--border-radius);
-  border: var(--border-width) solid green;
+  color: white;
+  text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.3);
+}
+
+#start-btn:hover,
+#session-key:hover {
+  background: rgba(255, 255, 255, 1);
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
 }
 </style>
