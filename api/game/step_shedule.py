@@ -71,13 +71,13 @@ class StepSchedule(BaseClass):
     async def execute(self):
         """ Выполняет все функции в расписании шага
         """
-
         session = session_manager.get_session(self.session_id)
+
         if not session:
             just_db.delete(self.__tablename__, id=self.id)
             return False
 
-        if not session.step != self.in_step:
+        if session.step != self.in_step:
             return False
 
         for func_entry in self.functions:
