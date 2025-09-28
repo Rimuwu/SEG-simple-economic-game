@@ -18,7 +18,7 @@ from bot_instance import dp, bot
 UPDATE_PASSWORD = os.getenv("UPDATE_PASSWORD", "default_password")
 
 
-@dp.message(AdminFilter(), Command("/start_game"))
+@dp.message(AdminFilter(), Command("start_game"))
 async def start_game(message: Message, state: FSMContext):
     msg = await message.answer("Введите ID сессии для её старта:")
     await state.update_data(msg_id=msg.message_id)
@@ -84,3 +84,15 @@ async def process_session_id(message: Message, state: FSMContext):
     )
     await state.clear()
 
+@ws_client.on_message('api-update_session_stage')
+async def on_update_session_stage(message: dict):
+    """Обработчик обновления стадии сессии"""
+    print(message)
+    data = message.get('data', {})
+    session_id = data.get('session_id')
+    new_stage = data.get('new_stage')
+    print("=====================", session_id, new_stage)
+    response = await get_companies(session_id=session_id)
+    print(response)
+    if new_stage == "CellSelect":
+        await go_to_page(session_id, "wait-start-page", "select-cell-page")
