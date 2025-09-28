@@ -120,6 +120,38 @@ async def update_company_improve(company_id: str, improvement_type: str):
         wait_for_response=True
     )
 
+async def company_take_credit(company_id: str, amount: int, period: int):
+    """Получение кредита компанией"""
+    return await ws_client.send_message(
+        "company-take-credit",
+        company_id=company_id,
+        amount=amount,
+        period=period,
+        password=UPDATE_PASSWORD,
+        wait_for_response=True
+    )
+
+async def company_pay_credit(company_id: str, credit_index: int, amount: int):
+    """Погашение кредита компанией"""
+    return await ws_client.send_message(
+        "company-pay-credit",
+        company_id=company_id,
+        credit_index=credit_index,
+        amount=amount,
+        password=UPDATE_PASSWORD,
+        wait_for_response=True
+    )
+
+async def company_pay_taxes(company_id: str, amount: int):
+    """Погашение налогов компанией"""
+    return await ws_client.send_message(
+        "company-pay-taxes",
+        company_id=company_id,
+        amount=amount,
+        password=UPDATE_PASSWORD,
+        wait_for_response=True
+    )
+
 # Функции для работы с сессиями
 async def get_sessions(stage: Optional[str] = None):
     """Получение списка сессий"""
