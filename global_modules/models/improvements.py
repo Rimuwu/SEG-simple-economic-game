@@ -9,7 +9,6 @@ class ImprovementLevel:
     max: int | None = field(default=None)  # Для контрактов
     productsPerTurn: int | None = field(default=None)  # Для станций
     tasksPerTurn: int | None = field(default=None)  # Для фабрик
-    factories: int | None = field(default=None)  # Для фабрик
 
 
 @dataclass
