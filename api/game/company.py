@@ -593,8 +593,8 @@ class Company(BaseClass):
         """
 
         if self.business_type == "big":
-            return Capital.bank.tax.big_on
-        return Capital.bank.tax.small_business
+            return CAPITAL.bank.tax.big_on
+        return CAPITAL.bank.tax.small_business
 
     def taxate(self):
         """ Начисляет налоги в зависимости от типа бизнеса. Вызывается каждый ход.
