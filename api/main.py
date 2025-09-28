@@ -111,7 +111,8 @@ async def initial_setup():
     company.set_position(0, 0)
     
     session.update_stage(SessionStages.Game)
-    
+    company.reupdate()
+
     company.add_resource('wood', 10)
     # company.add_resource('oil', 90)
 
@@ -132,6 +133,35 @@ async def initial_setup():
     print(
         company.get_max_warehouse_size()
     )
+    
+    print('===' * 50)
+
+    company.add_balance(10000)
+
+    session.update_stage(SessionStages.Game)
+    company.reupdate()
+
+    company.take_credit(5000, 5)
+
+    company.add_balance(10000)
+
+    session.update_stage(SessionStages.Game)
+    company.reupdate()
+    
+    company.add_balance(10000)
+
+    company.pay_taxes(600)
+
+    session.update_stage(SessionStages.Game)
+    company.reupdate()
+    
+    company.pay_taxes(1200)
+    company.pay_credit(0, 5040)
+
+    session.update_stage(SessionStages.Game)
+    company.reupdate()
+    
+    company.pay_credit(0, 5040)
 
     # company.remove_reputation(20)
 
