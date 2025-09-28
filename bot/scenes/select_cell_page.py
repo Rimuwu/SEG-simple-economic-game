@@ -9,16 +9,15 @@ class SelectCell(Page):
     
     __page_name__ = 'select-cell-page'
     
-    # Устанавливаем 7 кнопок в ряду
     row_width = 7
    
     async def buttons_worker(self):
-        buttons = []
+        buttons_o = []
         
         for i in range(7):
             for y in range(7):
                 cell_position = xy_into_cell(i, y)
-                buttons.append(
+                buttons_o.append(
                     {
                         'text': cell_position,
                         'callback_data': cell_position
@@ -26,13 +25,40 @@ class SelectCell(Page):
                 )
         
         self.row_width = 7
-    
+        buttons = []
         scene_data = self.scene.get_data('scene')
         session_id = scene_data.get('session')
         free_cells = await get_sessions_free_cells(session_id=session_id)
+        for b in buttons_o:
+            x, y = cell_into_xy(b['text'])
+            for c in free_cells:
+                if b["text"] == "D4":
+                    buttons.append({
+                        'text': '🏦',
+                        'callback_data': "bank"
+                    })
+                if b["text"] in ("B2", "F2", "B6", "F6"):
+                    buttons.append({
+                        'text': '🏢',
+                        'callback_data': "city"
+                    })
+                if c[0] == x and c[1] == y:
+                    buttons.append(b)
+                else:
+                    buttons.append({
+                        'text': '❌',
+                        'callback_data': "no"
+                    })
         
-        print(f"Free cells: {free_cells}")
         return buttons
+    
+    @Page.on_callback('my_callback')
+    async def my_callback_handler(self, callback: CallbackQuery, args: list):
+        cell = callback.data
+        company_id = self.scene.get_data('company_id')
+        x, y = cell_into_xy(cell)
+        await set_company_position(company_id=company_id, x=x, y=y)
+    
         
         
        
