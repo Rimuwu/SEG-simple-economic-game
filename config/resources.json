@@ -4,28 +4,32 @@
         "emoji": "🛢️",
         "basePrice": 75,
         "massModifier": 1,
-        "raw": true // Это сырьё, не нужно городам
+        "raw": true, // Это сырьё, не нужно городам
+        "lvl": 0
     },
     "metal": {
         "label": "Металл",
         "emoji": "⚙️",
         "basePrice": 15,
         "massModifier": 5,
-        "raw": true
+        "raw": true,
+        "lvl": 0
     },
     "wood": {
         "label": "Дерево",
         "emoji": "🌲",
         "basePrice": 15,
         "massModifier": 5,
-        "raw": true
+        "raw": true,
+        "lvl": 0
     },
     "cotton": {
         "label": "Хлопок",
         "emoji": "🌱",
         "basePrice": 75,
         "massModifier": 1,
-        "raw": true
+        "raw": true,
+        "lvl": 0
     },
     "oil_products": {
         "label": "Нефтепродукты",
@@ -38,7 +42,8 @@
             },
             "turns": 1,
             "output": 1
-        }
+        },
+        "lvl": 1
     },
     "nails": {
         "label": "Гвозди",
@@ -51,7 +56,8 @@
             },
             "turns": 1,
             "output": 10
-        }
+        },
+        "lvl": 1
     },
     "boards": {
         "label": "Доски",
@@ -64,7 +70,8 @@
             },
             "turns": 1,
             "output": 1
-        }
+        },
+        "lvl": 1
     },
     "fabric": {
         "label": "Ткань",
@@ -77,7 +84,8 @@
             },
             "turns": 1,
             "output": 2
-        }
+        },
+        "lvl": 1
     },
     "medical_equipment": {
         "label": "Медицинское оборудование",
@@ -91,7 +99,8 @@
             },
             "turns": 2,
             "output": 1
-        }
+        },
+        "lvl": 2
     },
     "machine": {
         "label": "Станок",
@@ -105,7 +114,8 @@
             },
             "turns": 2,
             "output": 1
-        }
+        },
+        "lvl": 2
     },
     "furniture": {
         "label": "Мебель",
@@ -119,7 +129,8 @@
             },
             "turns": 2,
             "output": 1
-        }
+        },
+        "lvl": 2
     },
     "tent": {
         "label": "Палатка",
@@ -133,7 +144,8 @@
             },
             "turns": 2,
             "output": 1
-        }
+        },
+        "lvl": 2
     },
     "barrel": {
         "label": "Бочка",
@@ -147,7 +159,8 @@
             },
             "turns": 1,
             "output": 1
-        }
+        },
+        "lvl": 2
     },
     "tarpaulin": {
         "label": "Брезент",
@@ -161,7 +174,8 @@
             },
             "turns": 1,
             "output": 1
-        }
+        },
+        "lvl": 2
     },
     "insulation": {
         "label": "Изоляционный материал",
@@ -175,7 +189,8 @@
             },
             "turns": 1,
             "output": 1
-        }
+        },
+        "lvl": 2
     },
     "sail": {
         "label": "Парус",
@@ -189,7 +204,8 @@
             },
             "turns": 1,
             "output": 1
-        }
+        },
+        "lvl": 2
     },
     "generator": {
         "label": "Генератор",
@@ -204,7 +220,8 @@
             },
             "turns": 1,
             "output": 1
-        }
+        },
+        "lvl": 3
     },
     "body_armor": {
         "label": "Бронежилет",
@@ -219,7 +236,8 @@
             },
             "turns": 1,
             "output": 1
-        }
+        },
+        "lvl": 3
     },
     "refrigerator": {
         "label": "Холодильник",
@@ -234,7 +252,8 @@
             },
             "turns": 1,
             "output": 1
-        }
+        },
+        "lvl": 3
     },
     "yacht": {
         "label": "Парусная яхта",
@@ -249,6 +268,7 @@
             },
             "turns": 1,
             "output": 1
-        }
+        },
+        "lvl": 3
     }
 }

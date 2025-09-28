@@ -19,6 +19,7 @@ class Resource:
     massModifier: float  # Модификатор массы
     raw: bool = field(default=False)  # Является ли сырьём
     production: Production | None = field(default=None)  # Производственная цепочка
+    lvl: int = field(default=1)  # Уровень ресурса
 
     @classmethod
     def load_from_json(cls, data: dict):
@@ -32,7 +33,8 @@ class Resource:
             basePrice=data["basePrice"],
             massModifier=data["massModifier"],
             raw=data.get("raw", False),
-            production=production
+            production=production,
+            lvl=data.get("lvl", 1)
         )
 
 
