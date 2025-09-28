@@ -13,7 +13,6 @@ from global_modules.logs import main_logger
 from modules.websocket_manager import websocket_manager
 from modules.sheduler import scheduler
 
-
 settings: Settings = ALL_CONFIGS['settings']
 cells: Cells = ALL_CONFIGS['cells']
 cells_types = cells.types

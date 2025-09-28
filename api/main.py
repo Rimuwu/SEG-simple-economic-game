@@ -1,7 +1,6 @@
 from asyncio import sleep
 import asyncio
-from datetime import datetime, timedelta
-import pprint
+import random
 from fastapi import FastAPI, Request
 from contextlib import asynccontextmanager
 
@@ -39,7 +38,7 @@ async def lifespan(app: FastAPI):
     await sleep(5)
 
     asyncio.create_task(scheduler.start())
-    asyncio.create_task(initial_setup())
+    # asyncio.create_task(initial_setup())
 
     yield
 
@@ -92,7 +91,6 @@ async def initial_setup():
     company = user.create_company("TestCompany")
     user2.add_to_company(company.secret_code)
 
-    cells = session.generate_cells()
     rows = session.map_size['rows']
     cols = session.map_size['cols']
 
@@ -109,59 +107,84 @@ async def initial_setup():
     free_cells = session.get_free_cells()
 
     company.set_position(0, 0)
-    
+
     session.update_stage(SessionStages.Game)
     company.reupdate()
 
-    company.add_resource('wood', 10)
-    # company.add_resource('oil', 90)
-
-
-    try:
-        company.add_resource('wood', 5)
-    except Exception as e:
-        print(e)
-
-    company.remove_resource('wood', 5)
+    fs = company.get_factories()
+    # fs[0].set_produce(True)
+    # fs[0].set_auto(True)
     
-    print(
-        company.get_max_warehouse_size()
-    )
-
-    company.improve('warehouse')
-    
-    print(
-        company.get_max_warehouse_size()
-    )
-    
+    # for factory in fs:
+    #     if factory.complectation == None:
+    #         factory.pere_complete(
+    #             random.choice(['generator', 'body_armor', 'tent'])
+    #         )
     print('===' * 50)
-
-    company.add_balance(10000)
-
-    session.update_stage(SessionStages.Game)
-    company.reupdate()
-
-    company.take_credit(5000, 5)
-
-    company.add_balance(10000)
+    print(len(fs))
+    
+    company.complete_free_factories(
+        find_resource=None,
+        new_resource='generator',
+        count=10
+    )
 
     session.update_stage(SessionStages.Game)
     company.reupdate()
     
-    company.add_balance(10000)
-
-    company.pay_taxes(600)
-
     session.update_stage(SessionStages.Game)
     company.reupdate()
-    
-    company.pay_taxes(1200)
-    company.pay_credit(0, 5040)
 
-    session.update_stage(SessionStages.Game)
-    company.reupdate()
+
+    # company.add_resource('wood', 10)
+    # # company.add_resource('oil', 90)
+
+
+    # try:
+    #     company.add_resource('wood', 5)
+    # except Exception as e:
+    #     print(e)
+
+    # company.remove_resource('wood', 5)
     
-    company.pay_credit(0, 5040)
+    # print(
+    #     company.get_max_warehouse_size()
+    # )
+
+    # company.improve('warehouse')
+    
+    # print(
+    #     company.get_max_warehouse_size()
+    # )
+    
+    # print('===' * 50)
+
+    # company.add_balance(10000)
+
+    # session.update_stage(SessionStages.Game)
+    # company.reupdate()
+
+    # company.take_credit(5000, 5)
+
+    # company.add_balance(10000)
+
+    # session.update_stage(SessionStages.Game)
+    # company.reupdate()
+    
+    # company.add_balance(10000)
+
+    # company.pay_taxes(600)
+
+    # session.update_stage(SessionStages.Game)
+    # company.reupdate()
+    
+    # company.pay_taxes(1200)
+    # company.pay_credit(0, 5040)
+
+    # session.update_stage(SessionStages.Game)
+    # company.reupdate()
+    
+    # company.pay_credit(0, 5040)
 
     # company.remove_reputation(20)
 

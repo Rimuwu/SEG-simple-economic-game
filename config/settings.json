@@ -13,5 +13,11 @@
         "station": 1,
         "factory": 1
     },
-    "max_credits_per_company": 2 // Максимальное количество кредитов на компанию
+    "max_credits_per_company": 2, // Максимальное количество кредитов на компанию
+    "start_complectation": {
+        "mountain": "nails",
+        "water": "oil_products",
+        "forest": "boards",
+        "field": "fabric"
+    }
 }

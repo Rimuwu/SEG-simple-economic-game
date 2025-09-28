@@ -178,7 +178,7 @@ async def handle_set_company_position(client_id: str, message: dict):
     doc="Обработчик выхода пользователя из компании. Требуется пароль для взаимодействия.",
     datatypes=[
         "user_id: int",
-        "company_id: str",
+        "company_id: int",
 
         "password: str"
     ],
@@ -208,7 +208,7 @@ async def handle_update_company_left_user(client_id: str, message: dict):
     "delete-company", 
     doc="Обработчик удаления компании. Требуется пароль для взаимодействия.",
     datatypes=[
-        "company_id: str",
+        "company_id: int",
 
         "password: str"
     ],
@@ -290,7 +290,7 @@ async def handle_get_company_improvement_info(client_id: str, message: dict):
     "update-company-improve", 
     doc="Обработчик улучшения компании. Требуется пароль для взаимодействия.",
     datatypes=[
-        "company_id: str",
+        "company_id: int",
         "improvement_type: str",
 
         "password: str"
@@ -322,7 +322,7 @@ async def handle_update_company_improve(client_id: str, message: dict):
     "company-take-credit", 
     doc="Обработчик получения кредита компанией. Требуется пароль для взаимодействия.",
     datatypes=[
-        "company_id: str",
+        "company_id: int",
         "amount: int",
         "period: int",
 
@@ -356,7 +356,7 @@ async def handle_company_take_credit(client_id: str, message: dict):
     "company-pay-credit", 
     doc="Обработчик погашения кредита компанией. Требуется пароль для взаимодействия.",
     datatypes=[
-        "company_id: str",
+        "company_id: int",
         "credit_index: int",
         "amount: int",
 
@@ -390,7 +390,7 @@ async def handle_company_pay_credit(client_id: str, message: dict):
     "company-pay-taxes", 
     doc="Обработчик погашения налогов компанией. Требуется пароль для взаимодействия.",
     datatypes=[
-        "company_id: str",
+        "company_id: int",
         "amount: int",
 
         "password: str"
@@ -417,3 +417,52 @@ async def handle_company_pay_taxes(client_id: str, message: dict):
 
     except ValueError as e:
         return {"error": str(e)}
+
+@message_handler(
+    "company-complete-free-factories", 
+    doc="Обработчик массовой перекомплектации свободных фабрик компании. Требуется пароль для взаимодействия.",
+    datatypes=[
+        "company_id: int",
+        "find_resource: Optional[str]",
+        "new_resource: str",
+        "count: int",
+        "produce_status: Optional[bool]",
+
+        "password: str"
+    ],
+    messages=["api-factory-start-complectation (broadcast для каждой фабрики)"]
+)
+async def handle_company_complete_free_factories(client_id: str, message: dict):
+    """Обработчик массовой перекомплектации свободных фабрик компании"""
+
+    password = message.get("password")
+    company_id = message.get("company_id")
+    find_resource = message.get("find_resource")  
+    new_resource = message.get("new_resource")
+    count = message.get("count")
+    produce_status = message.get("produce_status", False)
+
+    # Проверяем обязательные параметры
+    for param_name, param_value in [("company_id", company_id), ("new_resource", new_resource), ("count", count), ("password", password)]:
+        if param_value is None:
+            return {"error": f"Missing required field: {param_name}"}
+
+    try:
+        check_password(password)
+
+        company = Company(_id=company_id).reupdate()
+        if not company: raise ValueError("Company not found.")
+
+        # Вызываем метод массовой перекомплектации
+        company.complete_free_factories(
+            find_resource=find_resource,
+            new_resource=new_resource,
+            count=count,
+            produce_status=produce_status
+        )
+
+        return {"success": True}
+
+    except ValueError as e:
+        return {"error": str(e)}
+
