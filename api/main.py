@@ -92,7 +92,6 @@ async def initial_setup():
     company = user.create_company("TestCompany")
     user2.add_to_company(company.secret_code)
 
-    cells = session.generate_cells()
     rows = session.map_size['rows']
     cols = session.map_size['cols']
 
@@ -109,59 +108,59 @@ async def initial_setup():
     free_cells = session.get_free_cells()
 
     company.set_position(0, 0)
-    
-    session.update_stage(SessionStages.Game)
-    company.reupdate()
-
-    company.add_resource('wood', 10)
-    # company.add_resource('oil', 90)
-
-
-    try:
-        company.add_resource('wood', 5)
-    except Exception as e:
-        print(e)
-
-    company.remove_resource('wood', 5)
-    
-    print(
-        company.get_max_warehouse_size()
-    )
-
-    company.improve('warehouse')
-    
-    print(
-        company.get_max_warehouse_size()
-    )
-    
-    print('===' * 50)
-
-    company.add_balance(10000)
 
     session.update_stage(SessionStages.Game)
     company.reupdate()
 
-    company.take_credit(5000, 5)
+    # company.add_resource('wood', 10)
+    # # company.add_resource('oil', 90)
 
-    company.add_balance(10000)
 
-    session.update_stage(SessionStages.Game)
-    company.reupdate()
+    # try:
+    #     company.add_resource('wood', 5)
+    # except Exception as e:
+    #     print(e)
+
+    # company.remove_resource('wood', 5)
     
-    company.add_balance(10000)
+    # print(
+    #     company.get_max_warehouse_size()
+    # )
 
-    company.pay_taxes(600)
-
-    session.update_stage(SessionStages.Game)
-    company.reupdate()
+    # company.improve('warehouse')
     
-    company.pay_taxes(1200)
-    company.pay_credit(0, 5040)
-
-    session.update_stage(SessionStages.Game)
-    company.reupdate()
+    # print(
+    #     company.get_max_warehouse_size()
+    # )
     
-    company.pay_credit(0, 5040)
+    # print('===' * 50)
+
+    # company.add_balance(10000)
+
+    # session.update_stage(SessionStages.Game)
+    # company.reupdate()
+
+    # company.take_credit(5000, 5)
+
+    # company.add_balance(10000)
+
+    # session.update_stage(SessionStages.Game)
+    # company.reupdate()
+    
+    # company.add_balance(10000)
+
+    # company.pay_taxes(600)
+
+    # session.update_stage(SessionStages.Game)
+    # company.reupdate()
+    
+    # company.pay_taxes(1200)
+    # company.pay_credit(0, 5040)
+
+    # session.update_stage(SessionStages.Game)
+    # company.reupdate()
+    
+    # company.pay_credit(0, 5040)
 
     # company.remove_reputation(20)
 
