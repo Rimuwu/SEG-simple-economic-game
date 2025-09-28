@@ -7,6 +7,7 @@ from global_modules.logs import Logger
 
 from modules.db import db
 from modules.ws_client import ws_client
+from modules.utils import go_to_page
 from bot_instance import bot, dp
 
 import handlers
@@ -61,6 +62,17 @@ async def on_pong(message: dict):
 async def on_connect():
     print("🔗 Подключено к WebSocket серверу")
 
+async def on_update_session_stage(message: dict):
+    """Обработчик обновления стадии сессии"""
+    print(message)
+    data = message.get('data', {})
+    session_id = data.get('session_id')
+    new_stage = data.get('new_stage')
+    print("=====================", session_id, new_stage)
+    if new_stage == "CellSelect":
+        await go_to_page(session_id, "wait-start-page", "select-cell-page")
+
+
 @ws_client.on_event("disconnect")
 async def on_disconnect():
     print("❌ Отключено от WebSocket сервера")
@@ -76,6 +88,7 @@ async def on_disconnect():
         await asyncio.sleep(1)
 
     print("❌ Не удалось подключиться после 15 попыток, выход.")
+
 
 async def main():
     """Главная функция для запуска бота"""
