@@ -25,7 +25,8 @@ async def get_companies(session_id: Optional[int] = None, in_prison: Optional[bo
         session_id=session_id,
         in_prison=in_prison,
         cell_position=cell_position,
-        wait_for_response=True
+        wait_for_response=True,
+        timeout=50
     )
 
 async def get_company(id: Optional[int] = None, name: Optional[str] = None, reputation: Optional[int] = None, 

@@ -25,6 +25,8 @@ class Page:
 
         self.__callback_handlers__ = {}
         self.__text_handlers__ = {}
+        
+        self.row_width: int = 3 # Ширина ряда кнопок по умолчанию
 
         # Собираем обработчики из методов класса
         for attr_name in dir(self.__class__):
@@ -275,9 +277,6 @@ class Page:
 
 
     # МОЖНО И НУЖНО МЕНЯТЬ !
-
-    # Количество кнопок в ряду (можно переопределить в наследниках)
-    row_width: int = 3
 
     async def content_worker(self) -> str:
         return self.content

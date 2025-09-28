@@ -1,6 +1,6 @@
 from aiogram.types import ReplyKeyboardMarkup, KeyboardButton, InlineKeyboardButton, InlineKeyboardMarkup
 from aiogram.utils.keyboard import ReplyKeyboardBuilder
-from modules.ws_client import get_users, get_company
+from modules.ws_client import get_users, get_company, get_companies
 from oms import scene_manager
 
 def list_to_inline(buttons, row_width=3):
@@ -43,6 +43,22 @@ async def update_page(session_id, user_company_id, user_id, page_name):
                     current_page_name = scene.page
                     if current_page_name == page_name:
                         await scene.update_message()
+
+
+async def go_to_page(session_id, old_page_name, new_page_name):
+    companies = await get_companies(session_id=session_id)
+    for c in companies:
+        company_id = c.get('id')
+        users = await get_users(session_id=session_id, company_id=company_id)
+        for user in users:
+            user_id = user.get('id')
+            if user_id and scene_manager.has_scene(user_id):
+                scene = scene_manager.get_scene(user_id)
+                if scene and scene.page:
+                    current_page_name = scene.page
+                    if current_page_name == old_page_name:
+                        await scene.update_page(new_page_name)
+            
 
 
 def xy_into_cell(x, y):

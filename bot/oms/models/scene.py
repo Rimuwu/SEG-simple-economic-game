@@ -117,9 +117,7 @@ class Scene:
                       )
             })
 
-        # Используем row_width из текущей страницы
-        row_width = getattr(page, 'row_width', 3)
-        inl_markup = list_to_inline(buttons, row_width=row_width)
+        inl_markup = list_to_inline(buttons, row_width=page.row_width)
         return text, inl_markup
 
     async def send_message(self):
