@@ -9,7 +9,7 @@ from modules.json_database import just_db
 from game.session import session_manager
 from global_modules.load_config import ALL_CONFIGS, Resources, Improvements, Settings, Capital, Reputation
 from global_modules.bank import calc_credit, get_credit_conditions, check_max_credit_steps
-from game.factorie import Factory
+from game.factory import Factory
 
 RESOURCES: Resources = ALL_CONFIGS["resources"]
 CELLS: Cells = ALL_CONFIGS['cells']
@@ -129,16 +129,15 @@ class Company(BaseClass):
             }
         }))
 
-        cell_info: CellType = self.get_my_cell_info(
-            ) # type: ignore
         col = self.get_improvements()['factory']['tasksPerTurn']
         col_complect = col // 3
+        cell_type: str = self.get_cell_type() # type: ignore
 
-        for _ in range(col_complect):
+        for _ in range(col):
             res = None
 
             if col_complect > 0:
-                res = cell_info.resource_id
+                res = SETTINGS.start_complectation.get(cell_type, None)
 
             Factory().create(self.id, res)
             col_complect -= 1
@@ -158,6 +157,7 @@ class Company(BaseClass):
         just_db.delete(self.__tablename__, **{self.__unique_id__: self.id})
 
         for user in self.users: user.leave_from_company()
+        for factory in self.get_factories(): factory.delete()
 
         asyncio.create_task(websocket_manager.broadcast({
             "type": "api-company_deleted",
@@ -721,14 +721,21 @@ class Company(BaseClass):
 
     def complete_free_factories(self, 
                         find_resource: Optional[str],
-                        new_resource: str, 
-                        count: int
+                        new_resource: str,
+                        count: int,
+                        produce_status: bool = False
                         ):
         """ Переукомплектовать фабрики с типом ресурса (без него) на новый ресурс.
             Запускает этап комплектации.
         """
 
-        free_factories: list[Factory] = [f for f in self.get_factories() if f.complectation == find_resource]
+        free_factories: list[Factory] = []
+        for f in self.get_factories():
+            if f.complectation == find_resource and f.produce == produce_status:
+                free_factories.append(f)
+
+        print(f'find_resource: {find_resource}, new_resource: {new_resource}, count: {count}, produce_status: {produce_status}')
+        print(f"Found {len(free_factories)} free factories for re-complectation.")
 
         limit = 0
         for factory in free_factories:
@@ -841,3 +848,7 @@ class Company(BaseClass):
                 try:
                     self.add_resource(resource_id, raw_col)
                 except Exception: pass
+
+        factories = self.get_factories()
+        for factory in factories:
+            factory.on_new_game_stage()
