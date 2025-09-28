@@ -1,28 +1,20 @@
 import asyncio
-import os
-from aiogram import Bot, Dispatcher, types
+import logging
+from aiogram import types
 from aiogram.filters import Command
-from aiogram.fsm.storage.memory import MemoryStorage
 
-# from dotenv import load_dotenv # При запуске не из Docker
-# load_dotenv() # Загружаем переменные окружения из .env файла
-
-# # Добавляем корневую папку проекта в sys.path для корректного импорта модулей
-# sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))) # При запуске не из Docker
 from global_modules.logs import Logger
 
 from modules.db import db
-from modules.message import Message
 from modules.ws_client import ws_client
-from app.handlers import router
+from bot_instance import bot, dp
+
+import handlers
+from oms import register_handlers
 
 # Настройка логирования
 bot_logger = Logger.get_logger("bot")
-
-# Инициализация бота и диспетчера с хранилищем для FSM
-storage = MemoryStorage()
-bot = Bot(token=os.getenv("BOT_TOKEN"))
-dp = Dispatcher(storage=storage)
+logging.basicConfig(level=logging.INFO)
 
 @dp.message(Command("sessions"))
 async def sessions_command(message: types.Message):
@@ -56,22 +48,6 @@ async def ping_command(message: types.Message):
     except Exception as e:
         await message.answer(f"Ошибка при выполнении ping: {str(e)}")
 
-@dp.message(Command("save_my_message"))
-async def save_my_message_command(message: types.Message):
-    """Обработчик команды /save_my_message"""
-
-    msg = Message(_id=message.message_id)
-    msg.user_id = message.from_user.id
-    msg.save_to_base()
-
-    # or
-
-    msg = Message().create(
-        _id=message.message_id, user_id=message.from_user.id
-        )
-
-    # Тут не будет создано 2 записи, т.к. id сообщения будет уникальным в базе 
-
 @ws_client.on_message('pong')
 async def on_pong(message: dict):
     """Обработчик ответа pong от сервера"""
@@ -104,11 +80,12 @@ async def on_disconnect():
 async def main():
     """Главная функция для запуска бота"""
     bot_logger.info("Запуск бота...")
-    dp.include_router(router)
 
     try:
+        db.create_table('messages')
+        db.create_table('scenes')
 
-        db.create_table('messages') # После запуска посмотреть файл data/bot_database.json
+        register_handlers(dp)
 
         await ws_client.connect() # Подключаемся к WebSocket серверу
         await dp.start_polling(bot)

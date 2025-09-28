@@ -19,7 +19,6 @@ cells: Cells = ALL_CONFIGS['cells']
 cells_types = cells.types
 
 class SessionStages(Enum):
-    WaitWebConnect = "WaitWebConnect" # Ждём пока появится сайт для работы
     FreeUserConnect = "FreeUserConnect" # Подключаем пользователей
     CellSelect = "CellSelect" # Выбираем клетки
     Game = "Game" # Ход
@@ -39,14 +38,14 @@ class Session(BaseClass):
         self.map_size: dict = {"rows": 7, "cols": 7}
         self.map_pattern: str = "random"
         self.cell_counts: dict = {}
-        self.stage: str = SessionStages.WaitWebConnect.value
+        self.stage: str = SessionStages.FreeUserConnect.value
         self.step: int = 0
         self.max_steps: int = 15
 
     def start(self):
         if not self.session_id:
             self.session_id = generate_code(32, use_letters=True, use_numbers=True, use_uppercase=True)
-        self.stage = SessionStages.WaitWebConnect.value
+        self.stage = SessionStages.FreeUserConnect.value
 
         self.save_to_base()
         self.reupdate()
@@ -57,7 +56,13 @@ class Session(BaseClass):
         if not isinstance(new_stage, SessionStages):
             raise ValueError("new_stage must be an instance of SessionStages Enum")
 
-        if new_stage.value == SessionStages.CellSelect.value:
+        if self.stage == SessionStages.End.value:
+            raise ValueError("Cannot change stage from End stage.")
+
+        elif self.step >= self.max_steps:
+            new_stage = SessionStages.End
+
+        elif new_stage == SessionStages.CellSelect:
             scheduler.schedule_task(
                 stage_game_updater, 
                 datetime.now() + timedelta(
@@ -65,6 +70,13 @@ class Session(BaseClass):
                     ),
                 kwargs={"session_id": self.session_id}
             )
+
+        elif new_stage == SessionStages.Game:
+            self.step += 1
+            self.execute_step_schedule()
+
+            for company in self.companies:
+                company.on_new_game_stage(self.step)
 
         old_stage = self.stage
         self.stage = new_stage.value
@@ -79,7 +91,33 @@ class Session(BaseClass):
                 "old_stage": old_stage
             }
         }))
+
         return self
+
+    def execute_step_schedule(self):
+        from game.step_shedule import StepSchedule
+
+        schedules: list[StepSchedule] = just_db.find(
+            "step_schedule", session_id=self.session_id, in_step=self.step,
+            to_class=StepSchedule
+        ) # type: ignore
+
+        for schedule in schedules:
+            asyncio.create_task(schedule.execute())
+        return True
+
+    def create_step_schedule(self, in_step: int, 
+                             function, **kwargs):
+        from game.step_shedule import StepSchedule
+
+        if in_step < 0:
+            raise ValueError("in_step must be a non-negative integer.")
+
+        schedule = StepSchedule().create(
+            session_id=self.session_id, in_step=in_step)
+        schedule.add_function(function, **kwargs)
+
+        return schedule
 
     def can_user_connect(self):
         return self.stage == SessionStages.FreeUserConnect.value
