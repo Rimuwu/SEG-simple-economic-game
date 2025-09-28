@@ -448,7 +448,7 @@ class Company(BaseClass):
         for index, credit in enumerate(self.credits):
 
             if credit["steps_now"] <= credit["steps_total"]:
-                credit["need_pay"] += credit["total_to_pay"] - credit['paid'] // (credit["steps_total"] - credit["steps_now"])
+                credit["need_pay"] += (credit["total_to_pay"] - credit['need_pay'] - credit ['paid']) // (credit["steps_total"] - credit["steps_now"])
 
             elif credit["steps_now"] > credit["steps_total"]:
                 credit["need_pay"] += credit["total_to_pay"] - credit['paid']
@@ -500,27 +500,29 @@ class Company(BaseClass):
             raise ValueError("Not enough balance to pay credit.")
 
         credit = self.credits[credit_index]
-        if credit["need_pay"] < amount:
-            raise ValueError("Payment amount exceeds required payment.")
+
+        # Досрочное закрытие кредита - можно заплатить больше чем need_pay
+        remaining_debt = credit["total_to_pay"] - credit["paid"]
+        if amount > remaining_debt:
+            amount = remaining_debt
 
         # Снимаем деньги с баланса
         self.remove_balance(amount)
 
         # Обновляем информацию по кредиту
-        credit["need_pay"] -= amount
         credit["paid"] += amount
+        credit["need_pay"] = max(0, credit["need_pay"] - amount)
 
         # Если кредит полностью выплачен, удаляем его
         if credit["paid"] >= credit["total_to_pay"]:
             self.remove_credit(credit_index)
-            self.add_reputation(
-                REPUTATION.credit.gained
-            )
+            self.add_reputation(REPUTATION.credit.gained)
         else:
+            self.credits[credit_index] = credit
             self.save_to_base()
             self.reupdate()
 
-        remaining = credit["total_to_pay"] - credit["paid"]
+        remaining = credit["total_to_pay"] - credit["paid"] if credit["paid"] < credit["total_to_pay"] else 0
 
         asyncio.create_task(websocket_manager.broadcast({
             "type": "api-company_credit_paid",
@@ -602,7 +604,7 @@ class Company(BaseClass):
 
         if self.tax_debt > 0:
             self.overdue_steps += 1
-            self.remove_reputation(REPUTATION.tax.late * self.overdue_steps)
+            self.remove_reputation(REPUTATION.tax.late)
 
         if self.overdue_steps > REPUTATION.tax.not_paid_stages:
             self.overdue_steps = 0
@@ -613,7 +615,7 @@ class Company(BaseClass):
             return
 
         percent = self.business_tax()
-        tax_amount = int(self.last_turn_income * percent / 100)
+        tax_amount = int(self.last_turn_income * percent)
 
         self.tax_debt += tax_amount
         self.save_to_base()
@@ -632,10 +634,10 @@ class Company(BaseClass):
             raise ValueError("Amount must be a positive integer.")
         if self.tax_debt <= 0:
             raise ValueError("No tax debt to pay.")
-        if amount > self.tax_debt:
-            raise ValueError("Payment amount exceeds tax debt.")
         if self.balance < amount:
             raise ValueError("Not enough balance to pay taxes.")
+
+        if amount > self.tax_debt: amount = self.tax_debt
 
         # Снимаем деньги с баланса
         self.remove_balance(amount)
