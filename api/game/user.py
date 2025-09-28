@@ -87,7 +87,7 @@ class User(BaseClass):
         asyncio.create_task(websocket_manager.broadcast({
             "type": "api-user_added_to_company",
             "data": {
-                "company_id": self.id,
+                "company_id": company.id,
                 "user_id": self.id
             }
         }))

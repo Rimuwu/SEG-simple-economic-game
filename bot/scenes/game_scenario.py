@@ -3,6 +3,7 @@ from scenes.name_page import UserName
 from scenes.company_create_page import CompanyCreate
 from scenes.company_join_page import CompanyJoin
 from scenes.main_page import MainPage
+from scenes.wait_game_page import WaitStart
 from oms import Scene
 from modules.db import db
 
@@ -15,7 +16,8 @@ class GameManager(Scene):
         UserName,
         CompanyCreate,
         CompanyJoin,
-        MainPage
+        MainPage,
+        WaitStart
     ]
     
     @staticmethod

@@ -177,7 +177,7 @@ async def delete_session(session_id: str, really: bool = False):
     )
 
 # Функции для работы с пользователями
-async def get_users(company_id: Optional[int] = None, session_id: Optional[int] = None):
+async def get_users(company_id: Optional[int] = None, session_id: Optional[str] = None):
     """Получение списка пользователей"""
     return await ws_client.send_message(
         "get-users",

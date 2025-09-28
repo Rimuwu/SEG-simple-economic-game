@@ -1,10 +1,13 @@
 from oms import Page
 from aiogram.types import Message
 from modules.ws_client import update_company_add_user, get_company, get_users
+from modules.utils import update_page
+
 
 class CompanyJoin(Page):
 
     __page_name__ = 'company-join'
+    
     
     @Page.on_text('str')
     async def on_str(self, message: Message, value: str) -> None:
@@ -52,9 +55,24 @@ class CompanyJoin(Page):
                 # Сохраняем данные компании в сцене
                 self.scene.update_key(
                     'scene',
-                    'company',
-                    company_data # Но лучше так не делать, лучше хранить id
+                    'company_id',
+                    company_data.get('id')
                 )
+        else:
+            # Если не удалось найти компанию, показываем ошибку
+            self.clear_content()
+            self.content = self.content.replace("Введите секретный код: ", 
+                                                "❌ Не удалось найти вашу компанию. Попробуйте снова: ")
+            await self.scene.update_message()
+            return
 
+        await update_page(
+            session_id=session_id,
+            user_company_id=user_company_id,
+            user_id=message.from_user.id,
+            page_name='wait-start-page'
+        )
+        
+        
         # Переходим на главную страницу
-        await self.scene.update_page('main-page')
+        await self.scene.update_page('wait-start-page')

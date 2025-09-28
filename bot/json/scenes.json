@@ -40,6 +40,13 @@
                     "company-option": "Вернуться к выбору"
                 }
             },
+            "wait-start-page": {   // +
+                "title": "",
+                "content": "**Ожидание начала игры...**\n\n",
+                "to_pages": {
+                    "company-option": "Вернуться к выбору"
+                }
+            },
             "main-page":{ 
                 "title": "",
                 "content": "Меню управления компанией",
