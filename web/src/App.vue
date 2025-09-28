@@ -1,5 +1,5 @@
 <script setup>
-import { ref, reactive, provide} from 'vue'
+import { ref, reactive, provide } from 'vue'
 
 // Shared map state for singleton Map
 const mapState = reactive({
@@ -17,7 +17,9 @@ import Between from './components/Between.vue'
 import Endgame from './components/Endgame.vue'
 import AdminPanel from './components/AdminPanel.vue'
 
-const currentView = ref('Game')
+import { WebSocketManager } from './ws'
+
+const currentView = ref('Introduction')
 const showAdmin = ref(false)
 
 function handleShow(view) {
@@ -43,31 +45,28 @@ function handleBeforeLeave(el) {
 function handleEnter(el) {
   // The enter animation is handled by each component's onMounted
 }
+
+
+let wsManager = null
+
+wsManager = new WebSocketManager('ws://localhost:8000/ws/connect', globalThis.console)
+wsManager.connect()
+globalThis.wsManager = wsManager
+
+provide('wsManager', wsManager)
 </script>
 
 <template>
   <div @mousemove="handleMouseMove" style="position: relative; min-height: 100vh; overflow: hidden;">
-    <AdminPanel
-      v-if="showAdmin"
-      @show="handleShow"
-      @mouseleave="handleAdminLeave"
-      style="position: fixed; left: 0; top: 0; width: 320px; z-index: 1000;"/>
-    <Transition 
-      name="page" 
-      mode="out-in"
-      @before-leave="handleBeforeLeave"
-      @enter="handleEnter"
-    >
-      <component
-        :is="
-          currentView === 'Introduction' ? Introduction :
+    <AdminPanel v-if="showAdmin" @show="handleShow" @mouseleave="handleAdminLeave"
+      style="position: fixed; left: 0; top: 0; width: 320px; z-index: 1000;" />
+    <Transition name="page" mode="out-in" @before-leave="handleBeforeLeave" @enter="handleEnter">
+      <component :is="currentView === 'Introduction' ? Introduction :
           currentView === 'Preparation' ? Preparation :
-          currentView === 'Between' ? Between :
-          currentView === 'Endgame' ? Endgame :
-          Game
-        "
-        :key="currentView"
-      />
+            currentView === 'Between' ? Between :
+              currentView === 'Endgame' ? Endgame :
+                Game
+        " :key="currentView" />
     </Transition>
   </div>
 </template>
@@ -81,7 +80,8 @@ function handleEnter(el) {
   transition: opacity 0.3s ease;
 }
 
-.page-enter-from, .page-leave-to {
+.page-enter-from,
+.page-leave-to {
   opacity: 0;
 }
 </style>
