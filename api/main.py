@@ -1,7 +1,6 @@
 from asyncio import sleep
 import asyncio
-from datetime import datetime, timedelta
-import pprint
+import random
 from fastapi import FastAPI, Request
 from contextlib import asynccontextmanager
 
@@ -39,7 +38,7 @@ async def lifespan(app: FastAPI):
     await sleep(5)
 
     asyncio.create_task(scheduler.start())
-    asyncio.create_task(initial_setup())
+    # asyncio.create_task(initial_setup())
 
     yield
 
@@ -111,6 +110,31 @@ async def initial_setup():
 
     session.update_stage(SessionStages.Game)
     company.reupdate()
+
+    fs = company.get_factories()
+    # fs[0].set_produce(True)
+    # fs[0].set_auto(True)
+    
+    # for factory in fs:
+    #     if factory.complectation == None:
+    #         factory.pere_complete(
+    #             random.choice(['generator', 'body_armor', 'tent'])
+    #         )
+    print('===' * 50)
+    print(len(fs))
+    
+    company.complete_free_factories(
+        find_resource=None,
+        new_resource='generator',
+        count=10
+    )
+
+    session.update_stage(SessionStages.Game)
+    company.reupdate()
+    
+    session.update_stage(SessionStages.Game)
+    company.reupdate()
+
 
     # company.add_resource('wood', 10)
     # # company.add_resource('oil', 90)
