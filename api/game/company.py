@@ -1,14 +1,15 @@
 import asyncio
+from typing import Optional
 from game.stages import leave_from_prison
-from global_modules.models.cells import Cells
+from global_modules.models.cells import CellType, Cells
 from modules.generate import generate_number
 from modules.websocket_manager import websocket_manager
 from global_modules.db.baseclass import BaseClass
 from modules.json_database import just_db
 from game.session import session_manager
 from global_modules.load_config import ALL_CONFIGS, Resources, Improvements, Settings, Capital, Reputation
-from global_modules.models.improvements import ImprovementType, ImprovementLevel
 from global_modules.bank import calc_credit, get_credit_conditions, check_max_credit_steps
+from game.factorie import Factory
 
 RESOURCES: Resources = ALL_CONFIGS["resources"]
 CELLS: Cells = ALL_CONFIGS['cells']
@@ -127,6 +128,21 @@ class Company(BaseClass):
                 "new_position": self.cell_position
             }
         }))
+
+        cell_info: CellType = self.get_my_cell_info(
+            ) # type: ignore
+        col = self.get_improvements()['factory']['tasksPerTurn']
+        col_complect = col // 3
+
+        for _ in range(col_complect):
+            res = None
+
+            if col_complect > 0:
+                res = cell_info.resource_id
+
+            Factory().create(self.id, res)
+            col_complect -= 1
+
         return True
 
     def get_position(self):
@@ -207,9 +223,6 @@ class Company(BaseClass):
             }
         }))
         return True
-
-    def get_resources(self):
-        return {res_id: RESOURCES.get_resource(res_id) for res_id in self.warehouses.keys()}
 
     def get_resources_amount(self):
         count = 0
@@ -676,19 +689,77 @@ class Company(BaseClass):
         pass
 
 
-    def get_factories(self):
-
-        pass
-
-    def complect_factory(self, factory_id: str, resource: str):
-    
-        pass
-
-    def auto_manufacturing(self, factory_id: str):
-        """ Запускает автоматическое производство на фабрике с указанным ID.
+    def raw_in_step(self):
+        """ Вызывается при каждом шаге игры для компании.
+            Определеяет сколько сырья выдать компании в ход.
         """
 
-        pass
+        imps = self.get_improvements()
+        perturn = imps['station']['productsPerTurn']
+
+        return perturn
+
+
+    def get_factories(self) -> list['Factory']:
+        """ Возвращает список фабрик компании.
+        """
+        return [factory for factory in just_db.find(
+            "factories", to_class=Factory, company_id=self.id)] # type: ignore
+
+    def complect_factory(self, factory_id: int, resource: str):
+        """ Укомплектовать фабрику с указанным ID ресурсом.
+            Запускает этап комплектации.
+        """
+
+        factory = Factory(factory_id).reupdate()
+        if not factory:
+            raise ValueError("Factory not found.")
+        if factory.company_id != self.id:
+            raise ValueError("Factory does not belong to this company.")
+
+        factory.pere_complete(resource)
+
+    def complete_free_factories(self, 
+                        find_resource: Optional[str],
+                        new_resource: str, 
+                        count: int
+                        ):
+        """ Переукомплектовать фабрики с типом ресурса (без него) на новый ресурс.
+            Запускает этап комплектации.
+        """
+
+        free_factories: list[Factory] = [f for f in self.get_factories() if f.complectation == find_resource]
+
+        limit = 0
+        for factory in free_factories:
+            if limit >= count: break
+
+            limit += 1
+            factory.pere_complete(new_resource)
+
+    def auto_manufacturing(self, factory_id: int, status: bool):
+        """ Включает или выключает авто производство на фабрике с указанным ID.
+        """
+
+        factory = Factory(factory_id).reupdate()
+        if not factory:
+            raise ValueError("Factory not found.")
+        if factory.company_id != self.id:
+            raise ValueError("Factory does not belong to this company.")
+
+        factory.set_auto(status)
+
+    def factory_set_produce(self, factory_id: int, produce: bool):
+        """ Включает или выключает производство на фабрике с указанным ID.
+        """
+
+        factory = Factory(factory_id).reupdate()
+        if not factory:
+            raise ValueError("Factory not found.")
+        if factory.company_id != self.id:
+            raise ValueError("Factory does not belong to this company.")
+
+        factory.set_produce(produce)
 
     def sell_on_market(self, 
                        resource: str, amount: int, price_per_unit: int | str,
@@ -760,3 +831,13 @@ class Company(BaseClass):
 
         self.credit_paid_step()
         self.taxate()
+
+        cell_info = self.get_my_cell_info()
+        if cell_info:
+            resource_id = cell_info.resource_id 
+            raw_col = self.raw_in_step()
+
+            if resource_id and raw_col > 0:
+                try:
+                    self.add_resource(resource_id, raw_col)
+                except Exception: pass
