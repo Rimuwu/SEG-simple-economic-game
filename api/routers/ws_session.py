@@ -78,7 +78,7 @@ async def handle_create_session(client_id: str, message: dict):
     doc="Обработчик обновления стадии сессии. Требуется пароль для взаимодействия.",
     datatypes=[
         "session_id: Optional[str]",
-        "stage: Literal['WaitWebConnect', 'FreeUserConnect', 'CellSelect', 'Game', 'End']",
+        "stage: Literal['FreeUserConnect', 'CellSelect', 'Game', 'End']",
         "password: str",
     ],
     messages=["api-update_session_stage (broadcast)"]
@@ -91,7 +91,6 @@ async def handle_update_session_stage(client_id: str, message: dict):
     password = message.get("password", "")
 
     stages_to_types = {
-        "WaitWebConnect": SessionStages.WaitWebConnect,
         "FreeUserConnect": SessionStages.FreeUserConnect,
         "CellSelect": SessionStages.CellSelect,
         "Game": SessionStages.Game,

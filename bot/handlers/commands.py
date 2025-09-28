@@ -1,30 +1,21 @@
-from aiogram import F, Router
+from aiogram import F
 from aiogram.types import Message, CallbackQuery
 from aiogram.filters import Command
 from aiogram.fsm.context import FSMContext
 import os
-import sys
-sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+
 from modules.keyboards import *
 from modules.ws_client import *
 from filters.admins import *
-from .states import *
+from app.states import *
 
-
+from bot_instance import dp, bot
 
 
 # Список ID администраторов
 UPDATE_PASSWORD = os.getenv("UPDATE_PASSWORD", "default_password")
 
-router = Router()
-
-
-@router.message(Command("start"))
-async def start(message: Message):
-    await message.answer("Ку")
-
-
-@router.message(Command("connect"))
+@dp.message(Command("connect"))
 async def connect(message: Message, state: FSMContext):
     session = await get_sessions()
     for s in session:
@@ -39,7 +30,7 @@ async def connect(message: Message, state: FSMContext):
     await state.set_state(CreateUserStates.waiting_for_username)
 
 
-@router.message(CreateUserStates.waiting_for_username)
+@dp.message(CreateUserStates.waiting_for_username)
 async def process_username(message: Message, state: FSMContext):
     username = message.text.strip()
     data = await state.get_data()
@@ -54,7 +45,7 @@ async def process_username(message: Message, state: FSMContext):
     await state.set_state(CreateUserStates.waiting_for_session_id)
 
 
-@router.message(CreateUserStates.waiting_for_session_id)
+@dp.message(CreateUserStates.waiting_for_session_id)
 async def process_session_id(message: Message, state: FSMContext):
     session_id = message.text
     data = await state.get_data()
@@ -89,32 +80,21 @@ async def process_session_id(message: Message, state: FSMContext):
     await state.clear()
 
 
-@router.message(AdminFilter(), Command("create_game"))
-async def create_game_start(message: Message, state: FSMContext):
-    """
-    Начинаем процесс создания игры (только для админов)
-    """
-    
-    await state.update_data(
-        original_message_id=message.message_id + 1,
-        chat_id=message.chat.id
-    )
-    await message.answer("Введите ID сессии для новой игры или '-' для генерации ID:")
+@dp.message(AdminFilter(), Command("create_game"))
+async def create_game(message: Message, state: FSMContext):
+    msg = await message.answer("Введите ID сессии для новой игры или '-' для генерации ID:")
+    await state.update_data(msg_id=msg.message_id)
     await state.set_state(CreateGameStates.waiting_for_session_id)
 
-@router.message(CreateGameStates.waiting_for_session_id)
+
+@dp.message(CreateGameStates.waiting_for_session_id)
 async def process_session_id(message: Message, state: FSMContext):
-    """
-    Обрабатываем введенный ID сессии и создаем игру
-    """
-    session_id = message.text.strip()
-    data =  await state.get_data()
-    msg_id = data['original_message_id']
+    session_id = message.text
+    data = await state.get_data()
+    msg_id = data['msg_id']
     session_id_i = None if session_id == "-" else session_id
-    # Пытаемся создать сессию
     response = await create_session(
-        session_id=session_id_i,
-        password=UPDATE_PASSWORD
+        session_id=session_id_i
     )
     
     if response is None:
@@ -127,13 +107,10 @@ async def process_session_id(message: Message, state: FSMContext):
         await state.clear()
         return
     
-    # Успешно создана сессия, обновляем её стадию
     await update_session_stage(
         session_id=response["session"]['session_id'],
         stage='FreeUserConnect',
-        password=UPDATE_PASSWORD
     )
-
     await message.delete()
     await message.bot.edit_message_text(
         chat_id=message.chat.id,
@@ -145,7 +122,7 @@ async def process_session_id(message: Message, state: FSMContext):
 
 
 # Обработчики для управления компанией
-@router.callback_query(F.data == "create_company")
+@dp.callback_query(F.data == "create_company")
 async def create_company_start(callback: CallbackQuery, state: FSMContext):
     """
     Начинаем процесс создания компании
@@ -164,7 +141,7 @@ async def create_company_start(callback: CallbackQuery, state: FSMContext):
     await callback.answer()
 
 
-@router.message(CreateCompanyStates.waiting_for_company_name)
+@dp.message(CreateCompanyStates.waiting_for_company_name)
 async def process_company_name(message: Message, state: FSMContext):
     """
     Обрабатываем название компании и создаем её
@@ -204,7 +181,7 @@ async def process_company_name(message: Message, state: FSMContext):
     await state.clear()
 
 
-@router.callback_query(F.data == "join_company")
+@dp.callback_query(F.data == "join_company")
 async def join_company_start(callback: CallbackQuery, state: FSMContext):
     """
     Начинаем процесс присоединения к компании
@@ -223,7 +200,7 @@ async def join_company_start(callback: CallbackQuery, state: FSMContext):
     await callback.answer()
 
 
-@router.message(JoinCompanyStates.waiting_for_secret_code)
+@dp.message(JoinCompanyStates.waiting_for_secret_code)
 async def process_secret_code(message: Message, state: FSMContext):
     """
     Обрабатываем секретный код и присоединяем к компании
@@ -267,7 +244,7 @@ async def process_secret_code(message: Message, state: FSMContext):
     await state.clear()
 
 # Добавляем обработчик для отмены создания игры
-@router.callback_query(F.data == "cancel_ac")
+@dp.callback_query(F.data == "cancel_ac")
 async def cancel_creation(callback: CallbackQuery, state: FSMContext):
     """
     Отменяем создание игры
