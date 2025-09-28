@@ -15,17 +15,33 @@ export class WebSocketManager {
         const wsUrl = `${this.url}?client_id=${client_id}`;
         this.socket = new WebSocket(wsUrl);
         this.socket.onopen = () => {
-            console.log('WebSocket connection established with client_id:', client_id);
+            if (typeof window.log === 'function') {
+                window.log('WebSocket connection established with client_id: ' + client_id);
+            } else {
+                console.log('WebSocket connection established with client_id:', client_id);
+            }
         };
         this.socket.onmessage = (event) => this.onmessage(event);
 
-        console.log('WebSocketManager connected to', wsUrl);
+        if (typeof window.log === 'function') {
+            window.log('WebSocketManager connected to ' + wsUrl);
+        } else {
+            console.log('WebSocketManager connected to', wsUrl);
+        }
 
         this.socket.onclose = () => {
-            console.log('WebSocket connection closed');
+            if (typeof window.log === 'function') {
+                window.log('WebSocket connection closed');
+            } else {
+                console.log('WebSocket connection closed');
+            }
         };
         this.socket.onerror = (error) => {
-            console.error('WebSocket error:', error);
+            if (typeof window.error === 'function') {
+                window.error('WebSocket error: ' + error.toString());
+            } else {
+                console.error('WebSocket error:', error);
+            }
         };
     }
 
@@ -51,7 +67,11 @@ export class WebSocketManager {
     ping() {
         // Try different console methods
         setTimeout(() => {
-                console.log('test');
+                if (typeof window.log === 'function') {
+                    window.log('WebSocket ping test');
+                } else {
+                    console.log('test');
+                }
             }, 0);
         
         const request_id = `ping_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
@@ -62,32 +82,56 @@ export class WebSocketManager {
     onmessage(event) {
         const message = JSON.parse(event.data);
 
-        window.console.log('Message received:', message);
+        if (typeof window.log === 'function') {
+            window.log('Message received: ' + JSON.stringify(message));
+        } else {
+            window.console.log('Message received:', message);
+        }
 
 
         if (message.type === 'response' && message.request_id) {
             if (message.request_id.startsWith('check_session_')) {
                 this.handleSessionCheckResponse(message);
             }
-            console.log('Response to request_id:', message.request_id, message);
+            if (typeof window.log === 'function') {
+                window.log('Response to request_id: ' + message.request_id + ' - ' + JSON.stringify(message));
+            } else {
+                console.log('Response to request_id:', message.request_id, message);
+            }
         } else if (message.type && message.type.startsWith('api-')) {
             // this.handleBroadcastMessage(message);
         } else if (message.type === 'error') {
-            console.error('WebSocket error:', message.message);
+            if (typeof window.error === 'function') {
+                window.error('WebSocket error: ' + message.message);
+            } else {
+                console.error('WebSocket error:', message.message);
+            }
         }
         return message;
     }
 
     handleSessionCheckResponse(message) {
         if (message.data) {
-            console.log('Session exists:', message.data);
+            if (typeof window.log === 'function') {
+                window.log('Session exists: ' + JSON.stringify(message.data));
+            } else {
+                console.log('Session exists:', message.data);
+            }
         } else {
-            console.log('Session not found or error occurred');
+            if (typeof window.log === 'function') {
+                window.log('Session not found or error occurred');
+            } else {
+                console.log('Session not found or error occurred');
+            }
         }
     }
 
     handleBroadcastMessage(message) {
-        console.log('Broadcast message received:', message.type, message.data);
+        if (typeof window.log === 'function') {
+            window.log('Broadcast message received: ' + message.type + ' - ' + JSON.stringify(message.data));
+        } else {
+            console.log('Broadcast message received:', message.type, message.data);
+        }
         // Handle broadcast messages here - these are sent to all connected clients
         // when game events occur (user created, company actions, etc.)
     }
@@ -113,16 +157,28 @@ export const SAMPLE_MESSAGES = {
     }
 }
 
-console.log("WebSocketManager module loaded");
+if (typeof window.log === 'function') {
+    window.log("WebSocketManager module loaded");
+} else {
+    console.log("WebSocketManager module loaded");
+}
 
 // Create a standalone function for testing
 window.testStandaloneFunction = function() {
-    console.log("Standalone function called");
+    if (typeof window.log === 'function') {
+        window.log("Standalone function called");
+    } else {
+        console.log("Standalone function called");
+    }
     return "Standalone function executed";
 };
 
 // Create an arrow function
 window.testArrowFunction = () => {
-    console.log("Arrow function called");
+    if (typeof window.log === 'function') {
+        window.log("Arrow function called");
+    } else {
+        console.log("Arrow function called");
+    }
     return "Arrow function executed";
 };

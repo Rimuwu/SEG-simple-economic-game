@@ -16,11 +16,13 @@ import Game from './components/Game.vue'
 import Between from './components/Between.vue'
 import Endgame from './components/Endgame.vue'
 import AdminPanel from './components/AdminPanel.vue'
+import OutputConsole from './components/OutputConsole.vue'
 
 import { WebSocketManager } from './ws'
 
 const currentView = ref('Introduction')
 const showAdmin = ref(false)
+const outputConsole = ref(null)
 
 function handleShow(view) {
   currentView.value = view
@@ -35,7 +37,6 @@ function handleMouseMove(e) {
 function handleAdminLeave() {
   showAdmin.value = false
 }
-
 function handleBeforeLeave(el) {
   // Trigger exit animation for the leaving component
   const exitEvent = new CustomEvent('triggerExit')
@@ -54,12 +55,14 @@ wsManager.connect()
 globalThis.wsManager = wsManager
 
 provide('wsManager', wsManager)
+provide('outputConsole', outputConsole)
 </script>
 
 <template>
   <div @mousemove="handleMouseMove" style="position: relative; min-height: 100vh; overflow: hidden;">
     <AdminPanel v-if="showAdmin" @show="handleShow" @mouseleave="handleAdminLeave"
       style="position: fixed; left: 0; top: 0; width: 320px; z-index: 1000;" />
+    <OutputConsole ref="outputConsole" />
     <Transition name="page" mode="out-in" @before-leave="handleBeforeLeave" @enter="handleEnter">
       <component :is="currentView === 'Introduction' ? Introduction :
           currentView === 'Preparation' ? Preparation :
