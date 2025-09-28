@@ -1,96 +1,164 @@
 <script setup>
 import './mapScripts.js'
 import Map from './Map.vue'
-import { onMounted, onUnmounted, ref } from 'vue'
+import { onMounted, onUnmounted, ref, inject, reactive } from 'vue'
 import { gsap } from 'gsap'
 import { animationConfig, getDuration, getDelay, logTimelineDuration } from '../animationConfig.js'
 
+/**
+ * Ref to the root page container for animation and event handling.
+ * @type {import('vue').Ref<HTMLElement>}
+ */
 const pageRef = ref(null)
+/**
+ * Injected WebSocketManager instance for session and company data.
+ * @type {WebSocketManager}
+ */
+const wsManager = inject('wsManager', null)
 
+/**
+ * Reactive state for the list of companies displayed in the columns.
+ */
+const companiesState = reactive({ list: [] })
+
+/**
+ * Handles updates to the companies list from polling events.
+ * @param {CustomEvent} e
+ */
+function handleCompaniesUpdated(e) {
+  if (e && e.detail && Array.isArray(e.detail.companies)) {
+    companiesState.list = e.detail.companies
+  }
+}
+
+/**
+ * Returns the company object for a given slot in the left/right columns.
+ * @param {number} index - 1-based slot number in the column
+ * @param {boolean} isLeft - True for left column, false for right
+ * @returns {Object|null} Company object or null if no company
+ */
+function getCompanyForSlot(index, isLeft) {
+  const companies = companiesState.list
+  const globalIdx = (index - 1) * 2 + (isLeft ? 0 : 1)
+  if (globalIdx < companies.length) return companies[globalIdx]
+  return null
+}
+
+/**
+ * Plays the entrance animation for the preparation page using GSAP.
+ */
 function playEntranceAnimation() {
-  // Set initial positions (elements start off-screen)
   gsap.set('#start-btn', { y: -100, opacity: 0 })
   gsap.set('#session-key', { y: 100, opacity: 0 })
   gsap.set('#column-right .column:first-child', { x: -200, opacity: 0 })
   gsap.set('#column-right .column:last-child', { x: 200, opacity: 0 })
   gsap.set('#map', { scale: 0.5, opacity: 0 })
 
-
-  // Create entrance animation timeline
   const tl = gsap.timeline({ delay: getDelay(animationConfig.durations.delay) })
-
   tl.to('#start-btn', { y: 0, opacity: 1, duration: getDuration(animationConfig.durations.entrance), ease: animationConfig.ease.bounce })
-    .to('#map', { scale: 1, opacity: 1, duration: getDuration(animationConfig.durations.map), ease: animationConfig.ease.mapBounce }, '-=0.4').to('#session-key', { y: 0, opacity: 1, duration: getDuration(animationConfig.durations.entrance), ease: animationConfig.ease.bounce }, '-=0.6')
+    .to('#map', { scale: 1, opacity: 1, duration: getDuration(animationConfig.durations.map), ease: animationConfig.ease.mapBounce }, '-=0.4')
+    .to('#session-key', { y: 0, opacity: 1, duration: getDuration(animationConfig.durations.entrance), ease: animationConfig.ease.bounce }, '-=0.6')
     .to('#column-right .column:first-child', { x: 0, opacity: 1, duration: getDuration(animationConfig.durations.slide), ease: animationConfig.ease.smooth }, '-=0.5')
     .to('#column-right .column:last-child', { x: 0, opacity: 1, duration: getDuration(animationConfig.durations.slide), ease: animationConfig.ease.smooth }, '-=0.6')
     .to('.list-item', { y: 0, opacity: 1, duration: getDuration(animationConfig.durations.listItem), ease: animationConfig.ease.smooth, stagger: getDuration(animationConfig.durations.stagger) }, '-=0.3')
-  
-  // Log total duration
   logTimelineDuration(tl, 'Preparation', 'entrance')
 }
 
+/**
+ * Plays the exit animation for the preparation page using GSAP.
+ */
 function playExitAnimation() {
   const tl = gsap.timeline()
-
   tl.to('.list-item', { y: 20, opacity: 0, duration: getDuration(animationConfig.durations.listItemExit), ease: animationConfig.ease.exitSmooth, stagger: getDuration(0.02) })
     .to('#column-right .column:first-child', { x: -100, opacity: 0, duration: getDuration(animationConfig.durations.exit), ease: animationConfig.ease.exitSmooth }, '-=0.1')
     .to('#column-right .column:last-child', { x: 100, opacity: 0, duration: getDuration(animationConfig.durations.exit), ease: animationConfig.ease.exitSmooth }, '-=0.4')
     .to('#start-btn', { y: -50, opacity: 0, duration: getDuration(animationConfig.durations.exit), ease: animationConfig.ease.exitSmooth }, '-=0.3')
     .to('#session-key', { y: 50, opacity: 0, duration: getDuration(animationConfig.durations.exit), ease: animationConfig.ease.exitSmooth }, '-=0.4')
     .to('#map', { scale: 0.8, opacity: 0, duration: getDuration(animationConfig.durations.exit), ease: animationConfig.ease.exitSmooth }, '-=0.3')
-
-  // Log total duration
   logTimelineDuration(tl, 'Preparation', 'exit')
 }
 
+/**
+ * Lifecycle hook: runs on component mount.
+ * Sets up entrance animation, exit event listener, and starts company polling.
+ */
 onMounted(() => {
   playEntranceAnimation()
-
-  // Listen for exit animation trigger
   pageRef.value?.addEventListener('triggerExit', playExitAnimation)
+  if (wsManager) {
+    window.addEventListener('companies-updated', handleCompaniesUpdated)
+    wsManager.startCompaniesPolling(5000)
+  }
 })
 
+/**
+ * Lifecycle hook: runs on component unmount.
+ * Cleans up event listeners and stops company polling.
+ */
 onUnmounted(() => {
   pageRef.value?.removeEventListener('triggerExit', playExitAnimation)
+  if (wsManager) {
+    wsManager.stopCompaniesPolling()
+    window.removeEventListener('companies-updated', handleCompaniesUpdated)
+  }
 })
 </script>
 
 <template>
+  <!--
+    Preparation page layout.
+    Left column: title, map, session key.
+    Right columns: alternating company slots (left/right).
+  -->
   <div id="page" ref="pageRef">
     <div id="column-left">
       <div id="title">
         Этап подготовки
       </div>
-
+      <!-- Game map grid -->
       <Map />
-
       <div id="session-key">
-        КЛЮЧ СЕССИИ
+        {{ wsManager.session_id }}
       </div>
     </div>
-
     <div id="column-right">
+      <!-- Left company column -->
       <div id="list-col-left" class="column">
-        <div v-for="n in 7" :key="n" class="list-item" :id="'item-left-' + n">
-          Item {{ n }}
+        <div v-for="n in 7" :key="'left-' + n" class="list-item" :id="'item-left-' + n">
+          <template v-if="getCompanyForSlot(n, true)">
+            <strong>{{ getCompanyForSlot(n, true).name }}</strong><br/>
+            Баланс: {{ getCompanyForSlot(n, true).balance }} | Реп: {{ getCompanyForSlot(n, true).reputation }}
+          </template>
+          <template v-else>
+            —
+          </template>
         </div>
       </div>
+      <!-- Right company column -->
       <div id="list-col-right" class="column">
-        <div v-for="n in 7" :key="n" class="list-item" :id="'item-right-' + n">
-          Item {{ n }}
+        <div v-for="n in 7" :key="'right-' + n" class="list-item" :id="'item-right-' + n">
+          <template v-if="getCompanyForSlot(n, false)">
+            <strong>{{ getCompanyForSlot(n, false).name }}</strong><br/>
+            Баланс: {{ getCompanyForSlot(n, false).balance }} | Реп: {{ getCompanyForSlot(n, false).reputation }}
+          </template>
+          <template v-else>
+            —
+          </template>
         </div>
       </div>
     </div>
   </div>
-
 </template>
 
 <style scoped>
+/*
+  Preparation page layout and animation styles.
+  Includes flexbox columns, company slot styling, and animated transitions.
+*/
 #page {
   display: flex;
   margin: 0;
   padding: var(--spacing-sm);
-
   gap: var(--spacing-lg);
   width: calc(100vw - var(--spacing-sm) * 2);
   height: calc(100vh - var(--spacing-sm) * 2);

@@ -1,5 +1,5 @@
 <script setup>
-import { ref, onMounted, onUnmounted } from 'vue'
+import { ref, onMounted, onUnmounted, inject } from 'vue'
 import { gsap } from 'gsap'
 import { animationConfig, getDuration, getDelay, logTimelineDuration } from '../animationConfig.js'
 
@@ -7,6 +7,13 @@ const pageRef = ref(null)
 const sessionId = ref('')
 const currentInstructionIndex = ref(0)
 const instructionInterval = ref(null)
+const isJoining = ref(false)
+
+// Get WebSocket manager from parent
+const wsManager = inject('wsManager', null)
+
+// Define emit to send events to parent
+const emit = defineEmits(['navigateTo'])
 
 // Game instructions that rotate every 15 seconds
 const instructions = [
@@ -67,8 +74,49 @@ function stopInstructionRotation() {
 }
 
 function joinSession() {
-  // TODO: Implement join session functionality
-  console.log('Joining session:', sessionId.value)
+  if (!wsManager) {
+    if (typeof window.error === 'function') {
+      window.error('WebSocket manager not available');
+    } else {
+      console.error('WebSocket manager not available');
+    }
+    return;
+  }
+
+  if (!sessionId.value.trim()) {
+    if (typeof window.error === 'function') {
+      window.error('Please enter a session ID');
+    } else {
+      console.error('Please enter a session ID');
+    }
+    return;
+  }
+
+  isJoining.value = true;
+  
+  if (typeof window.log === 'function') {
+    window.log('Attempting to join session: ' + sessionId.value);
+  }
+
+  // Use the WebSocket manager to join the session
+  wsManager.join_session(sessionId.value.trim(), (result) => {
+    isJoining.value = false;
+    
+    if (result.success) {
+      if (typeof window.log === 'function') {
+        window.log('Successfully joined session: ' + wsManager.session_id);
+      }
+      
+      // Navigate to the next page (Preparation)
+      emit('navigateTo', 'Preparation');
+    } else {
+      if (typeof window.error === 'function') {
+        window.error('Failed to join session: ' + (result.error || 'Session not found'));
+      } else {
+        console.error('Failed to join session:', result.error);
+      }
+    }
+  });
 }
 
 function playEntranceAnimation() {
@@ -149,10 +197,11 @@ onUnmounted(() => {
             v-model="sessionId" 
             placeholder="Введите ID Сессии"
             @keyup.enter="joinSession"
+            autofocus
           />
         </div>
-        <button id="join-btn" @click="joinSession" :disabled="!sessionId.trim()">
-          Присоединиться к сессии
+        <button id="join-btn" @click="joinSession" :disabled="!sessionId.trim() || isJoining">
+          {{ isJoining ? 'Подключение...' : 'Присоединиться к сессии' }}
         </button>
       </div>
     </div>
