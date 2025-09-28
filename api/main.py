@@ -92,7 +92,7 @@ async def initial_setup():
     company = user.create_company("TestCompany")
     user2.add_to_company(company.secret_code)
 
-    cells = session.generate_cells()
+    # cells = session.generate_cells() тест
     rows = session.map_size['rows']
     cols = session.map_size['cols']
 

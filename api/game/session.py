@@ -63,6 +63,7 @@ class Session(BaseClass):
             new_stage = SessionStages.End
 
         elif new_stage == SessionStages.CellSelect:
+            self.generate_cells() # изменено тест
             scheduler.schedule_task(
                 stage_game_updater, 
                 datetime.now() + timedelta(
