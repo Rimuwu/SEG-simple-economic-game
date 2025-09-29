@@ -7,7 +7,7 @@ export class WebSocketManager {
         this.map = null;
     this.pendingCallbacks = new Map();
         this.companies = [];
-        this._companiesPollInterval = null;
+        this._pollInterval = null;
     }
     get_id() {
         return `web_${Date.now()}`;
@@ -72,6 +72,7 @@ export class WebSocketManager {
             request_id: request_id
         }));
         
+        
         if (typeof window.log === 'function') {
             window.log('Attempting to join session: ' + session_id);
         } else {
@@ -134,20 +135,21 @@ export class WebSocketManager {
         return request_id;
     }
 
-    startCompaniesPolling(intervalMs = 5000) {
-        this.stopCompaniesPolling();
+    startPolling(intervalMs = 5000) {
+        this.stopPolling();
         this.get_companies();
-        this._companiesPollInterval = setInterval(() => {
+        this._pollInterval = setInterval(() => {
             this.get_companies();
+            this.refreshMap();
         }, intervalMs);
-        if (typeof window.log === 'function') window.log('Started companies polling every ' + intervalMs + 'ms');
+        if (typeof window.log === 'function') window.log('Started polling every ' + intervalMs + 'ms');
     }
 
-    stopCompaniesPolling() {
-        if (this._companiesPollInterval) {
-            clearInterval(this._companiesPollInterval);
-            this._companiesPollInterval = null;
-            if (typeof window.log === 'function') window.log('Stopped companies polling');
+    stopPolling() {
+        if (this._pollInterval) {
+            clearInterval(this._pollInterval);
+            this._pollInterval = null;
+            if (typeof window.log === 'function') window.log('Stopped polling');
         }
     }
 

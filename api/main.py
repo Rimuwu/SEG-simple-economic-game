@@ -38,7 +38,7 @@ async def lifespan(app: FastAPI):
     await sleep(5)
 
     asyncio.create_task(scheduler.start())
-    # asyncio.create_task(initial_setup())
+    asyncio.create_task(test1())
 
     yield
 
@@ -66,6 +66,42 @@ app = get_fastapi_app(
 async def root(request: Request):
     return {"message": f"{app.description} is running! v{app.version}"}
 
+async def test1():
+    
+    
+    from game.user import User
+    from game.session import Session, session_manager, SessionStages
+    from game.company import Company
+
+    await asyncio.sleep(2)
+
+    print("Performing initial setup...")
+
+    # try:
+    session = session_manager.create_session('AFRIKA')
+
+    session.update_stage(SessionStages.FreeUserConnect)
+    user: User = User().create(_id=1, 
+                         username="TestUser", 
+                         session_id=session.session_id)
+    user2: User = User().create(_id=2, 
+                         username="TestUser2", 
+                         session_id=session.session_id)
+
+    company = user.create_company("TestCompany")
+    user2.add_to_company(company.secret_code)
+
+    session.update_stage(SessionStages.CellSelect)
+    session.reupdate()
+
+    free_cells = session.get_free_cells()
+    print(free_cells)
+
+    company.set_position(0, 0)
+    session.reupdate()
+
+    free_cells = session.get_free_cells()
+    print(free_cells)
 
 async def initial_setup():
 

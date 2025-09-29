@@ -87,7 +87,7 @@ onMounted(() => {
   pageRef.value?.addEventListener('triggerExit', playExitAnimation)
   if (wsManager) {
     window.addEventListener('companies-updated', handleCompaniesUpdated)
-    wsManager.startCompaniesPolling(5000)
+    wsManager.startPolling(5000)
   }
 })
 
@@ -98,7 +98,7 @@ onMounted(() => {
 onUnmounted(() => {
   pageRef.value?.removeEventListener('triggerExit', playExitAnimation)
   if (wsManager) {
-    wsManager.stopCompaniesPolling()
+    wsManager.stopPolling()
     window.removeEventListener('companies-updated', handleCompaniesUpdated)
   }
 })
