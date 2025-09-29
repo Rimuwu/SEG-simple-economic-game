@@ -12,7 +12,8 @@ ENV NODE_ENV=development
 WORKDIR /app
 
 # Копируем файлы package.json и package-lock.json
-COPY web/package*.json ./
+COPY web/package.json ./
+COPY web/package-lock.json ./
 
 # Устанавливаем зависимости
 RUN npm install

@@ -42,9 +42,9 @@ services:
     ports:
       - "5173:5173"
       - "443:443"
-    environment:
-      VITE_API_URL: ${VITE_API_URL}
-      VITE_DEBUG: ${DEBUG}
+    networks:
+      - seg_network
+    restart: unless-stopped
 
 networks:
   seg_network:
