@@ -20,7 +20,9 @@ class SelectCell(Page):
                 buttons_o.append(
                     {
                         'text': cell_position,
-                        'callback_data': cell_position
+                        'callback_data': callback_generator(
+                    self.scene.__scene_name__, 
+                    'cell_select')
                     }
                 )
         
@@ -52,12 +54,13 @@ class SelectCell(Page):
         
         return buttons
     
-    @Page.on_callback('my_callback')
+    @Page.on_callback('cell_select')
     async def my_callback_handler(self, callback: CallbackQuery, args: list):
         cell = callback.data
         company_id = self.scene.get_data('company_id')
         x, y = cell_into_xy(cell)
-        await set_company_position(company_id=company_id, x=x, y=y)
+        response = await set_company_position(company_id=company_id, x=x, y=y)
+        print(response)
     
         
         
