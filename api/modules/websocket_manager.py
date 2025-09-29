@@ -66,7 +66,7 @@ class WebSocketManager:
             main_logger.error(f"Ошибка при отключении WebSocket для {client_id}: {e}")
             return False
 
-    async def send_message(self, client_id: str, message: Any) -> bool:
+    async def send_message(self, client_id: str, message: Any, log: bool = True) -> bool:
         """
         Отправить сообщение конкретному клиенту
 
@@ -89,6 +89,9 @@ class WebSocketManager:
                 await websocket.send_text(message)
             else:
                 await websocket.send_text(json.dumps(message, ensure_ascii=False))
+
+            if log:
+                main_logger.info(f"Sent to {client_id}: {message}")
 
             return True
 
@@ -120,7 +123,7 @@ class WebSocketManager:
 
         for client_id in clients:
             if client_id not in exclude:
-                if await self.send_message(client_id, message):
+                if await self.send_message(client_id, message, False):
                     success_count += 1
 
         main_logger.info(

@@ -1,9 +1,14 @@
-// Global animation configuration
+
+
+/**
+ * Global animation configuration object for controlling animation speeds, durations, and easings.
+ * @type {Object}
+ * @property {number} speed - Animation speed multiplier (1 = normal, 0.5 = half speed, 2 = double speed)
+ * @property {Object} durations - Individual timing controls (in seconds)
+ * @property {Object} ease - Easing functions for different animation types
+ */
 export const animationConfig = {
-  // Animation speed multiplier (1 = normal, 0.5 = half speed, 2 = double speed)
   speed: 1.0,
-  
-  // Individual timing controls (in seconds)
   durations: {
     entrance: 0.8,
     exit: 0.5,
@@ -14,8 +19,6 @@ export const animationConfig = {
     stagger: 0.05,
     delay: 0.0
   },
-  
-  // Easing functions
   ease: {
     bounce: 'back.out(1.7)',
     mapBounce: 'back.out(1.2)',
@@ -24,15 +27,28 @@ export const animationConfig = {
   }
 }
 
-// Helper function to get speed-adjusted duration
+
+/**
+ * Returns the speed-adjusted duration for an animation.
+ * @param {number} baseDuration - The base duration in seconds.
+ * @returns {number} Speed-adjusted duration.
+ */
 export const getDuration = (baseDuration) => baseDuration / animationConfig.speed
 
-// Helper function to get speed-adjusted delay
+/**
+ * Returns the speed-adjusted delay for an animation.
+ * @param {number} baseDelay - The base delay in seconds.
+ * @returns {number} Speed-adjusted delay.
+ */
 export const getDelay = (baseDelay) => baseDelay / animationConfig.speed
 
-// Helper function to log timeline duration
+/**
+ * Logs the total duration of a GSAP timeline for debugging purposes.
+ * @param {Object} timeline - GSAP timeline instance.
+ * @param {string} componentName - Name of the component.
+ * @param {string} [animationType='entrance'] - Type of animation.
+ * @returns {Object} The timeline instance.
+ */
 export const logTimelineDuration = (timeline, componentName, animationType = 'entrance') => {
-  const duration = timeline.totalDuration()
-  console.log(`🎬 ${componentName} ${animationType} animation duration: ${duration.toFixed(2)}s`)
   return timeline
 }

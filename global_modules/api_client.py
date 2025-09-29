@@ -120,12 +120,11 @@ class WebSocketClient:
         """Прослушивание входящих сообщений"""
         try:
             async for message in self.websocket:
-                await self._handle_message(message)
+                asyncio.create_task(self._handle_message(message))
         except websockets.exceptions.ConnectionClosed:
             self.logger.warning("Соединение закрыто сервером")
             self.connected = False
-            await self._on_disconnect()
-
+            if self._on_disconnect: await self._on_disconnect()
         except Exception as e:
             self.logger.error(f"Ошибка при прослушивании: {e}")
             self.connected = False
@@ -149,12 +148,11 @@ class WebSocketClient:
             if message_type in self.message_handlers:
                 handler = self.message_handlers[message_type]
                 if asyncio.iscoroutinefunction(handler):
-                    await handler(data)
+                    asyncio.create_task(handler(data))
                 else:
-                    handler(data)
+                    asyncio.create_task(asyncio.to_thread(handler, data))
             else:
-                if getenv("DEBUG") == 'true':
-                    self.logger.debug(f"Нет обработчика для типа '{message_type}': {data}")
+                self.logger.debug(f"Нет обработчика для типа '{message_type}': {data}")
 
         except json.JSONDecodeError:
             self.logger.warning(f"Получено не-JSON сообщение: {message}")
@@ -215,6 +213,8 @@ class WebSocketClient:
                 if request_id in self.pending_requests:
                     del self.pending_requests[request_id]
                 return None
+            except Exception as e:
+                self.logger.error(f"Ошибка ожидания ответа для {message_type}: {e}")
 
         except Exception as e:
             self.logger.error(f"Ошибка отправки сообщения: {e}")
@@ -228,7 +228,7 @@ class WebSocketClient:
 
 # Фабричная функция для создания клиента
 def create_client(uri: str = "ws://localhost:8000/ws/connect", 
-                 client_id: str = None,
+                 client_id: Optional[str] = None,
                  logger = None) -> WebSocketClient:
     """
     Создать WebSocket клиент

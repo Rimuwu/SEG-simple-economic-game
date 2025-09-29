@@ -25,6 +25,8 @@ class Page:
 
         self.__callback_handlers__ = {}
         self.__text_handlers__ = {}
+        
+        self.row_width: int = 3 # Ширина ряда кнопок по умолчанию
 
         # Собираем обработчики из методов класса
         for attr_name in dir(self.__class__):

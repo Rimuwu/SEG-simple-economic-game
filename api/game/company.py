@@ -51,6 +51,11 @@ class Company(BaseClass):
         self.this_turn_income: int = 0  # Доход за текущий ход
 
         self.business_type: str = "small"  # Тип бизнеса: "small" или "big"
+        self.owner: int = 0
+
+    def set_owner(self, user_id: int):
+        self.owner = user_id
+        self.save_to_base()
 
     def create(self, name: str, session_id: str):
         self.name = name
@@ -852,3 +857,55 @@ class Company(BaseClass):
         factories = self.get_factories()
         for factory in factories:
             factory.on_new_game_stage()
+
+    def status(self):
+        """Возвращает полный статус компании со всеми данными"""
+        return {
+            # Основная информация
+            "id": self.id,
+            "name": self.name,
+            "owner": self.owner,
+            "session_id": self.session_id,
+            "secret_code": self.secret_code,
+            
+            # Финансовые данные
+            "balance": self.balance,
+            "last_turn_income": self.last_turn_income,
+            "this_turn_income": self.this_turn_income,
+            "business_type": self.business_type,
+            
+            # Репутация и статус
+            "reputation": self.reputation,
+            "in_prison": self.in_prison,
+            
+            # Позиция и местоположение
+            "cell_position": self.cell_position,
+            "position_coords": self.get_position(),
+            "cell_type": self.get_cell_type(),
+            "cell_info": self.get_my_cell_info().__dict__ if self.get_my_cell_info() else None,
+            
+            # Налоги
+            "tax_debt": self.tax_debt,
+            "overdue_steps": self.overdue_steps,
+            "tax_rate": self.business_tax(),
+            
+            # Кредиты и депозиты
+            "credits": self.credits,
+            "deposits": self.deposits,
+            
+            # Улучшения и ресурсы
+            "improvements": self.improvements,
+            "improvements_data": self.get_improvements(),
+            "warehouses": self.warehouses,
+            "warehouse_capacity": self.get_max_warehouse_size(),
+            "resources_amount": self.get_resources_amount(),
+            "raw_per_turn": self.raw_in_step(),
+            
+            # Пользователи и фабрики
+            "users": [user.__dict__ for user in self.users],
+            "factories": [factory.__dict__ for factory in self.get_factories()],
+            "factories_count": len(self.get_factories()),
+            
+            # Дополнительные возможности
+            "can_user_enter": self.can_user_enter(),
+        }

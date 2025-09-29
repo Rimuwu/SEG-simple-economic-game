@@ -30,6 +30,7 @@ body {
   font-weight: 700;
   font-style: normal;
   font-size: var(--text-sm);
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
 }
 
 #app {
