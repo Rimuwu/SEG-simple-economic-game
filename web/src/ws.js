@@ -128,6 +128,7 @@ export class WebSocketManager {
             session_id: this.session_id,
             request_id: request_id
         }));
+        window.log("Requesting session info...");
         return request_id;
     }
 
