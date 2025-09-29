@@ -130,14 +130,14 @@ async def on_connect():
     print("🔗 Подключено к WebSocket серверу")
 
 
-@ws_client.on_message('api-company_set_position')
-async def on_company_set_position(message: dict):
-    """Обработчик установки позиции компании"""
-    data = message.get('data', {})
-    company_id = data.get('company_id')
-    new_position = data.get('new_position')
-    if new_position:
-        await update_page(company_id, "select-cell-page")
+# @ws_client.on_message('api-company_set_position')
+# async def on_company_set_position(message: dict):
+#     """Обработчик установки позиции компании"""
+#     data = message.get('data', {})
+#     company_id = data.get('company_id')
+#     new_position = data.get('new_position')
+#     if new_position:
+#         await update_page(company_id, "select-cell-page")
 
 
 @ws_client.on_message('api-update_session_stage')
@@ -150,6 +150,8 @@ async def on_update_session_stage(message: dict):
     print("=====================", session_id, new_stage)
     if new_stage == "CellSelect":
         await go_to_page(session_id, "wait-start-page", "select-cell-page")
+    if new_stage == "Game":
+        await go_to_page(session_id, "wait-game-page", "main-page")
 
 
 @ws_client.on_event("disconnect")
