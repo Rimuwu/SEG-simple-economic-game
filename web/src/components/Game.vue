@@ -103,6 +103,7 @@ onUnmounted(() => {
   gap: var(--spacing-lg);
   width: calc(100vw - var(--spacing-sm) * 2);
   height: calc(100vh - var(--spacing-sm) * 2);
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
 }
 
 #column-left {
@@ -135,50 +136,68 @@ onUnmounted(() => {
 .column-title {
   flex: 1;
   font-size: var(--text-xl);
-  font-weight: 600;
+  font-weight: 700;
   text-align: center;
   margin-bottom: var(--spacing-sm);
+  color: white;
+  text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.3);
 }
 
 .column {
   flex: 1;
-  padding: var(--spacing-sm);
   display: flex;
   flex-direction: column;
   gap: var(--spacing-sm);
+  margin: var(--spacing-sm);
 }
 
 .list-item {
-  background-color: lightgray;
-  color: black;
-  border: var(--border-width) solid gray;
+  background: rgba(255, 255, 255, 0.95);
+  color: #333;
+  border: var(--border-width) solid rgba(255, 255, 255, 0.3);
   border-radius: var(--border-radius);
-  padding: var(--spacing-sm) 0;
+  padding: var(--spacing-sm);
   font-size: var(--text-md);
   text-align: center;
   flex: 1;
+  font-weight: 600;
+  transition: all 0.2s ease;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.15);
+  backdrop-filter: blur(10px);
   /* Initial state for animation */
   transform: translateY(20px);
   opacity: 0;
 }
 
+.list-item:hover {
+  background: rgba(255, 255, 255, 1);
+  transform: translateY(-2px);
+  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.2);
+}
+
 #map-title {
   font-size: var(--text-xl);
-  font-weight: 600;
+  font-weight: 700;
   text-align: center;
   margin: var(--spacing-sm) 0;
   padding: var(--spacing-sm) 0;
   width: 90%;
+  color: white;
+  text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.3);
 }
 
 #timer {
   font-size: var(--text-lg);
   text-align: center;
   margin: var(--spacing-sm);
-  padding: var(--spacing-sm) 0;
+  padding: var(--spacing-md);
   width: 90%;
-  background: lightgray;
+  background: rgba(255, 255, 255, 0.95);
+  color: #333;
   border-radius: var(--border-radius);
-  border: var(--border-width) solid gray;
+  border: var(--border-width) solid rgba(255, 255, 255, 0.3);
+  font-weight: 700;
+  backdrop-filter: blur(10px);
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
 }
 </style>
