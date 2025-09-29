@@ -115,6 +115,22 @@ export class WebSocketManager {
         }));
         return request_id;
     }
+    get_session() {
+        if (!this.socket || this.socket.readyState !== WebSocket.OPEN) {
+            const error = 'WebSocket is not connected';
+            if (callback) callback({ success: false, error });
+            return null;
+        }
+        
+        const request_id = `get_session_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+        this.socket.send(JSON.stringify({
+            type: 'get-session',
+            session_id: this.session_id,
+            request_id: request_id
+        }));
+        window.log("Requesting session info...");
+        return request_id;
+    }
 
     get_companies(callback = null) {
         if (!this.socket || this.socket.readyState !== WebSocket.OPEN) {
@@ -348,7 +364,7 @@ export class WebSocketManager {
     }
 
     refreshMap() {
-        this.loadMapToDOM();
+        this.get_session();
     }
 }
 
