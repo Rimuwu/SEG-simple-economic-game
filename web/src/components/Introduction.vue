@@ -94,19 +94,11 @@ function joinSession() {
 
   isJoining.value = true;
   
-  if (typeof window.log === 'function') {
-    window.log('Attempting to join session: ' + sessionId.value);
-  }
-
   // Use the WebSocket manager to join the session
   wsManager.join_session(sessionId.value.trim(), (result) => {
     isJoining.value = false;
     
     if (result.success) {
-      if (typeof window.log === 'function') {
-        window.log('Successfully joined session: ' + wsManager.session_id);
-      }
-      
       // Navigate to the next page (Preparation)
       emit('navigateTo', 'Preparation');
     } else {

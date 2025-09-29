@@ -91,17 +91,17 @@ async def test1():
     company = user.create_company("TestCompany")
     user2.add_to_company(company.secret_code)
 
-    session.update_stage(SessionStages.CellSelect)
-    session.reupdate()
+    # session.update_stage(SessionStages.CellSelect)
+    # session.reupdate()
 
-    free_cells = session.get_free_cells()
-    print(free_cells)
+    # free_cells = session.get_free_cells()
+    # print(free_cells)
 
-    company.set_position(0, 0)
-    session.reupdate()
+    # company.set_position(0, 0)
+    # session.reupdate()
 
-    free_cells = session.get_free_cells()
-    print(free_cells)
+    # free_cells = session.get_free_cells()
+    # print(free_cells)
 
 async def initial_setup():
 

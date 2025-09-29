@@ -59,7 +59,7 @@ function formatTimestamp() {
 
 // Add log entry
 function addLogEntry(message, type = 'log') {
-  console.log(String(message));
+  console.log(message);
   consoleEntries.value.push({
     id: ++entryId,
     message: String(message),
@@ -160,21 +160,13 @@ onMounted(() => {
   document.addEventListener('mousemove', handleGlobalMouseMove)
   
   // Make log and error methods globally available
-  window.log = log
   window.error = error
   
   // Also add them to globalThis for broader compatibility
-  globalThis.log = log
   globalThis.error = error
-  
-  // Initial log to show console is working with viewport info
-  const viewportWidth = getViewportWidth()
-  log(`Output console initialized - Viewport width: ${viewportWidth}px`)
   
   // Optional: Add window resize listener for debugging
   const handleResize = () => {
-    const newWidth = getViewportWidth()
-    log(`Viewport resized to: ${newWidth}px`)
   }
   
   window.addEventListener('resize', handleResize)
@@ -193,9 +185,7 @@ onUnmounted(() => {
   }
   
   // Clean up global methods
-  delete window.log
   delete window.error  
-  delete globalThis.log
   delete globalThis.error
 })
 
