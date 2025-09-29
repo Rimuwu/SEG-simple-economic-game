@@ -59,6 +59,7 @@ function formatTimestamp() {
 
 // Add log entry
 function addLogEntry(message, type = 'log') {
+  console.log(String(message));
   consoleEntries.value.push({
     id: ++entryId,
     message: String(message),
