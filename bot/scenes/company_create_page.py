@@ -42,12 +42,12 @@ class CompanyCreate(Page):
                 # Сохраняем данные компании в сцене
                 self.scene.update_key(
                     'scene',
-                    'company',
-                    response['company'] # Но лучше так не делать, лучше хранить id
+                    'company_id',
+                    response['company']["id"]
                 )
 
-                # Переходим на главную страницу
-                await self.scene.update_page('main-page')
+                # Переходим на страницу ожидания игры
+                await self.scene.update_page('wait-start-page')
             else:
                 error_message = response.get('error', 'Неизвестная ошибка') if response else 'Нет ответа от сервера'
                 self.clear_content()

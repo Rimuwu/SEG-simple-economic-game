@@ -40,6 +40,23 @@
                     "company-option": "Вернуться к выбору"
                 }
             },
+            "wait-start-page": {   // +
+                "title": "",
+                "content": "**Ожидание начала игры...**\n\n",
+                "to_pages": {
+                    "company-option": "Вернуться к выбору"
+                }
+            },
+            "select-cell-page": {   // +
+                "title": "",
+                "content": "Выберите клетку, на которой будет ваша располагаться ваша компания: ",
+                "to_pages": {}
+            },
+            "wait-game-stage-page": {   // +
+                "title": "",
+                "content": "Вы выбрали клетку. Ожидание начала игрового этапа...",
+                "to_pages": {}
+            },
             "main-page":{ 
                 "title": "",
                 "content": "Меню управления компанией",

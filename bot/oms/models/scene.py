@@ -117,7 +117,7 @@ class Scene:
                       )
             })
 
-        inl_markup = list_to_inline(buttons)
+        inl_markup = list_to_inline(buttons, row_width=page.row_width)
         return text, inl_markup
 
     async def send_message(self):

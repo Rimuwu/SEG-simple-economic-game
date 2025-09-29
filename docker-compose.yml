@@ -46,7 +46,6 @@ services:
       VITE_API_URL: ${VITE_API_URL}
       VITE_DEBUG: ${DEBUG}
 
-
 networks:
   seg_network:
     driver: bridge
