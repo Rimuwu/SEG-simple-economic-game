@@ -89,6 +89,7 @@ async def handle_create_company(client_id: str, message: dict):
         user = User(_id=who_create).reupdate()
         if not user: raise ValueError("User not found.")
         company = user.create_company(name=name)
+        company.set_owner(user.id)
 
     except ValueError as e:
         return {"error": str(e)}

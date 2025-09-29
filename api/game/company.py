@@ -51,6 +51,11 @@ class Company(BaseClass):
         self.this_turn_income: int = 0  # Доход за текущий ход
 
         self.business_type: str = "small"  # Тип бизнеса: "small" или "big"
+        self.owner: int = 0
+
+    def set_owner(self, user_id: int):
+        self.owner = user_id
+        self.save_to_base()
 
     def create(self, name: str, session_id: str):
         self.name = name
