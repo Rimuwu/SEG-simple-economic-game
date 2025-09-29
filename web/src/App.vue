@@ -125,14 +125,12 @@ provide('outputConsole', outputConsole)
     <!-- Floating output console for logs and errors -->
     <OutputConsole ref="outputConsole" />
     <!-- Page transition wrapper for animated navigation between views -->
-    <Transition name="page" mode="out-in" @before-leave="handleBeforeLeave" @enter="handleEnter">
-      <component :is="currentView === 'Introduction' ? Introduction :
-          currentView === 'Preparation' ? Preparation :
-            currentView === 'Between' ? Between :
-              currentView === 'Endgame' ? Endgame :
-                Game
-        " :key="currentView" @navigateTo="handleShow" />
-    </Transition>
+    <component :is="currentView === 'Introduction' ? Introduction :
+        currentView === 'Preparation' ? Preparation :
+          currentView === 'Between' ? Between :
+            currentView === 'Endgame' ? Endgame :
+              Game
+      " :key="currentView" @navigateTo="handleShow" />
   </div>
 </template>
 
