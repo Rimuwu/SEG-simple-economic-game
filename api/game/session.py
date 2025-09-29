@@ -13,7 +13,6 @@ from global_modules.logs import main_logger
 from modules.websocket_manager import websocket_manager
 from modules.sheduler import scheduler
 
-
 settings: Settings = ALL_CONFIGS['settings']
 cells: Cells = ALL_CONFIGS['cells']
 cells_types = cells.types
@@ -63,6 +62,7 @@ class Session(BaseClass):
             new_stage = SessionStages.End
 
         elif new_stage == SessionStages.CellSelect:
+            self.generate_cells()
             scheduler.schedule_task(
                 stage_game_updater, 
                 datetime.now() + timedelta(
@@ -72,6 +72,7 @@ class Session(BaseClass):
             )
 
         elif new_stage == SessionStages.Game:
+
             self.step += 1
             self.execute_step_schedule()
 

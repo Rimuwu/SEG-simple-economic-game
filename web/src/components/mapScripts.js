@@ -1,19 +1,45 @@
+/**
+ * Map tile and grid configuration for the game map.
+ * Provides tile definitions, types, styles, and tile mutation logic.
+ */
 import { ref, onMounted, nextTick } from 'vue'
-
-
+/**
+ * Number of rows in the map grid.
+ * @type {number}
+ */
 const rows = 7
+/**
+ * Number of columns in the map grid.
+ * @type {number}
+ */
 const cols = 7
+/**
+ * Total number of tiles in the grid.
+ * @type {number}
+ */
 const total = rows * cols
+/**
+ * Letters used for tile labeling.
+ * @type {string}
+ */
 const letters = "ABCDEFGHIJKLMNOPQRSTUVWXYZ"
-
-
+/**
+ * Array of tile objects for the grid.
+ * @type {Array<{id: string, label: string}>}
+ */
 const tiles = Array.from({ length: total }, (_, i) => ({
   id: `t-${i}`,
   label: letters[i % rows] + (Math.floor(i / cols) + 1),
 }))
-
+/**
+ * References to tile DOM elements.
+ * @type {import('vue').Ref<Array<HTMLElement>>}
+ */
 const tileRefs = ref([])
-
+/**
+ * Enum for tile types.
+ * @type {Object}
+ */
 const TileTypes = {
   MOUNTAINS: 0,
   WATER: 1,
@@ -22,7 +48,10 @@ const TileTypes = {
   CITY: 4,
   BANK: 5
 }
-
+/**
+ * Mapping of tile types to their color styles.
+ * @type {Object}
+ */
 const tileStyles = {
   [TileTypes.MOUNTAINS]: { color: "Gray"},
   [TileTypes.WATER]: { color: "dodgerBlue"},
@@ -31,15 +60,24 @@ const tileStyles = {
   [TileTypes.CITY]: { color: "orange"},
   [TileTypes.BANK]: { color: "red"},
 }
-
+/**
+ * Sets the tile's color and label in the grid.
+ * @param {number} row - Row index (0-based)
+ * @param {number} col - Column index (0-based)
+ * @param {number} tileType - Tile type enum value
+ * @param {string} text - Text label for the tile
+ * @param {string} font_size - Optional font size for the label
+ */
 function setTile(row, col, tileType, text, font_size) {
   if (row < 0 || row >= rows || col < 0 || col >= cols) return
   const idx = row * cols + col
   const tile = tileRefs.value[idx]
   if (!tile) return
-  if (tileType) tile.style.backgroundColor = tileStyles[tileType].color
-  if (text) tile.textContent = text
-  if (font_size) tile.style.fontSize = font_size
+  if (tileType !== undefined && tileType !== null) {
+    tile.style.backgroundColor = tileStyles[tileType].color
+  }
+  if (text !== undefined) {
+    tile.textContent = text
+  }
 }
-
 export { tiles, tileRefs, TileTypes, tileStyles, setTile, rows, cols }
