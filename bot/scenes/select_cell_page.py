@@ -68,7 +68,7 @@ class SelectCell(Page):
             else:
                 # Занятая ячейка - крестик
                 buttons.append({
-                    'text': f"❌ {cell_text}",
+                    'text': f"❌",
                     'callback_data': "occupied"
                 })
         
@@ -76,8 +76,22 @@ class SelectCell(Page):
     
     @Page.on_callback('cell_select')
     async def my_callback_handler(self, callback: CallbackQuery, args: list):
-        cell_name = args[0] if args else None
-        x, y = cell_into_xy(cell_name)
-        self.scene.update_page("wait-game-stage-page")
-        await set_company_position(company_id=self.scene.get_data('company_id'), x=x, y=y)
-
+        # args[0] - это callback_type ('cell_select')
+        # args[1] - это первый аргумент, переданный в callback_generator (cell_name)
+        
+        cell_name = args[1] if len(args) > 1 else None
+        if cell_name:
+            x, y = cell_into_xy(cell_name)
+            data = self.scene.get_data('scene')
+            response = await set_company_position(company_id=data.get('company_id'), x=x, y=y)
+            # if "data" in response:
+            #     if "error" in response["data"]:
+            #         self.content = self.content.replace("Выберите свободную клетку для размещения вашей компании:", 
+            #                                             "Данная клетка уже занята, выберите другую:")
+            #         await self.scene.update_message()
+            #         return
+            if response.get("result") == False:
+                self.content = "Данная клетка уже занята, выберите другую:s"
+                await self.scene.update_message()
+                return
+            await self.scene.update_page("wait-game-stage-page")
