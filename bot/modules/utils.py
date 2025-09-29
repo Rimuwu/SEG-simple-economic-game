@@ -32,11 +32,11 @@ def list_to_inline(buttons, row_width=3):
     return InlineKeyboardMarkup(inline_keyboard=inline_keyboard)
 
 
-async def update_page(session_id, user_company_id, user_id, page_name):
-    company_users = await get_users(session_id=session_id, company_id=user_company_id)
+async def update_page(user_company_id, page_name, user_id = None):
+    company_users = await get_users(company_id=user_company_id)
     for user in company_users:
         user_id_2 = user.get('id')
-        if user_id_2 != user_id:
+        if user_id_2 != user_id or user_id is None:
             if user_id_2 and scene_manager.has_scene(user_id_2):
                 scene = scene_manager.get_scene(user_id_2)
                 if scene and scene.page:

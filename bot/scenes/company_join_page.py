@@ -67,7 +67,6 @@ class CompanyJoin(Page):
             return
 
         await update_page(
-            session_id=session_id,
             user_company_id=user_company_id,
             user_id=message.from_user.id,
             page_name='wait-start-page'

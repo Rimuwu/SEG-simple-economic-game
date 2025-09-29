@@ -7,7 +7,7 @@ from global_modules.logs import Logger
 
 from modules.db import db
 from modules.ws_client import ws_client
-from modules.utils import go_to_page
+from modules.utils import go_to_page, update_page
 from bot_instance import bot, dp
 
 import handlers
@@ -61,6 +61,17 @@ async def on_pong(message: dict):
 @ws_client.on_event("connect")
 async def on_connect():
     print("🔗 Подключено к WebSocket серверу")
+
+
+@ws_client.on_message('api-company_set_position')
+async def on_company_set_position(message: dict):
+    """Обработчик установки позиции компании"""
+    data = message.get('data', {})
+    company_id = data.get('company_id')
+    new_position = data.get('new_position')
+    if new_position:
+        await update_page(company_id, "select-cell-page")
+
 
 @ws_client.on_message('api-update_session_stage')
 async def on_update_session_stage(message: dict):
