@@ -45,20 +45,57 @@ async def update_page(user_company_id, page_name, user_id = None):
                         await scene.update_message()
 
 
-async def go_to_page(session_id, old_page_name, new_page_name):
+async def go_to_page(session_id, old_page_name, new_page_name, owner: int = None):
     companies = await get_companies(session_id=session_id)
     for c in companies:
         company_id = c.get('id')
         users = await get_users(session_id=session_id, company_id=company_id)
-        for user in users:
-            user_id = user.get('id')
-            if user_id and scene_manager.has_scene(user_id):
-                scene = scene_manager.get_scene(user_id)
-                if scene and scene.page:
-                    current_page_name = scene.page
-                    if current_page_name == old_page_name:
-                        await scene.update_page(new_page_name)
+        if owner == False:
+            for user in users:
+                user_id = user.get('id')
+                if user_id and scene_manager.has_scene(user_id):
+                    scene = scene_manager.get_scene(user_id)
+                    if scene and scene.page:
+                        current_page_name = scene.page
+                        if current_page_name == old_page_name:
+                            await scene.update_page(new_page_name)
+
+
+ 
+        
+        else:
+            user_id = c.get('owner')
+            for user in users:
+                if user == user_id:
+                    if user_id and scene_manager.has_scene(user_id):
+                        scene = scene_manager.get_scene(user_id)
+                        if scene and scene.page:
+                            current_page_name = scene.page
+                            if current_page_name == old_page_name:
+                                await scene.update_page(new_page_name)
             
+            
+
+
+async def go_to_page_single_user(user_id: int, new_page_name: str, old_page_name: str = None):
+    """Переход на указанную страницу для одного конкретного пользователя
+    
+    Args:
+        user_id (int): ID пользователя
+        new_page_name (str): Название новой страницы
+        old_page_name (str, optional): Название текущей страницы (если указано, переход произойдет только если пользователь находится на этой странице)
+    """
+    if user_id and scene_manager.has_scene(user_id):
+        scene = scene_manager.get_scene(user_id)
+        if scene and scene.page:
+            # Если old_page_name указан, проверяем текущую страницу
+            if old_page_name:
+                current_page_name = scene.page
+                if current_page_name == old_page_name:
+                    await scene.update_page(new_page_name)
+            else:
+                # Если old_page_name не указан, просто переходим на новую страницу
+                await scene.update_page(new_page_name)
 
 
 def xy_into_cell(x, y):

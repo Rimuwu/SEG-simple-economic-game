@@ -149,7 +149,8 @@ async def on_update_session_stage(message: dict):
     new_stage = data.get('new_stage')
     print("=====================", session_id, new_stage)
     if new_stage == "CellSelect":
-        await go_to_page(session_id, "wait-start-page", "select-cell-page")
+        await go_to_page(session_id, "wait-start-page", "select-cell-page", owner=True)
+        await go_to_page(session_id, "wait-start-page", "wait-select-cell-page")
     if new_stage == "Game":
         await go_to_page(session_id, "wait-game-page", "main-page")
 
