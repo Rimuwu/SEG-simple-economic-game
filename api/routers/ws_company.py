@@ -491,3 +491,34 @@ async def handle_get_company_status(client_id: str, message: dict):
         return {"status": company.status()}
     except ValueError as e:
         return {"error": str(e)}
+
+
+@message_handler(
+    "get-company-users", 
+    doc="Обработчик получения списка пользователей компании. Отправляет ответ на request_id.", 
+    datatypes=[
+        "company_id: int", 
+        "request_id: str"
+        ])
+async def handle_get_company_users(client_id: str, message: dict):
+    """Обработчик получения списка пользователей компании"""
+
+    company_id = message.get("company_id")
+
+    if company_id is None:
+        return {"error": "company_id is required"}
+
+    try:
+        company = Company(_id=company_id).reupdate()
+        if not company:
+            raise ValueError("Company not found.")
+
+        users_data = []
+        for user_id in company.users:
+            user = User(_id=user_id).reupdate()
+            if user:
+                users_data.append(user.__dict__)
+
+        return {"users": users_data, "owner": company.owner}
+    except ValueError as e:
+        return {"error": str(e)}
