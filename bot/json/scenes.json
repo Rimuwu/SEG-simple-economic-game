@@ -71,9 +71,20 @@
                     "contract-menu": "📋 Контракты",
                     "factory-menu": "🏭 Управление заводами",
                     "upgrade-cell-menu": "🔧 Улучшение ячейки",
-                    "about-company-menu": "👥 О компании",
+                    "about-info-menu": "👥 Общая информация",
                     "logistics-menu": "🚚 Логистика",
                     "cities-menu": "🏙️ Города"
+                }
+            },
+            "about-info-menu": {
+                "title": "",
+                "content": "jh",
+                "to_pages": {
+                    "stage-info-page": "↪️ Назад",
+                    "cells-info-page": "↪️ Назад",
+                    "inventory-page": "↪️ Назад",
+                    "main-page": "↪️ Назад"
+                    
                 }
             }
         }

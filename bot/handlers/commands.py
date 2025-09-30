@@ -181,8 +181,8 @@ async def on_update_session_stage(message: dict):
     print("=====================", session_id, new_stage)
     if new_stage == "CellSelect":
         await go_to_page(session_id, "wait-start-page", "select-cell-page")
-    if new_stage == "Game":
-        await go_to_page(session_id, "wait-game-page", "main-page")
+    elif new_stage == "Game":
+        await go_to_page(session_id, "wait-game-stage-page", "main-page")
 
 
 @ws_client.on_event("disconnect")
