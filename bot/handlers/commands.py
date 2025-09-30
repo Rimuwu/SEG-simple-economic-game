@@ -84,25 +84,6 @@ async def process_session_id(message: Message, state: FSMContext):
     )
     await state.clear()
 
-@dp.message(Command("sessions"))
-async def sessions_command(message: Message):
-    """Обработчик команды /sessions"""
-    try:
-        # Отправляем запрос на получение списка сессий
-        response = await ws_client.send_message(
-            "get-sessions",
-            stage='FreeUserConnect',
-            wait_for_response=True,
-            )
-        for session in response:
-            await message.answer(
-                f"ID: {session['session_id']}, Stage: {session['stage']}, Created At: {session['created_at']}"
-                )
-        else:
-            if not response:
-                await message.answer("Нет активных сессий.")
-    except Exception as e:
-        await message.answer(f"Ошибка при выполнении команды /sessions: {str(e)}")
 
 # http://localhost:8000/ws/status - тут можно посмотреть статус вебсокета и доступные типы для отправки сообщений через send_message
 @dp.message(Command("ping"))
@@ -130,16 +111,6 @@ async def on_connect():
     print("🔗 Подключено к WebSocket серверу")
 
 
-# @ws_client.on_message('api-company_set_position')
-# async def on_company_set_position(message: dict):
-#     """Обработчик установки позиции компании"""
-#     data = message.get('data', {})
-#     company_id = data.get('company_id')
-#     new_position = data.get('new_position')
-#     if new_position:
-#         await update_page(company_id, "select-cell-page")
-
-
 @ws_client.on_message('api-update_session_stage')
 async def on_update_session_stage(message: dict):
     """Обработчик обновления стадии сессии"""
@@ -149,8 +120,7 @@ async def on_update_session_stage(message: dict):
     new_stage = data.get('new_stage')
     print("=====================", session_id, new_stage)
     if new_stage == "CellSelect":
-        await go_to_page(session_id, "wait-start-page", "select-cell-page", owner=True)
-        await go_to_page(session_id, "wait-start-page", "wait-select-cell-page")
+        await go_to_page(session_id, "wait-start-page", "select-cell-page")
     if new_stage == "Game":
         await go_to_page(session_id, "wait-game-page", "main-page")
 
