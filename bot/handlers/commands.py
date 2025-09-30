@@ -5,9 +5,9 @@ from aiogram.fsm.context import FSMContext
 import os
 import asyncio
 
-from modules.keyboards import *
 from modules.ws_client import *
 from modules.utils import go_to_page, update_page
+from modules.db import db
 from filters.admins import *
 from app.states import *
 
@@ -50,6 +50,7 @@ async def process_start_session_id(message: Message, state: FSMContext):
         text=f"✅ Сессия с ID `{session_id}` успешно запущена!",
         parse_mode="Markdown"
     )
+    db.drop_all()
     await state.clear()
     
 
@@ -99,6 +100,49 @@ async def process_session_id(message: Message, state: FSMContext):
         parse_mode="Markdown"
     )
     await state.clear()
+
+
+
+
+
+@dp.message(AdminFilter(), Command("ds"))
+async def delete_session_command(message: Message, state: FSMContext):
+    msg = await message.answer("Введите ID сессии для её удаления:")
+    await state.update_data(msg_id=msg.message_id)
+    await state.set_state(DeleteSessionStates.waiting_for_session_id)
+
+
+@dp.message(DeleteSessionStates.waiting_for_session_id)
+async def process_delete_session_id(message: Message, state: FSMContext):
+    session_id = message.text
+    data = await state.get_data()
+    msg_id = data['msg_id']
+    response = await delete_session(
+        session_id=session_id,
+        really=True
+    )
+    
+    await message.delete()
+    if response is not None and "error" in response.keys():
+        await message.bot.edit_message_text(
+        chat_id=message.chat.id,
+        message_id=msg_id,
+        text=f"❌ Ошибка при удалении сессии: {response['error']}"
+        )
+        await state.clear()
+        return
+    
+    await message.bot.edit_message_text(
+        chat_id=message.chat.id,
+        message_id=msg_id,
+        text=f"✅ Сессия с ID `{session_id}` успешно удалена!",
+        parse_mode="Markdown"
+    )
+    db.drop_all()
+    await state.clear()
+
+
+
 
 
 # http://localhost:8000/ws/status - тут можно посмотреть статус вебсокета и доступные типы для отправки сообщений через send_message
