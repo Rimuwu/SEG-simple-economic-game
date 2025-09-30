@@ -18,7 +18,7 @@ from bot_instance import dp, bot
 UPDATE_PASSWORD = os.getenv("UPDATE_PASSWORD", "default_password")
 
 
-@dp.message(AdminFilter(), Command("start_game"))
+@dp.message(AdminFilter(), Command("sg"))
 async def start_game(message: Message, state: FSMContext):
     msg = await message.answer("Введите ID сессии для её старта:")
     await state.update_data(msg_id=msg.message_id)
@@ -35,6 +35,15 @@ async def process_start_session_id(message: Message, state: FSMContext):
     )
     
     await message.delete()
+    if "error" in response.keys():
+        await message.bot.edit_message_text(
+        chat_id=message.chat.id,
+        message_id=msg_id,
+        text=f"❌ Ошибка при запуске сессии: {response['error']}"
+        )
+        await state.clear()
+        return
+    
     await message.bot.edit_message_text(
         chat_id=message.chat.id,
         message_id=msg_id,
@@ -44,7 +53,7 @@ async def process_start_session_id(message: Message, state: FSMContext):
     await state.clear()
     
 
-@dp.message(AdminFilter(), Command("create_game"))
+@dp.message(AdminFilter(), Command("cg"))
 async def create_game(message: Message, state: FSMContext):
     msg = await message.answer("Введите ID сессии для новой игры или '-' для генерации ID:")
     await state.update_data(msg_id=msg.message_id)
@@ -60,14 +69,22 @@ async def process_session_id(message: Message, state: FSMContext):
     response = await create_session(
         session_id=session_id_i
     )
-    
+    await message.delete()
     if response is None:
-        await message.answer("❌ Ошибка при создании сессии. Ответа нет.")
+        await message.bot.edit_message_text(
+        chat_id=message.chat.id,
+        message_id=msg_id,
+        text=f"❌ Ошибка при создании сессии. Ответа нет."
+        )
         await state.clear()
         return
     
     elif "error" in response.keys():
-        await message.answer(f"❌ Ошибка при создании сессии: {response['error']}")
+        await message.bot.edit_message_text(
+        chat_id=message.chat.id,
+        message_id=msg_id,
+        text=f"❌ Ошибка при создании сессии: {response['error']}"
+        )
         await state.clear()
         return
     
@@ -75,7 +92,6 @@ async def process_session_id(message: Message, state: FSMContext):
         session_id=response["session"]['session_id'],
         stage='FreeUserConnect',
     )
-    await message.delete()
     await message.bot.edit_message_text(
         chat_id=message.chat.id,
         message_id=msg_id,
