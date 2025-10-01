@@ -9,7 +9,7 @@ from modules.ws_client import *
 from modules.utils import go_to_page, update_page
 from modules.db import db
 from filters.admins import *
-from app.states import *
+from modules.states import *
 
 from bot_instance import dp, bot
 
