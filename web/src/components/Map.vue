@@ -45,10 +45,6 @@ function updateMapSize(reason = 'initial') {
 
     el.style.width = side + 'px'
     el.style.height = side + 'px'
-
-    if (typeof window.log === 'function') {
-        window.log(`[Map] updateMapSize (${reason}) parentWidth=${parentWidth} parentHeightRaw=${parentHeightRaw} viewportAvail=${viewportHeightAvailable} side=${side}`)
-    }
 }
 
 onMounted(async () => {
@@ -80,27 +76,14 @@ onMounted(async () => {
 
     // Load map from WebSocket data if available
     if (wsManager && wsManager.map) {
-        if (typeof window.log === 'function') {
-            window.log('WebSocket map data available on mount: ' + JSON.stringify(wsManager.map));
-        }
         wsManager.loadMapToDOM()
-        if (typeof window.log === 'function') {
-            window.log('Map loaded from session data on mount')
-        }
     } else {
         // Fallback to default static setup if no session data
-        if (typeof window.log === 'function') {
-            window.log('No WebSocket map data available, using default setup');
-        }
         setTile(1, 1, TileTypes.CITY, "ГОРОД А")
         setTile(5, 1, TileTypes.CITY, "ГОРОД В")
         setTile(1, 5, TileTypes.CITY, "ГОРОД Б")
         setTile(5, 5, TileTypes.CITY, "ГОРОД Г")
         setTile(3, 3, TileTypes.BANK, "ЦЕНТР. БАНК", "var(--text-xs)")
-        
-        if (typeof window.log === 'function') {
-            window.log('Map loaded with default static data')
-        }
     }
 })
 
@@ -122,9 +105,6 @@ if (wsManager) {
             setTimeout(() => {
                 wsManager.loadMapToDOM()
                 updateMapSize('session-change')
-                if (typeof window.log === 'function') {
-                    window.log('Map reloaded due to session change: ' + newSessionId)
-                }
             }, 100)
         }
     })

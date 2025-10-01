@@ -94,5 +94,5 @@ class SelectCell(Page):
                 self.content = "Данная клетка уже занята, выберите другую:s"
                 await self.scene.update_message()
                 return
-            await self.scene.update_page("wait-game-stage-page")
 
+            await self.scene.update_page("wait-game-stage-page")

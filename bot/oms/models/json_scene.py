@@ -27,8 +27,8 @@ class SceneSettings:
 @dataclass
 class ScenePage:
     """Страница сцены"""
-    title: str
     content: str
+    image: Optional[str] = None
     to_pages: Dict[str, str] = field(default_factory=dict)
     content_worker: Optional[FunctionWorker] = None
     buttons_worker: Optional[FunctionWorker] = None
@@ -46,7 +46,7 @@ class ScenePage:
             buttons_worker = FunctionWorker(**data['buttons-worker'])
 
         return cls(
-            title=data['title'],
+            image=data.get('image', None),
             content=data['content'],
             to_pages=data.get('to_pages', {}),
             content_worker=content_worker,

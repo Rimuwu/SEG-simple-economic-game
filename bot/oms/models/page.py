@@ -1,9 +1,7 @@
-from typing import TYPE_CHECKING, Optional
-from datetime import datetime, timedelta
-import re
+from typing import TYPE_CHECKING, Optionalfrom aiogram.types import Message, CallbackQuery
 
+from ..utils import parse_text
 from .json_scene import ScenePage, SceneModel
-from aiogram.types import Message, CallbackQuery
 
 if TYPE_CHECKING:
     from .scene import Scene
@@ -25,8 +23,9 @@ class Page:
 
         self.__callback_handlers__ = {}
         self.__text_handlers__ = {}
-        
+
         self.row_width: int = 3 # Ширина ряда кнопок по умолчанию
+        self.enable_topages: bool = True # Включены ли кнопки перехода по страницам
 
         # Собираем обработчики из методов класса
         for attr_name in dir(self.__class__):
@@ -64,7 +63,7 @@ class Page:
         if not self.__page__:
             raise ValueError(f"Страница {self.__page_name__} не найдена в сцене {scene.name} -> {list(scene.pages.keys())}")
 
-        self.title: str = self.__page__.title
+        self.image: Optional[str] = self.__page__.image
         self.content: str = self.__page__.content
         self.to_pages: dict = self.__page__.to_pages
 
@@ -95,7 +94,7 @@ class Page:
     @staticmethod
     def on_text(data_type: str, separator: str = ','):
         """ Декоратор для регистрации обработчиков текстовых сообщений
-            Поддерживаемые типы: 'int', 'str', 'time', 'list'
+            Поддерживаемые типы: 'int', 'str', 'time', ''
 
             Пример использования:
 
@@ -114,77 +113,22 @@ class Page:
             @Page.on_text('all')
             async def handle_all_text(self, message: Message):
                 print(f"Получен любой текст: {message.text}")
+
+            @Page.on_text('not_handled')
+            async def not_handled_text(self, message: Message):
+                print(f"Не обработан: {message.text}")
         """
         def decorator(func):
             # Сохраняем информацию о декораторе в атрибуте функции
             if not hasattr(func, '_text_handler_info'):
                 func._text_handler_info = []
-            
+
             func._text_handler_info.append({
                 'data_type': data_type,
                 'separator': separator
             })
             return func
         return decorator
-
-    def _parse_time(self, text: str) -> Optional[datetime]:
-        """ Парсинг времени из строки """
-        now = datetime.now()
-
-        # Паттерн для времени с датой: 16:30 21.10.2025
-        pattern_with_date = r'(\d{1,2}):(\d{2})\s+(\d{1,2})\.(\d{1,2})\.(\d{4})'
-        match_date = re.match(pattern_with_date, text.strip())
-
-        if match_date:
-            hour, minute, day, month, year = map(int, match_date.groups())
-            try:
-                return datetime(year, month, day, hour, minute)
-            except ValueError:
-                return None
-
-        # Паттерн для времени без даты: 16:30
-        pattern_time_only = r'(\d{1,2}):(\d{2})'
-        match_time = re.match(pattern_time_only, text.strip())
-
-        if match_time:
-            hour, minute = map(int, match_time.groups())
-            try:
-                target_time = now.replace(hour=hour, minute=minute, second=0, microsecond=0)
-
-                # Если время уже прошло сегодня, устанавливаем на завтра
-                if target_time <= now:
-                    target_time += timedelta(days=1)
-
-                return target_time
-            except ValueError:
-                return None
-
-        return None
-
-    def _parse_text(self, text: str, data_type: str, separator: str = ','):
-        """ Парсинг текста в соответствующий тип данных """
-        text = text.strip()
-
-        if data_type == 'int':
-            try:
-                return int(text)
-            except ValueError:
-                return None
-
-        elif data_type == 'str':
-            return text
-
-        elif data_type == 'time':
-            return self._parse_time(text)
-
-        elif data_type == 'list':
-            parsed_list = [item.strip() for item in text.split(separator) if item.strip()]
-            # Если в списке только 1 элемент, считаем это не списком, а текстом
-            if len(parsed_list) <= 1:
-                return None
-            return parsed_list
-
-        return None
 
     async def text_handler(self, message: Message) -> None:
         """ Обработка текстовых сообщений с автоматическим определением типа """
@@ -198,12 +142,12 @@ class Page:
         for data_type in type_priority:
             if data_type not in self.__text_handlers__:
                 continue
-                
+
             handler_info = self.__text_handlers__[data_type]
             handler = handler_info['handler']
             separator = handler_info['separator']
 
-            parsed_value = self._parse_text(text, data_type, separator)
+            parsed_value = parse_text(text, data_type, separator)
 
             if parsed_value is not None:
                 await handler(message=message, value=parsed_value)
@@ -215,10 +159,11 @@ class Page:
             handler = self.__text_handlers__['all']['handler']
             await handler(message=message)
 
-        # Если текст не был обработан, можно добавить обработку по умолчанию
-        if not handled and 'all' not in self.__text_handlers__:
-            pass  # Здесь можно добавить обработку по умолчанию
-
+        # Если текст не был обработан
+        if not handled:
+            handler = self.__text_handlers__.get('not_handled', {}).get('handler')
+            if handler:
+                await handler(message=message)
 
 
     @staticmethod
@@ -258,13 +203,21 @@ class Page:
                     callback: CallbackQuery, args: list) -> None:
         """ Обработка и получение нажатий
         """
+        handled = False
+
         if args and args[0] in self.__callback_handlers__:
             callback_type = args[0]
             handler = self.__callback_handlers__[callback_type]
             await handler(callback=callback, args=args)
+            handled = True
 
         if 'all' in self.__callback_handlers__:
             handler = self.__callback_handlers__['all']
+            await handler(callback=callback, args=args)
+
+        # Если текст не был обработан
+        if not handled and 'not_handled' in self.__callback_handlers__:
+            handler = self.__callback_handlers__['not_handled']
             await handler(callback=callback, args=args)
 
 

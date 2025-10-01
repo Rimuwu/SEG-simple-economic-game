@@ -6,12 +6,13 @@ from .utils import CALLBACK_PREFIX
 from .manager import scene_manager
 from aiogram import F, Router
 from logging import getLogger
+from .filters.scene_filter import InScene
 
 logger = getLogger(__name__)
 
 def register_handlers(router: Union[Router, Dispatcher]):
 
-    @router.message()
+    @router.message(InScene())
     async def on_message(message: Message):
         user_id = message.from_user.id
         scene = scene_manager.get_scene(user_id)
@@ -24,6 +25,7 @@ def register_handlers(router: Union[Router, Dispatcher]):
             await scene.text_handler(message)
 
     @router.callback_query(
+        InScene(),
         F.data.split(":")[:2] == [CALLBACK_PREFIX, 'to_page']
                     )
     async def to_page(callback: CallbackQuery):
@@ -50,6 +52,7 @@ def register_handlers(router: Union[Router, Dispatcher]):
         #     # await user_session.update_page(to_page)
 
     @router.callback_query(
+        InScene(),
         F.data.split(":")[0] == CALLBACK_PREFIX)
     async def on_callback_query(callback: CallbackQuery):
         user_id = callback.from_user.id

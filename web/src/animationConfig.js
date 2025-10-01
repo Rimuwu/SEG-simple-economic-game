@@ -50,7 +50,5 @@ export const getDelay = (baseDelay) => baseDelay / animationConfig.speed
  * @returns {Object} The timeline instance.
  */
 export const logTimelineDuration = (timeline, componentName, animationType = 'entrance') => {
-  const duration = timeline.totalDuration()
-  console.log(`${componentName} ${animationType} animation duration: ${duration.toFixed(2)}s`)
   return timeline
 }

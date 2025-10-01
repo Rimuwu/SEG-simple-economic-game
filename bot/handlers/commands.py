@@ -101,10 +101,6 @@ async def process_session_id(message: Message, state: FSMContext):
     )
     await state.clear()
 
-
-
-
-
 @dp.message(AdminFilter(), Command("ds"))
 async def delete_session_command(message: Message, state: FSMContext):
     msg = await message.answer("Введите ID сессии для её удаления:")
@@ -141,10 +137,7 @@ async def process_delete_session_id(message: Message, state: FSMContext):
     db.drop_all()
     await state.clear()
 
-
-
-
-
+    
 # http://localhost:8000/ws/status - тут можно посмотреть статус вебсокета и доступные типы для отправки сообщений через send_message
 @dp.message(Command("ping"))
 async def ping_command(message: Message):
