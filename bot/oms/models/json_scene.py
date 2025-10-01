@@ -46,7 +46,7 @@ class ScenePage:
             buttons_worker = FunctionWorker(**data['buttons-worker'])
 
         return cls(
-            image=data['image'],
+            image=data.get('image', None),
             content=data['content'],
             to_pages=data.get('to_pages', {}),
             content_worker=content_worker,
