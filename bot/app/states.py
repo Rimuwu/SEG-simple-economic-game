@@ -6,3 +6,7 @@ class CreateGameStates(StatesGroup):
 
 class StartGameStates(StatesGroup):
     waiting_for_session_id = State()
+
+
+class DeleteSessionStates(StatesGroup):
+    waiting_for_session_id = State()
