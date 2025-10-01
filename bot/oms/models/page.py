@@ -1,8 +1,6 @@
 from typing import TYPE_CHECKING, Optional
-from datetime import datetime, timedelta
-import re
 
-from oms.utils import parse_text
+from ..utils import parse_text
 
 from .json_scene import ScenePage, SceneModel
 from aiogram.types import Message, CallbackQuery
