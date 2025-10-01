@@ -44,7 +44,6 @@ class Scene:
             self.__scene_name__) # type: ignore
 
         if not self.scene:
-            print(scenes_loader.scenes)
             raise ValueError(f"Сцена {self.__scene_name__} не найдена")
 
         self.set_pages()
@@ -167,11 +166,6 @@ class Scene:
                 reply_markup=markup
             )
 
-        self.update_key(page.__page_name__, 
-                                'last_content', content)
-        self.update_key(page.__page_name__, 
-                        'last_buttons', markup.model_dump_json())
-
         self.message_id = message.message_id
         await self.save_to_db()
 
@@ -179,10 +173,13 @@ class Scene:
         content, markup = await self.preparate_message_data()
         page = self.current_page
 
-        # Проверяем было ли сообщение с фото
-        last_page = self.pages.get(self.data['scene']['last_page'], None)
-        last_have_photo = last_page is not None and hasattr(last_page, 'image') and last_page.__page__.image is not None
-        has_new_photo = hasattr(page, 'image') and page.__page__.image is not None
+        # Проверяем было ли последнее сообщение с фото
+        last_page_name = self.data['scene'].get('last_page', None)
+        last_page = self.pages.get(last_page_name, None) if last_page_name else None
+        last_have_photo = last_page is not None and last_page.__page__.image is not None
+
+        # Проверяем есть ли фото на новой странице
+        has_new_photo = page.__page__.image is not None
         new_photo = page.__page__.image
 
         # Если раньше было фото, а теперь нет, удаляем сообщение и отправляем новое
@@ -191,39 +188,24 @@ class Scene:
             await self.send_message()
             return
 
-        # Проверяем изменился ли контент или кнопки
-        last_content = self.data[page.__page_name__].get('last_content', None)
-        last_buttons = self.data[page.__page_name__].get('last_buttons', None)
-
-        print(f"OMS: last_content: {last_content}, content: {content}")
-        print(f"OMS: last_buttons: {last_buttons}, buttons: {markup.model_dump_json()}")
-
-        if last_content != content or last_buttons != markup.model_dump_json() or True:
-            try:
-                if has_new_photo and new_photo:
-                    prepared_image = prepare_image(new_photo)
-                    if prepared_image:
-                        await self.__bot__.edit_message_media(
-                            chat_id=self.user_id,
-                            message_id=self.message_id,
-                            media=InputMediaPhoto(
-                                media=prepared_image, 
-                                caption=content,
-                                parse_mode=self.scene.settings.parse_mode
-                                ),
-                            reply_markup=markup
-                        )
-                    else:
-                        print(f"OMS: Не удалось подготовить изображение для обновления: {new_photo}")
-                        # Если не удалось подготовить изображение, отправляем как текст
-                        await self.__bot__.edit_message_text(
-                            chat_id=self.user_id,
-                            message_id=self.message_id,
-                            text=content,
-                            parse_mode=self.scene.settings.parse_mode,
-                            reply_markup=markup
-                        )
+        # Пытаемся обновить сообщение
+        try:
+            if has_new_photo and new_photo:
+                prepared_image = prepare_image(new_photo)
+                if prepared_image:
+                    await self.__bot__.edit_message_media(
+                        chat_id=self.user_id,
+                        message_id=self.message_id,
+                        media=InputMediaPhoto(
+                            media=prepared_image, 
+                            caption=content,
+                            parse_mode=self.scene.settings.parse_mode
+                            ),
+                        reply_markup=markup
+                    )
                 else:
+                    print(f"OMS: Не удалось подготовить изображение для обновления: {new_photo}")
+                    # Если не удалось подготовить изображение, обновляем как текст
                     await self.__bot__.edit_message_text(
                         chat_id=self.user_id,
                         message_id=self.message_id,
@@ -231,39 +213,35 @@ class Scene:
                         parse_mode=self.scene.settings.parse_mode,
                         reply_markup=markup
                     )
-                self.update_key(page.__page_name__, 
-                                'last_content', content)
-                self.update_key(page.__page_name__, 
-                                'last_buttons', markup.model_dump_json())
-            except Exception as e:
-                print(f"OMS: Ошибка при обновлении сообщения: {e}")
-                # Если не удалось обновить, пересоздаем сообщение
-                try:
-                    await self.__bot__.delete_message(self.user_id, self.message_id)
-                    await self.send_message()
-                except Exception as delete_error:
-                    print(f"OMS: Ошибка при пересоздании сообщения: {delete_error}")
-        else:
-            print("OMS: Сообщение и кнопки не изменились, не обновляем!")
+            else:
+                await self.__bot__.edit_message_text(
+                    chat_id=self.user_id,
+                    message_id=self.message_id,
+                    text=content,
+                    parse_mode=self.scene.settings.parse_mode,
+                    reply_markup=markup
+                )
+        except Exception as e:
+            print(f"OMS: Ошибка при обновлении сообщения: {e}")
+            # Если не удалось обновить, пересоздаем сообщение
+            try:
+                print("OMS: Пересоздаем сообщение")
+                await self.__bot__.delete_message(self.user_id, self.message_id)
+                await self.send_message()
+            except Exception as delete_error:
+                print(f"OMS: Ошибка при пересоздании сообщения: {delete_error}")
 
     async def update_message_markup(self):
         _, buttons = await self.preparate_message_data(True)
-        page = self.current_page
-        last_buttons = self.data[page.__page_name__].get('last_buttons', None)
-
-        if last_buttons != buttons.model_dump_json():
-            try:
-                await self.__bot__.edit_message_reply_markup(
-                    chat_id=self.user_id,
-                    message_id=self.message_id,
-                    reply_markup=buttons
-                )
-                self.update_key(page.__page_name__, 
-                                'last_buttons', buttons.model_dump_json())
-            except Exception as e:
-                print(f"OMS: Ошибка при обновлении кнопок: {e}")
-        else:
-            print("OMS: Кнопки не изменились, не обновляем!")
+        
+        try:
+            await self.__bot__.edit_message_reply_markup(
+                chat_id=self.user_id,
+                message_id=self.message_id,
+                reply_markup=buttons
+            )
+        except Exception as e:
+            print(f"OMS: Ошибка при обновлении кнопок: {e}")
 
 
     # ===== Работа с БД =====
