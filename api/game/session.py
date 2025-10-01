@@ -79,6 +79,9 @@ class Session(BaseClass):
             for company in self.companies:
                 company.on_new_game_stage(self.step)
 
+        elif new_stage == SessionStages.End:
+            self.end_game()
+
         old_stage = self.stage
         self.stage = new_stage.value
         self.save_to_base()
@@ -292,6 +295,64 @@ class Session(BaseClass):
             }
         }))
         return True
+
+    def end_game(self):
+        from game.company import Company
+        
+        capital_winner = None
+        reputation_winner = None
+        economic_winner = None
+
+        max_capital = 0
+        for company in self.companies:
+            company: Company
+            if company.balance > max_capital:
+                max_capital = company.balance
+                capital_winner = company
+
+        for company in self.companies:
+            company: Company
+            if company.reputation > (reputation_winner.reputation if reputation_winner else 0):
+                reputation_winner = company
+
+        # for company in self.companies:
+        #     company: Company
+        #     if company.economic_power > (economic_winner.economic_power if economic_winner else 0):
+        #         economic_winner = company
+
+        # Объявление победителей
+        if capital_winner:
+            main_logger.info(f"Capital winner: {capital_winner.name} with {capital_winner.balance}")
+        if reputation_winner:
+            main_logger.info(f"Reputation winner: {reputation_winner.name} with {reputation_winner.reputation}")
+        if economic_winner:
+            main_logger.info(f"Economic winner: {economic_winner.name} with {economic_winner.economic_power}")
+
+        asyncio.create_task(websocket_manager.broadcast({
+            "type": "api-game_ended",
+            "data": {
+                "session_id": self.session_id,
+                "winners": {
+                    "capital": capital_winner,
+                    "reputation": reputation_winner,
+                    "economic": economic_winner
+                }
+            }
+        }))
+
+    def to_dict(self):
+        return {
+            "id": self.session_id,
+            "companies": [company.to_dict() for company in self.companies],
+            "users": [user.to_dict() for user in self.users],
+            "cells": self.cells,
+            "map_size": self.map_size,
+            "map_pattern": self.map_pattern,
+            "cell_counts": self.cell_counts,
+            "stage": self.stage,
+            "step": self.step,
+            "max_steps": self.max_steps
+        }
 
 
 class SessionsManager():

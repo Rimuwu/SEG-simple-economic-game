@@ -88,7 +88,7 @@ async def handle_create_user(client_id: str, message: dict):
 
     return {
         'session_id': user.session_id,
-        'user': user.__dict__
+        'user': user.to_dict()
     }
 
 @message_handler(
@@ -133,8 +133,8 @@ async def handle_update_user(client_id: str, message: dict):
         return {"error": str(e)}
     data = {
             "session_id": new_user.session_id,
-            "new": new_user.__dict__,
-            "old": old_user.__dict__
+            "new": new_user.to_dict(),
+            "old": old_user.to_dict()
         }
 
     await websocket_manager.broadcast({

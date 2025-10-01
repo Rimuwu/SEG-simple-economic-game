@@ -94,7 +94,7 @@ class Company(BaseClass):
             "type": "api-create_company",
             "data": {
                 'session_id': self.session_id,
-                'company': self.__dict__
+                'company': self.to_dict()
             }
         }))
         return self
@@ -858,7 +858,7 @@ class Company(BaseClass):
         for factory in factories:
             factory.on_new_game_stage()
 
-    def status(self):
+    def to_dict(self):
         """Возвращает полный статус компании со всеми данными"""
         return {
             # Основная информация
@@ -902,8 +902,8 @@ class Company(BaseClass):
             "raw_per_turn": self.raw_in_step(),
             
             # Пользователи и фабрики
-            "users": [user.__dict__ for user in self.users],
-            "factories": [factory.__dict__ for factory in self.get_factories()],
+            "users": [user.to_dict() for user in self.users],
+            "factories": [factory.to_dict() for factory in self.get_factories()],
             "factories_count": len(self.get_factories()),
             
             # Дополнительные возможности

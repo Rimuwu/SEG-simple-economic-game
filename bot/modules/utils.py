@@ -58,7 +58,6 @@ async def go_to_page(session_id, old_page_name, new_page_name):
                     current_page_name = scene.page
                     if current_page_name == old_page_name:
                         await scene.update_page(new_page_name)
-            
 
 
 def xy_into_cell(x, y):
