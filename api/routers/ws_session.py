@@ -71,7 +71,7 @@ async def handle_create_session(client_id: str, message: dict):
     except ValueError as e:
         return {"error": str(e)}
 
-    return {"session": session.__dict__}
+    return {"session": session.to_dict()}
 
 @message_handler(
     "update-session-stage", 
