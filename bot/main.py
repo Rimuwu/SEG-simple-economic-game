@@ -1,17 +1,12 @@
 import asyncio
 import logging
-from aiogram import types
-from aiogram.filters import Command
 
 from global_modules.logs import Logger
 
 from modules.db import db
 from modules.ws_client import ws_client
-from modules.utils import go_to_page, update_page
 from bot_instance import bot, dp
-import middlewares
 
-import handlers
 from oms import register_handlers
 
 # Настройка логирования
