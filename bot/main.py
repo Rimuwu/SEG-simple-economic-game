@@ -6,8 +6,10 @@ from global_modules.logs import Logger
 from modules.db import db
 from modules.ws_client import ws_client
 from bot_instance import bot, dp
+from modules.load_scenes import load_scenes_from_db
 
-from oms import register_handlers
+from oms import register_handlers, scene_manager
+import handlers
 
 # Настройка логирования
 bot_logger = Logger.get_logger("bot")
@@ -21,6 +23,9 @@ async def main():
     try:
         db.create_table('messages')
         db.create_table('scenes')
+
+        # Загрузка сцен из бд 
+        load_scenes_from_db(scene_manager)
 
         register_handlers(dp)
 

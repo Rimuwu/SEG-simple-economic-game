@@ -1,4 +1,5 @@
-from typing import TYPE_CHECKING, Optionalfrom aiogram.types import Message, CallbackQuery
+from typing import TYPE_CHECKING, Optional
+from aiogram.types import Message, CallbackQuery
 
 from ..utils import parse_text
 from .json_scene import ScenePage, SceneModel
