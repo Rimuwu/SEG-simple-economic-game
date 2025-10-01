@@ -16,7 +16,7 @@ class SceneManager:
 
     @classmethod
     def create_scene(cls, user_id: int, 
-                     scene_class: 'Scene',
+                     scene_class: Type['Scene'],
                      bot_instance: 'Bot'
                      ) -> 'Scene':
         if user_id in cls._instances:
