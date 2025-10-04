@@ -1,15 +1,27 @@
-from typing import TYPE_CHECKING, Optional
-from aiogram.types import Message, CallbackQuery
+from typing import TYPE_CHECKING, Literal, Optional
+
+from .safe_formatter import SafeFormatter
 
 from ..utils import parse_text
+
 from .json_scene import ScenePage, SceneModel
+from aiogram.types import Message, CallbackQuery
 
 if TYPE_CHECKING:
     from .scene import Scene
 
 class Page:
 
-    __page_name__: str = ''
+    __page_name__: str = ''  # Имя страницы из json конфига
+    __json_args__: list[str] = []  # Аргументы которые можно переопределить из json конфига
+
+    def __after_init__(self):
+        """ Метод вызывающийся сразу после инициализации страницы, но до переопределения атрибутов из json.
+            Можно переопределить в подклассе
+            
+            В основном используется для установки значений по умолчанию
+        """
+        pass
 
     def __init__(self, 
                  scene: SceneModel, 
@@ -18,9 +30,18 @@ class Page:
         if page_name and not self.__page_name__: 
             self.__page_name__ = page_name
 
+        self.json_args = self.__json_args__
         self.__scene__: SceneModel = scene
         self.__page__: ScenePage = scene.pages.get(
             self.__page_name__) # type: ignore
+
+        self.__after_init__()
+
+        # Добавляем все данные из json страницы в атрибуты страницы
+
+        for key, value in self.__page__.json_data.items():
+            if key in self.json_args:
+                setattr(self, key, value)
 
         self.__callback_handlers__ = {}
         self.__text_handlers__ = {}
@@ -69,6 +90,14 @@ class Page:
         self.to_pages: dict = self.__page__.to_pages
 
         self.scene: Scene = this_scene
+
+        self.__post_init__()
+
+    def __post_init__(self):
+        """ Метод вызывающийся в конце инициализации страницы
+            Можно переопределить в подклассе
+        """
+        pass
 
     def __call__(self, *args, **kwargs):
         return self
@@ -222,18 +251,67 @@ class Page:
             await handler(callback=callback, args=args)
 
 
+    # Служебные методы
 
     def clear_content(self):
         """ Очистка контента до значения из конфига
         """
         self.content = self.__page__.content
 
+    def append_variables(self,
+                         content: Optional[str] = None, **kwargs) -> str:
+        """ Добавление переменных в контент страницы. Добавляет в сообщение все переменные доступные странице.
+            Если content не указан, используется self.content
+        """
+        if not content: content = self.content
+
+        formatter = SafeFormatter()
+        field_names = set()
+        for literal_text, field_name, format_spec, conversion in formatter.parse(content):
+            if field_name:
+                field_names.add(field_name)
+
+        variables = {}
+        # Добавляем атрибуты страницы
+        variables.update(
+            {name: getattr(self, name) for name in field_names if hasattr(self, name)}
+        )
+        # Добавляем данные сцены
+        variables.update(
+            {name: value for name, value in self.scene.data['scene'].items()}
+        )
+        # Добавляем данные страницы
+        variables.update(
+            {name: value for name, value in self.scene.data[self.__page_name__].items()}
+        )
+        # Добавляем | заменяем на переденные данные
+        variables.update(kwargs)
+        return formatter.format(content, **variables)
 
 
     # МОЖНО И НУЖНО МЕНЯТЬ !
 
+    def page_blocked(self):
+        """ Отвечает сцене, можно ли перейти на эту страницу
+        """
+        return True
+
     async def content_worker(self) -> str:
-        return self.content
+        """ Функция вызывающаяся для получения контента
+        """
+        return self.append_variables()
 
     async def buttons_worker(self) -> list[dict]:
+        """ Функция вызывающаяся для получения кнопок
+        """
         return []
+
+    async def data_preparate(self) -> None:
+        """ Функция вызывающаяся для обработки до старта генерации страницы
+        """
+        pass
+
+    async def post_handle(self, h_type: Literal['text', 'button']) -> None:
+        """ Функция вызывающаяся после обработки текста / кнопки
+        """
+        pass
