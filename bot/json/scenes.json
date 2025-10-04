@@ -88,6 +88,21 @@
                 }
             }
         }
+    },
+    "start-scene-manager": {
+        "settings": {
+            "parse_mode": "Markdown",
+            "delete_after_send": true
+        },
+        "pages": {
+            "game-info-page": {
+                "title": "",
+                "content": "qwe",
+                "to_pages": {
+                    "connect-code-page": "Подключиться к игре"
+                }
+            }
+        }
     }
 
 }
