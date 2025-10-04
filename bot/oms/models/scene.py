@@ -1,9 +1,10 @@
 import asyncio
-from typing import Optional, Type
+from typing import Callable, Optional, Type
 
 from aiogram import Bot
-from aiogram.types import Message, CallbackQuery, InputMediaPhoto, FSInputFile
+from aiogram.types import Message, CallbackQuery, InputMediaPhoto
 
+from ..fast_page import fast_page
 from ..utils import list_to_inline, callback_generator, func_to_str, prepare_image
 from ..manager import scene_manager
 from .json_scene import scenes_loader, SceneModel
@@ -17,19 +18,19 @@ class Scene:
 
     # Функция для вставки сцены в БД
     # В функцию передаёт user_id: int, data: dict
-    __insert_function__: callable = None
+    __insert_function__: Optional[Callable] = None
 
     # Функция для загрузки сцены из БД
     # В функцию передаёт user_id: int, вернуть должна dict
-    __load_function__: callable = None
+    __load_function__: Optional[Callable] = None
 
     # Функция для обновления сцены в БД
     # В функцию передаёт user_id: int, data: dict
-    __update_function__: callable = None
+    __update_function__: Optional[Callable] = None
 
     # Функция для удаления сцены из БД
     # В функцию передаёт user_id: int
-    __delete_function__: callable = None
+    __delete_function__: Optional[Callable] = None
 
     def __init__(self, user_id: int, bot_instance: Bot):
         self.user_id = user_id
@@ -44,6 +45,7 @@ class Scene:
             self.__scene_name__) # type: ignore
 
         if not self.scene:
+            print(scenes_loader.scenes)
             raise ValueError(f"Сцена {self.__scene_name__} не найдена")
 
         self.set_pages()
@@ -69,20 +71,36 @@ class Scene:
         for page in self.__pages__:
             self.pages[
                 page.__page_name__
-            ] = page(self.scene, this_scene=self)
+            ] = page(
+                self.scene, this_scene=self
+            )
 
             if page.__page_name__ not in self.data:
                 self.data[
                     page.__page_name__
-                ] = {}
+                ] = {
+                    'last_button': '',
+                    'last_message': ''
+                }
 
         for page in self.scene.pages.keys():
             if page not in self.data:
                 self.data[page] = {}
 
+            if page not in self.pages:
+                js_type = self.scene.pages[page].type
+                page_type = fast_page(js_type, page)
+
+                self.pages[page] = page_type(
+                    self.scene, this_scene=self
+                    )
+
     @property
     def start_page(self) -> str:
-        return list(self.scene.pages.keys())[0]
+        if self.scene.settings.start_page:
+            return self.scene.settings.start_page
+        else:
+            return list(self.scene.pages.keys())[0]
 
     @property
     def current_page(self) -> Page:
@@ -93,11 +111,17 @@ class Scene:
         if page_name not in self.scene.pages:
             raise ValueError(f"Страница {page_name} не найдена в сцене {self.__scene_name__}")
 
-        self.update_key('scene', 'last_page', self.page)
-        self.page = page_name
+        page_model: Page = self.pages[page_name]
+        if page_model.page_blocked():
 
-        await self.save_to_db()
-        await self.update_message()
+            self.update_key('scene', 'last_page', self.page)
+            self.page = page_name
+
+            await self.save_to_db()
+            await self.update_message()
+
+        else:
+            print(f'Страница {page_name} заблокирована для перехода')
 
     def get_page(self, page_name: str):
         if page_name not in self.pages:
@@ -115,7 +139,9 @@ class Scene:
     async def preparate_message_data(self,
                         only_buttons: bool = False):
         page = self.current_page
-        if only_buttons:
+        await page.data_preparate()
+
+        if not only_buttons:
             text: str = await page.content_worker()
         else: text = page.__page__.content
 
@@ -184,6 +210,7 @@ class Scene:
 
         # Если раньше было фото, а теперь нет, удаляем сообщение и отправляем новое
         if last_have_photo and not has_new_photo:
+            print("OMS: Раньше было фото, а теперь нет, пересоздаем сообщение")
             await self.__bot__.delete_message(self.user_id, self.message_id)
             await self.send_message()
             return
@@ -267,11 +294,12 @@ class Scene:
         if not self.__insert_function__ or not self.__update_function__:
             return False
 
-        exist = await self.__load_function__(self.user_id)
-        if not exist:
-            await self.__insert_function__(user_id=self.user_id, data=self.data_to_save())
-        else:
-            await self.__update_function__(user_id=self.user_id, data=self.data_to_save())
+        if self.__load_function__:
+            exist = await self.__load_function__(self.user_id)
+            if not exist:
+                await self.__insert_function__(user_id=self.user_id, data=self.data_to_save())
+            else:
+                await self.__update_function__(user_id=self.user_id, data=self.data_to_save())
         return True
 
     async def load_from_db(self, update_page: bool) -> bool:
@@ -296,15 +324,22 @@ class Scene:
         await page.text_handler(message)
 
         if self.scene.settings.delete_after_send:
+            print("Delete message after send")
             await self.__bot__.delete_message(
                 self.user_id, message.message_id
             )
+
+        self.update_key(page.__page_name__, 'last_message', message.text)
+        await page.post_handle('text')
 
     async def callback_handler(self, 
                 callback: CallbackQuery, args: list) -> None:
         """Обработчик колбэков"""
         page = self.current_page
         await page.callback_handler(callback, args)
+
+        self.update_key(page.__page_name__, 'last_button', callback.data)
+        await page.post_handle('button')
 
 
     # ===== Работа с данными сцены и страниц =====

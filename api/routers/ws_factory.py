@@ -46,7 +46,7 @@ async def handle_get_factory(client_id: str, message: dict):
         if not factory:
             raise ValueError("Factory not found.")
         
-        return {"factory": factory.__dict__}
+        return {"factory": factory.to_dict()}
     except ValueError as e:
         return {"error": str(e)}
 

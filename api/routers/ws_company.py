@@ -96,7 +96,7 @@ async def handle_create_company(client_id: str, message: dict):
 
     return {
         'session_id': company.session_id,
-        'company': company.__dict__
+        'company': company.to_dict()
     }
 
 
@@ -517,7 +517,7 @@ async def handle_get_company_users(client_id: str, message: dict):
         for user_id in company.users:
             user = User(_id=user_id).reupdate()
             if user:
-                users_data.append(user.__dict__)
+                users_data.append(user.to_dict())
 
         return {"users": users_data, "owner": company.owner}
     except ValueError as e:

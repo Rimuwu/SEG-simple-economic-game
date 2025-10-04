@@ -220,7 +220,7 @@ class Factory(BaseClass):
 
         return all_good
 
-    def status(self) -> dict:
+    def to_dict(self) -> dict:
         """ Получение статуса фабрики
         """
         return {
