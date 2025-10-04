@@ -11,19 +11,10 @@ class GameInfo(Page):
         self.current_page = 1
         self.total_pages = 4
     
-    # async def content_worker(self) -> str:
-    #     """Генерация контента в зависимости от текущей страницы"""
-        
-    #     if self.current_page == 1:
-    #         return "Страница один"
-    #     elif self.current_page == 2:
-    #         return self._get_gameplay_content()
-    #     elif self.current_page == 3:
-    #         return self._get_resources_content()
-    #     elif self.current_page == 4:
-    #         return self._get_authors_content()
-    #
-    #     return self._get_welcome_content()
+    async def content_worker(self) -> str:
+        """Генерация контента в зависимости от текущей страницы"""
+        func = [self._get_welcome_content(), self._get_gameplay_content(), self._get_resources_content(), self._get_authors_content()]
+        return func[self.current_page - 1]
     
     def _get_welcome_content(self) -> str:
         return (
