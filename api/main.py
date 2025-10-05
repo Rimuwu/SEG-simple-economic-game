@@ -89,6 +89,7 @@ async def test1():
                          session_id=session.session_id)
 
     company = user.create_company("TestCompany")
+    company.set_owner(1)
     user2.add_to_company(company.secret_code)
 
     # session.update_stage(SessionStages.CellSelect)
