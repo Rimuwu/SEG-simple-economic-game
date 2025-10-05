@@ -1,6 +1,9 @@
 from oms import Page
 from aiogram.types import Message, CallbackQuery
 from oms.utils import callback_generator
+from scenes.game_scenario import GameManager
+from oms import scene_manager
+from bot_instance import bot
 
 
 class GameInfo(Page):
@@ -143,5 +146,11 @@ class GameInfo(Page):
     async def connect_game_handler(self, callback: CallbackQuery, args: list):
         """Обработчик подключения к игре"""
         # Переходим на страницу ввода кода сессии
-        await self.scene.update_page('session-input-page')
+        await self.scene.end()
+        n_scene = scene_manager.create_scene(
+        callback.from_user.id,
+        GameManager,
+        bot
+    )
+        await n_scene.start()
         await callback.answer()

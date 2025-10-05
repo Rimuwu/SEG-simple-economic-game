@@ -90,13 +90,13 @@ async def process_session_id(message: Message, state: FSMContext):
         return
     
     await update_session_stage(
-        session_id=response["session"]['session_id'],
+        session_id=response["session"]['id'],
         stage='FreeUserConnect',
     )
     await message.bot.edit_message_text(
         chat_id=message.chat.id,
         message_id=msg_id,
-        text=f"✅ Успешно создана игровая сессия!\n🆔 Код сессии: `{response['session']['session_id']}`",
+        text=f"✅ Успешно создана игровая сессия!\n🆔 Код сессии: `{response['session']['id']}`",
         parse_mode="Markdown"
     )
     await state.clear()
