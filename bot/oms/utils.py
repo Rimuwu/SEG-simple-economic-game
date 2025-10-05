@@ -15,24 +15,32 @@ def list_to_inline(buttons, row_width=3):
               buttons = [ {'text': 'Кнопка 1', 'callback_data': 'btn1'},
                           {'text': 'Кнопка 2', 'callback_data': 'btn2'},
                           {'text': 'Кнопка 3', 'callback_data': 'btn3'} ]
-              
+
               > Кнопка 1 | Кнопка 2 | Кнопка 3
+        ignore_row - кнопка будет на новой строке 
+        next_line - после кнопки начнется новый ряд
     """
 
     inline_keyboard = []
     row = []
     for button in buttons:
 
-        if 'ignore_row' in button and (button['ignore_row'].lower() == 'true' or button['ignore_row'] == True):
+        if 'ignore_row' in button and ((type(button['ignore_row']) == str and button['ignore_row'].lower() == 'true') or button['ignore_row'] == True):
             inline_keyboard.append(row)
             row = []
             inline_keyboard.append([InlineKeyboardButton(**button)])
             continue
 
-        row.append(InlineKeyboardButton(**button))
+        if 'next_line' in button and ((type(button['next_line']) == str and button['next_line'].lower() == 'true') or button['next_line'] == True):
+            inline_keyboard.append(row)
+            row = []
+
         if len(row) == row_width:
             inline_keyboard.append(row)
             row = []
+
+        row.append(InlineKeyboardButton(**button))
+
     if row:
         inline_keyboard.append(row)
     return InlineKeyboardMarkup(inline_keyboard=inline_keyboard)
@@ -66,6 +74,22 @@ def parse_time(text: str) -> Optional[datetime]:
         hour, minute, day, month, year = map(int, match_date.groups())
         try:
             return datetime(year, month, day, hour, minute)
+        except ValueError:
+            return None
+
+    # Паттерн для времени с датой без года: 16:30 21.10
+    pattern_date_no_year = r'(\d{1,2}):(\d{2})\s+(\d{1,2})\.(\d{1,2})'
+    match_date_no_year = re.match(pattern_date_no_year, text.strip())
+
+    if match_date_no_year:
+        hour, minute, day, month = map(int, match_date_no_year.groups())
+        year = now.year
+        try:
+            target_time = datetime(year, month, day, hour, minute)
+            # Если дата уже прошла в этом году, устанавливаем на следующий год
+            if target_time <= now:
+                target_time = datetime(year + 1, month, day, hour, minute)
+            return target_time
         except ValueError:
             return None
 
