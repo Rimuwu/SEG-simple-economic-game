@@ -59,7 +59,7 @@ class Factory(BaseClass):
         asyncio.create_task(websocket_manager.broadcast({
             "type": "api-factory-create",
             "data": {
-                "factory": self.status(),
+                "factory": self.to_dict(),
                 "company_id": self.company_id
             }
         }))
