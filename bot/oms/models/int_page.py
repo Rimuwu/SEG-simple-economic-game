@@ -35,14 +35,14 @@ class IntTypeScene(Page):
             return
 
         # Сохраняем текст в сцену
-        self.scene.update_key(
+        await self.scene.update_key(
             'scene',
             self.scene_key, 
             value
         )
 
         # Сохраняем текст в страницу
-        self.scene.update_key(
+        await self.scene.update_key(
             self.__page_name__,
             self.scene_key, 
             value
