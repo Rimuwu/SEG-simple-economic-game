@@ -54,6 +54,11 @@ class Company(BaseClass):
         self.owner: int = 0
 
     def set_owner(self, user_id: int):
+        if self.owner != 0:
+            raise ValueError("Owner is already set.")
+        if user_id in [user.id for user in self.users] is False:
+            raise ValueError("User is not a member of the company.")
+
         self.owner = user_id
         self.save_to_base()
 
@@ -174,8 +179,10 @@ class Company(BaseClass):
 
     def get_max_warehouse_size(self) -> int:
         imps = self.get_improvements()
-        base_size = imps['warehouse']['capacity']
+        if 'warehouse' not in imps:
+            return 0
 
+        base_size = imps['warehouse']['capacity']
         return base_size
 
     def add_resource(self, resource: str, amount: int):
@@ -700,8 +707,10 @@ class Company(BaseClass):
         """
 
         imps = self.get_improvements()
-        perturn = imps['station']['productsPerTurn']
+        if 'station' not in imps:
+            return 0
 
+        perturn = imps['station']['productsPerTurn']
         return perturn
 
 
