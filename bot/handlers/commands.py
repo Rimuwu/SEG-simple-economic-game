@@ -166,23 +166,8 @@ async def confirm_leave(message: Message, state: FSMContext):
         await state.clear()
         return
     user_id = message.from_user.id
-    response = await delete_user(user_id=user_id)
+    await delete_user(user_id=user_id)
     scene = scene_manager.get_scene(user_id)
-    if response is not None and "error" in response.keys():
-        text = ""
-        if scene is not None:
-            await scene.end()
-            text = "Вы не находились в сессии. Но ваша сцена была завершена."
-        else:
-            text = f"Ошибка: {response['error']}"
-            
-        await message.bot.edit_message_text(
-            chat_id=message.chat.id,
-            message_id=msg_id,
-            text=f"{text}"
-        )
-        await state.clear()
-        return
     await message.bot.edit_message_text(
         chat_id=message.chat.id,
         message_id=msg_id,
