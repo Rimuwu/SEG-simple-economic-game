@@ -488,7 +488,7 @@ async def handle_get_company_status(client_id: str, message: dict):
         if not company:
             raise ValueError("Company not found.")
 
-        return {"status": company.status()}
+        return {"status": company.to_dict()}
     except ValueError as e:
         return {"error": str(e)}
 

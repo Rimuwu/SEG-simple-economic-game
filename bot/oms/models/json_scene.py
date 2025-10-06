@@ -25,7 +25,6 @@ class SceneSettings:
             start_page=data.get('start_page', None)
         )
 
-
 @dataclass
 class ScenePage:
     """Страница сцены"""
@@ -53,6 +52,7 @@ class SceneModel:
     name: str
     settings: SceneSettings
     pages: Dict[str, ScenePage]
+    standart_data: Dict[str, Any] = field(default_factory=dict)
 
     @classmethod
     def from_dict(cls, name: str, data: Dict[str, Any]) -> 'SceneModel':
@@ -66,6 +66,7 @@ class SceneModel:
         return cls(
             name=name,
             settings=settings,
+            standart_data=data.get('standart_data', {}),
             pages=pages
         )
 

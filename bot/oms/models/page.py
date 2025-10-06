@@ -30,24 +30,28 @@ class Page:
         if page_name and not self.__page_name__: 
             self.__page_name__ = page_name
 
-        self.json_args = self.__json_args__
+        self.json_args = self.__json_args__ + [
+            'row_width', 'enable_topages'
+            ]
         self.__scene__: SceneModel = scene
-        self.__page__: ScenePage = scene.pages.get(
-            self.__page_name__) # type: ignore
+        self.__page__ = scene.pages.get(
+            self.__page_name__)
+
+        if not self.__page__:
+            raise ValueError(f"Страница {self.__page_name__} ({self.__class__.__name__}) не найдена в сцене {scene.name} -> {list(scene.pages.keys())}")
 
         self.__after_init__()
 
-        # Добавляем все данные из json страницы в атрибуты страницы
+        self.row_width: int = 3 # Ширина ряда кнопок по умолчанию
+        self.enable_topages: bool = True # Включены ли кнопки перехода по страницам
 
+        # Добавляем все данные из json страницы в атрибуты страницы
         for key, value in self.__page__.json_data.items():
             if key in self.json_args:
                 setattr(self, key, value)
 
         self.__callback_handlers__ = {}
         self.__text_handlers__ = {}
-
-        self.row_width: int = 3 # Ширина ряда кнопок по умолчанию
-        self.enable_topages: bool = True # Включены ли кнопки перехода по страницам
 
         # Собираем обработчики из методов класса
         for attr_name in dir(self.__class__):
@@ -109,15 +113,15 @@ class Page:
             return self.scene.get_key(self.__page_name__, key)
         return self.scene.get_data(self.__page_name__)
 
-    def set_data(self, data: dict) -> bool:
+    async def set_data(self, data: dict) -> bool:
         """ Установка данных (с польной перезаписью) страницы
         """
-        return self.scene.set_data(self.__page_name__, data)
+        return await self.scene.set_data(self.__page_name__, data)
 
-    def update_data(self, key: str, value) -> bool:
+    async def update_data(self, key: str, value) -> bool:
         """ Обновление данных страницы по ключу
         """
-        return self.scene.update_key(self.__page_name__, key, value)
+        return await self.scene.update_key(self.__page_name__, key, value)
 
 
 
@@ -167,7 +171,7 @@ class Page:
 
         # Определяем порядок приоритета типов (от наиболее к наименее специфичным)
         type_priority = ['time', 'int', 'list', 'str']
-        
+
         # Проверяем каждый тип в порядке приоритета
         for data_type in type_priority:
             if data_type not in self.__text_handlers__:
@@ -286,6 +290,12 @@ class Page:
         )
         # Добавляем | заменяем на переденные данные
         variables.update(kwargs)
+
+        # Если значение - список, выводим через запятую
+        for key, value in variables.items():
+            if isinstance(value, list):
+                variables[key] = ', '.join(map(str, value))
+
         return formatter.format(content, **variables)
 
 

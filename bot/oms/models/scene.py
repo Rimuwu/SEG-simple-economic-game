@@ -35,14 +35,14 @@ class Scene:
     def __init__(self, user_id: int, bot_instance: Bot):
         self.user_id = user_id
         self.message_id: int = 0
-        self.data: dict = {
-            'scene': {}
-        }
-
         self.__bot__ = bot_instance
 
         self.scene: SceneModel = scenes_loader.get_scene(
             self.__scene_name__) # type: ignore
+
+        self.data: dict = {
+            'scene': self.scene.standart_data
+        }
 
         if not self.scene:
             print(scenes_loader.scenes)
@@ -114,7 +114,7 @@ class Scene:
         page_model: Page = self.pages[page_name]
         if page_model.page_blocked():
 
-            self.update_key('scene', 'last_page', self.page)
+            await self.update_key('scene', 'last_page', self.page)
             self.page = page_name
 
             await self.save_to_db()
@@ -149,13 +149,16 @@ class Scene:
 
         if page.enable_topages:
             to_pages: dict[str, str] = page.to_pages
-            for page_name, title in to_pages.items():
+
+            for i, (page_name, title) in enumerate(
+                to_pages.items()):
                 buttons.append({
                     'text': title,
                     'callback_data': callback_generator(
-                        self.__scene_name__, 
-                        'to_page', page_name
-                        )
+                    self.__scene_name__, 
+                    'to_page', page_name
+                    ),
+                    'next_line': len(buttons) > 0 and i == 0
                 })
 
         inl_markup = list_to_inline(buttons, page.row_width)
@@ -329,7 +332,7 @@ class Scene:
                 self.user_id, message.message_id
             )
 
-        self.update_key(page.__page_name__, 'last_message', message.text)
+        await self.update_key(page.__page_name__, 'last_message', message.text)
         await page.post_handle('text')
 
     async def callback_handler(self, 
@@ -338,7 +341,7 @@ class Scene:
         page = self.current_page
         await page.callback_handler(callback, args)
 
-        self.update_key(page.__page_name__, 'last_button', callback.data)
+        await self.update_key(page.__page_name__, 'last_button', callback.data)
         await page.post_handle('button')
 
 
@@ -353,17 +356,18 @@ class Scene:
         if element in self.data: return self.data[element]
         return None
 
-    def set_data(self, element: str, value: dict) -> bool:
+    async def set_data(self, element: str, value: dict) -> bool:
         """ Установка данных элемента (полная перезапись)
         """
 
         if element in self.data:
             self.data[element] = value
-            asyncio.create_task(self.save_to_db())
+            await self.save_to_db()
             return True
         return False
 
-    def update_key(self, element: str, key: str, value) -> bool:
+    async def update_key(self, element: str, key: str, 
+                         value) -> bool:
         """ Обновление ключа в данных элемента
             Если ключа нет, он будет создан
             Аккуратно, value должен быть сериализуемым в JSON
@@ -373,7 +377,7 @@ class Scene:
                 self.data[element][key] = value
             else:
                 self.data[element][key] = value
-            asyncio.create_task(self.save_to_db())
+            await self.save_to_db()
             return True
         return False
 
