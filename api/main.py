@@ -31,7 +31,6 @@ async def lifespan(app: FastAPI):
     just_db.create_table('cities') # Таблица с городами
     just_db.create_table('exchange') # Таблица с биржей
     just_db.create_table('factories') # Таблица с заводами
-    just_db.create_table('warehouse') # Таблица с складом
 
     main_logger.info("Starting task scheduler...")
 
