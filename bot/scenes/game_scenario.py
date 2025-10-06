@@ -5,6 +5,7 @@ from scenes.company_join_page import CompanyJoin
 from scenes.main_page import MainPage
 from scenes.wait_game_page import WaitStart
 from scenes.select_cell_page import SelectCell
+from scenes.about_info_page import AboutInfo
 from oms import Scene
 from modules.db import db
 
@@ -19,7 +20,8 @@ class GameManager(Scene):
         CompanyJoin,
         MainPage,
         WaitStart,
-        SelectCell
+        SelectCell,
+        AboutInfo
     ]
     
     @staticmethod

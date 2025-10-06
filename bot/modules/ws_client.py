@@ -153,6 +153,91 @@ async def company_pay_taxes(company_id: str, amount: int):
         wait_for_response=True
     )
 
+async def company_complete_free_factories(company_id: int, new_resource: str, count: int, 
+                                        find_resource: Optional[str] = None, 
+                                        produce_status: Optional[bool] = None):
+    """Массовая перекомплектация свободных фабрик компании"""
+    return await ws_client.send_message(
+        "company-complete-free-factories",
+        company_id=company_id,
+        find_resource=find_resource,
+        new_resource=new_resource,
+        count=count,
+        produce_status=produce_status,
+        password=UPDATE_PASSWORD,
+        wait_for_response=True
+    )
+
+async def get_company_status(company_id: int):
+    """Получение статуса компании"""
+    return await ws_client.send_message(
+        "get-company-status",
+        company_id=company_id,
+        wait_for_response=True
+    )
+
+async def get_company_users(company_id: int):
+    """Получение списка пользователей компании"""
+    return await ws_client.send_message(
+        "get-company-users",
+        company_id=company_id,
+        wait_for_response=True
+    )
+
+# Функции для работы с фабриками
+async def get_factories(company_id: Optional[int] = None, complectation: Optional[str] = None):
+    """Получение списка фабрик"""
+    return await ws_client.send_message(
+        "get-factories",
+        company_id=company_id,
+        complectation=complectation,
+        wait_for_response=True
+    )
+
+async def get_factory(factory_id: int):
+    """Получение информации о фабрике"""
+    return await ws_client.send_message(
+        "get-factory",
+        factory_id=factory_id,
+        wait_for_response=True
+    )
+
+async def get_factory_status(factory_id: int):
+    """Получение статуса фабрики"""
+    return await ws_client.send_message(
+        "get-factory-status",
+        factory_id=factory_id,
+        wait_for_response=True
+    )
+
+async def factory_recomplectation(factory_id: int, new_complectation: str):
+    """Перекомплектация фабрики"""
+    return await ws_client.send_message(
+        "factory-recomplectation",
+        factory_id=factory_id,
+        new_complectation=new_complectation,
+        password=UPDATE_PASSWORD,
+        wait_for_response=True
+    )
+
+async def factory_set_produce(factory_id: int, produce: bool):
+    """Установка статуса производства фабрики"""
+    return await ws_client.send_message(
+        "factory-set-produce",
+        factory_id=factory_id,
+        produce=produce,
+        wait_for_response=True
+    )
+
+async def factory_set_auto(factory_id: int, is_auto: bool):
+    """Установка статуса автоматического производства фабрики"""
+    return await ws_client.send_message(
+        "factory-set-auto",
+        factory_id=factory_id,
+        is_auto=is_auto,
+        wait_for_response=True
+    )
+
 # Функции для работы с сессиями
 async def get_sessions(stage: Optional[str] = None):
     """Получение списка сессий"""

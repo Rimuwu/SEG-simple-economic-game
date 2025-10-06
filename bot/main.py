@@ -21,7 +21,7 @@ async def main():
     bot_logger.info("Запуск бота...")
 
     try:
-        db.drop_all()
+        # db.drop_all()
         db.create_table('messages')
         db.create_table('scenes')
 

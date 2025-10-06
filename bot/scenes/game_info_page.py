@@ -151,6 +151,6 @@ class GameInfo(Page):
         callback.from_user.id,
         GameManager,
         bot
-    )
+        )
         await n_scene.start()
         await callback.answer()

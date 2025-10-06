@@ -42,7 +42,7 @@
             },
             "wait-start-page": {   // +
                 "title": "",
-                "content": "**Ожидание начала игры...**\n\n",
+                "content": "*Ожидание начала игры...*\n\n",
                 "to_pages": {
                     "company-option": "Вернуться к выбору"
                 }
@@ -74,15 +74,16 @@
                     "about-info-menu": "👥 Общая информация",
                     "logistics-menu": "🚚 Логистика",
                     "cities-menu": "🏙️ Города"
-                }
+                },
+                "row_width": 2
             },
             "about-info-menu": {
                 "title": "",
                 "content": "jh",
                 "to_pages": {
-                    "stage-info-page": "↪️ Назад",
-                    "cells-info-page": "↪️ Назад",
-                    "inventory-page": "↪️ Назад",
+                    "stage-info-page": "О этапе",
+                    "cells-info-page": "О клетке",
+                    "inventory-page": "Инвентарь",
                     "main-page": "↪️ Назад"
                     
                 }
