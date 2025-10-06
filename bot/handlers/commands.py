@@ -11,6 +11,8 @@ from modules.db import db
 from filters.admins import *
 from modules.states import *
 
+from oms import scene_manager
+
 from bot_instance import dp, bot
 
 
@@ -113,10 +115,16 @@ async def process_delete_session_id(message: Message, state: FSMContext):
     session_id = message.text
     data = await state.get_data()
     msg_id = data['msg_id']
+    
+    users = await get_users(session_id=session_id)
     response = await delete_session(
         session_id=session_id,
         really=True
     )
+    for user in users:
+        scene = scene_manager.get_scene(user['id'])
+        print("=============\n", user['id'], "\n=================")
+        await scene.end()
     
     await message.delete()
     if response is not None and "error" in response.keys():
@@ -134,7 +142,53 @@ async def process_delete_session_id(message: Message, state: FSMContext):
         text=f"✅ Сессия с ID `{session_id}` успешно удалена!",
         parse_mode="Markdown"
     )
-    db.drop_all()
+    await state.clear()
+
+
+@dp.message(Command("leave"))
+async def leave_session(message: Message, state: FSMContext):
+    msg = await message.answer("Отправьте 'Да' для подтверждения выхода из сессии или что угодно для отмены.")
+    await state.update_data(msg_id=msg.message_id)
+    await state.set_state(ConfirmLeaveStates.waiting_for_confirmation)
+
+
+@dp.message(ConfirmLeaveStates.waiting_for_confirmation)
+async def confirm_leave(message: Message, state: FSMContext):
+    await message.delete()
+    data = await state.get_data()
+    msg_id = data['msg_id']
+    if message.text.lower() != "да":
+        await message.bot.edit_message_text(
+            chat_id=message.chat.id,
+            message_id=msg_id,
+            text="Выход из сессии отменен."
+        )
+        await state.clear()
+        return
+    user_id = message.from_user.id
+    response = await delete_user(user_id=user_id)
+    scene = scene_manager.get_scene(user_id)
+    if response is not None and "error" in response.keys():
+        text = ""
+        if scene is not None:
+            await scene.end()
+            text = "Вы не находились в сессии. Но ваша сцена была завершена."
+        else:
+            text = f"Ошибка: {response['error']}"
+            
+        await message.bot.edit_message_text(
+            chat_id=message.chat.id,
+            message_id=msg_id,
+            text=f"{text}"
+        )
+        await state.clear()
+        return
+    await message.bot.edit_message_text(
+        chat_id=message.chat.id,
+        message_id=msg_id,
+        text="Ваше существование в сессии приравнено к 0, спасибо за игру."
+    )
+    await scene.end()
     await state.clear()
 
     
