@@ -123,8 +123,8 @@ async def process_delete_session_id(message: Message, state: FSMContext):
     )
     for user in users:
         scene = scene_manager.get_scene(user['id'])
-        print("=============\n", user['id'], "\n=================")
-        await scene.end()
+        if scene:
+            await scene.end()
     
     await message.delete()
     if response is not None and "error" in response.keys():

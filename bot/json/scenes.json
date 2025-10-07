@@ -87,6 +87,30 @@
                     "main-page": "↪️ Назад"
                     
                 }
+            },
+            "factory-menu": {
+                "title": "",
+                "content": "",
+                "to_pages": {
+                    "main-page": "↪️ Назад"
+                }
+            },
+            "factory-rekit-groups-page": {
+                "title": "",
+                "content": "",
+                "to_pages": {}
+            },
+            "factory-rekit-count-page": {
+                "title": "",
+                "content": "",
+                "to_pages": {
+                    "factory-rekit-groups-page": "↪️ Назад"
+                }
+            },
+            "factory-rekit-resource-page": {
+                "title": "",
+                "content": "",
+                "to_pages": {}
             }
         }
     },
