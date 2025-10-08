@@ -13,6 +13,7 @@ from scenes.factory_rekit_groups import FactoryRekitGroups
 from scenes.factory_rekit_count import FactoryRekitCount
 from scenes.factory_rekit_resource import FactoryRekitResource
 from scenes.factory_rekit_produce import FactoryRekitProduce
+from scenes.change_turn_page import ChangeTurnPage
 from oms import Scene
 from modules.db import db
 
@@ -35,7 +36,8 @@ class GameManager(Scene):
         FactoryRekitGroups,
         FactoryRekitCount,
         FactoryRekitResource,
-        FactoryRekitProduce
+        FactoryRekitProduce,
+        ChangeTurnPage
     ]
     
     @staticmethod
