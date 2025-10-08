@@ -375,4 +375,11 @@ class SessionsManager():
         if session_id in self.sessions:
             del self.sessions[session_id]
 
+    def load_from_base(self):
+        ss = just_db.find("sessions")
+        for s in ss:
+            session = Session(s['session_id'])
+            session.load_from_base(s)
+            self.sessions[session.session_id] = session
+
 session_manager = SessionsManager()
