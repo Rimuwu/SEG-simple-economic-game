@@ -25,9 +25,6 @@ async def main():
         db.create_table('messages')
         db.create_table('scenes')
 
-        # Загрузка сцен из бд 
-        load_scenes_from_db(scene_manager)
-
         register_handlers(dp)
 
         await ws_client.connect() # Подключаемся к WebSocket серверу
