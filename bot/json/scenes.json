@@ -95,6 +95,13 @@
                     "about-info-menu": "↪️ Назад"
                 }
             },
+            "inventory-page": {
+                "title": "",
+                "content": "",
+                "to_pages": {
+                    "about-info-menu": "↪️ Назад"
+                }
+            },
             "factory-menu": {
                 "title": "",
                 "content": "",
