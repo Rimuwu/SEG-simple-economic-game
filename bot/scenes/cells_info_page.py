@@ -27,7 +27,6 @@ class CellsInfo(Page):
         
         # Получаем название и эмодзи типа клетки
         cell_name = get_resource_name(cell_type)
-        cell_emoji = get_resource_emoji(cell_type)
         
         # Преобразуем координаты в буквенный формат
         cell_position = xy_into_cell(position_coords[0], position_coords[1])
@@ -37,7 +36,6 @@ class CellsInfo(Page):
         resource_text = ""
         if resource_id:
             resource_name = get_resource_name(resource_id)
-            resource_emoji = get_resource_emoji(resource_id)
             resource_text = f"\n*Ресурс:* {resource_name}"
         
         # Формируем текст
