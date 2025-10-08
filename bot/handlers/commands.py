@@ -117,10 +117,17 @@ async def process_delete_session_id(message: Message, state: FSMContext):
     msg_id = data['msg_id']
     
     users = await get_users(session_id=session_id)
+    reposnse2 = await get_session(session_id=session_id)
     response = await delete_session(
         session_id=session_id,
         really=True
     )
+    print("==========================")
+    print(users)
+    print(reposnse2)
+    print(response)
+    print(message.text)
+    print("==========================")
     for user in users:
         scene = scene_manager.get_scene(user['id'])
         if scene:
@@ -143,6 +150,71 @@ async def process_delete_session_id(message: Message, state: FSMContext):
         parse_mode="Markdown"
     )
     await state.clear()
+
+
+@dp.message(AdminFilter(), Command("step"))
+async def change_session_stage(message: Message):
+    """
+    Команда для изменения этапа сессии
+    Формат: /step <код_сессии> <этап>
+    Этапы: FreeUserConnect, CellSelect, Game, End
+    """
+    # Парсим аргументы команды
+    args = message.text.split(maxsplit=2)
+    
+    if len(args) < 3:
+        await message.answer(
+            "❌ Неверный формат команды!\n\n"
+            "Используйте: `/step <код_сессии> <этап>`\n\n"
+            "Доступные этапы:\n"
+            "• `FreeUserConnect` - свободное подключение\n"
+            "• `CellSelect` - выбор клетки\n"
+            "• `Game` - игра\n"
+            "• `End` - конец игры",
+            parse_mode="Markdown"
+        )
+        return
+    
+    session_id = args[1].strip()
+    stage = args[2].strip()
+    
+    # Проверяем валидность этапа
+    valid_stages = ['FreeUserConnect', 'CellSelect', 'Game', 'End']
+    if stage not in valid_stages:
+        await message.answer(
+            f"❌ Неверный этап: `{stage}`\n\n"
+            f"Доступные этапы: {', '.join([f'`{s}`' for s in valid_stages])}",
+            parse_mode="Markdown"
+        )
+        return
+    
+    # Выполняем запрос к API
+    try:
+        response = await update_session_stage(
+            session_id=session_id,
+            stage=stage
+        )
+        
+        if response is None:
+            await message.answer(
+                f"⚠️ Запрос отправлен: сессия `{session_id}` → этап `{stage}`",
+                parse_mode="Markdown"
+            )
+        elif isinstance(response, dict) and "error" in response:
+            await message.answer(
+                f"❌ Ошибка: {response['error']}",
+                parse_mode="Markdown"
+            )
+        else:
+            await message.answer(
+                f"✅ Этап сессии `{session_id}` изменён на `{stage}`",
+                parse_mode="Markdown"
+            )
+    except Exception as e:
+        await message.answer(
+            f"❌ Ошибка при выполнении команды: {str(e)}",
+            parse_mode="Markdown"
+        )
 
 
 @dp.message(Command("leave"))
@@ -232,3 +304,5 @@ async def on_disconnect():
         await asyncio.sleep(1)
 
     print("❌ Не удалось подключиться после 15 попыток, выход.")
+    
+    

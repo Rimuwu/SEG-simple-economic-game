@@ -7,28 +7,28 @@ from oms.utils import callback_generator
 class FactoryRekitResource(Page):
     __page_name__ = "factory-rekit-resource-page"
     
-    # Список доступных ресурсов для производства с короткими ID
+    # Маппинг ресурсов с эмодзи (только производные, без сырья)
     AVAILABLE_RESOURCES = {
-        "oil": "Нефть",
-        "metal": "Металл", 
-        "wood": "Дерево",
-        "cotton": "Хлопок",
-        "oil_p": "Нефтепродукты",
-        "nails": "Гвозди",
-        "planks": "Доски",
-        "fabric": "Ткань",
-        "med_eq": "Медицинское оборудование",
-        "machine": "Станок",
-        "furniture": "Мебель",
-        "tent": "Палатка",
-        "barrel": "Бочка",
-        "tarp": "Брезент",
-        "insulation": "Изоляционный материал",
-        "sail": "Парус",
-        "generator": "Генератор",
-        "armor": "Бронежилет",
-        "fridge": "Холодильник",
-        "yacht": "Парусная яхта"
+        # Уровень 1
+        "oil_p": {"name": "Нефтепродукты", "emoji": "⛽"},
+        "nails": {"name": "Гвозди", "emoji": "🔩"},
+        "planks": {"name": "Доски", "emoji": "🪵"},
+        "fabric": {"name": "Ткань", "emoji": "🧵"},
+        # Уровень 2
+        "med_eq": {"name": "Медоборудование", "emoji": "💉"},
+        "machine": {"name": "Станок", "emoji": "⚙️"},
+        "furniture": {"name": "Мебель", "emoji": "🪑"},
+        "tent": {"name": "Палатка", "emoji": "⛺"},
+        # Уровень 3
+        "barrel": {"name": "Бочка", "emoji": "🛢️"},
+        "tarp": {"name": "Брезент", "emoji": "🎪"},
+        "insulation": {"name": "Изоляция", "emoji": "🧱"},
+        "sail": {"name": "Парус", "emoji": "⛵"},
+        # Уровень 4
+        "generator": {"name": "Генератор", "emoji": "⚡"},
+        "armor": {"name": "Бронежилет", "emoji": "🦺"},
+        "fridge": {"name": "Холодильник", "emoji": "🧊"},
+        "yacht": {"name": "Яхта", "emoji": "🛥️"}
     }
     
     async def content_worker(self):
@@ -46,28 +46,17 @@ class FactoryRekitResource(Page):
         """Кнопки с ресурсами"""
         buttons = []
         
-        # Группируем ресурсы по уровням
-        basic_resources = [("oil", "Нефть"), ("metal", "Металл"), ("wood", "Дерево"), ("cotton", "Хлопок")]
-        level1_resources = [("oil_p", "Нефтепродукты"), ("nails", "Гвозди"), ("planks", "Доски"), ("fabric", "Ткань")]
-        level2_resources = [("med_eq", "Медоборудование"), ("machine", "Станок"), ("furniture", "Мебель"), ("tent", "Палатка")]
-        level3_resources = [("barrel", "Бочка"), ("tarp", "Брезент"), ("insulation", "Изоляция"), ("sail", "Парус")]
-        level4_resources = [("generator", "Генератор"), ("armor", "Бронежилет"), ("fridge", "Холодильник"), ("yacht", "Яхта")]
-        
-        # Базовые ресурсы
-        for res_id, res_name in basic_resources:
-            buttons.append({
-                'text': f"⚪️ {res_name}",
-                'callback_data': callback_generator(
-                    self.scene.__scene_name__,
-                    'sel_res',
-                    res_id
-                )
-            })
+        # Группируем ресурсы по уровням (убрали базовые ресурсы)
+        level1_resources = ["oil_p", "nails", "planks", "fabric"]
+        level2_resources = ["med_eq", "machine", "furniture", "tent"]
+        level3_resources = ["barrel", "tarp", "insulation", "sail"]
+        level4_resources = ["generator", "armor", "fridge", "yacht"]
         
         # Уровень 1
-        for res_id, res_name in level1_resources:
+        for res_id in level1_resources:
+            res_data = self.AVAILABLE_RESOURCES[res_id]
             buttons.append({
-                'text': f"🟢 {res_name}",
+                'text': f"{res_data['emoji']} {res_data['name']}",
                 'callback_data': callback_generator(
                     self.scene.__scene_name__,
                     'sel_res',
@@ -76,9 +65,10 @@ class FactoryRekitResource(Page):
             })
         
         # Уровень 2
-        for res_id, res_name in level2_resources:
+        for res_id in level2_resources:
+            res_data = self.AVAILABLE_RESOURCES[res_id]
             buttons.append({
-                'text': f"🟡 {res_name}",
+                'text': f"{res_data['emoji']} {res_data['name']}",
                 'callback_data': callback_generator(
                     self.scene.__scene_name__,
                     'sel_res',
@@ -87,9 +77,10 @@ class FactoryRekitResource(Page):
             })
         
         # Уровень 3
-        for res_id, res_name in level3_resources:
+        for res_id in level3_resources:
+            res_data = self.AVAILABLE_RESOURCES[res_id]
             buttons.append({
-                'text': f"🟠 {res_name}",
+                'text': f"{res_data['emoji']} {res_data['name']}",
                 'callback_data': callback_generator(
                     self.scene.__scene_name__,
                     'sel_res',
@@ -98,9 +89,10 @@ class FactoryRekitResource(Page):
             })
         
         # Уровень 4
-        for res_id, res_name in level4_resources:
+        for res_id in level4_resources:
+            res_data = self.AVAILABLE_RESOURCES[res_id]
             buttons.append({
-                'text': f"🔴 {res_name}",
+                'text': f"{res_data['emoji']} {res_data['name']}",
                 'callback_data': callback_generator(
                     self.scene.__scene_name__,
                     'sel_res',
@@ -128,8 +120,13 @@ class FactoryRekitResource(Page):
         
         resource_id = args[1]
         
-        # Получаем полное название ресурса
-        new_resource = self.AVAILABLE_RESOURCES.get(resource_id, resource_id)
+        # Получаем данные о ресурсе
+        resource_data = self.AVAILABLE_RESOURCES.get(resource_id)
+        if not resource_data:
+            await callback.answer("❌ Неизвестный ресурс", show_alert=True)
+            return
+        
+        new_resource = resource_data['name']
         
         # Получаем данные
         scene_data = self.scene.get_data('scene')
@@ -154,21 +151,43 @@ class FactoryRekitResource(Page):
                 find_resource=old_resource,
                 new_resource=new_resource,
                 count=rekit_count,
-                produce_status=True  # Включаем производство после перекомплектации
+                produce_status=True
             )
             
-            if response and response.get('result'):
+            # Проверяем ответ: может быть None, dict с result, или dict с error
+            if response is None:
+                # API не вернул ответ, но запрос мог пройти
                 await callback.answer(
-                    f"✅ Перекомплектовано {rekit_count} заводов на {new_resource}",
+                    f"⚠️ Запрос отправлен: {rekit_count} заводов → {new_resource}",
                     show_alert=True
                 )
-                # Возвращаемся в меню заводов
                 await self.scene.update_page('factory-menu')
+            elif isinstance(response, dict):
+                if response.get('result') == True or response.get('success') == True:
+                    await callback.answer(
+                        f"✅ Перекомплектовано {rekit_count} заводов на {new_resource}",
+                        show_alert=True
+                    )
+                    await self.scene.update_page('factory-menu')
+                elif 'error' in response:
+                    await callback.answer(f"❌ {response['error']}", show_alert=True)
+                else:
+                    # Непонятный ответ, но считаем успехом
+                    await callback.answer(
+                        f"✅ Запрос выполнен: {rekit_count} заводов → {new_resource}",
+                        show_alert=True
+                    )
+                    await self.scene.update_page('factory-menu')
             else:
-                error_msg = response.get('error', 'Неизвестная ошибка') if response else 'Нет ответа от сервера'
-                await callback.answer(f"❌ Ошибка: {error_msg}", show_alert=True)
+                # Странный формат ответа
+                await callback.answer(
+                    f"⚠️ Запрос отправлен: {rekit_count} заводов → {new_resource}",
+                    show_alert=True
+                )
+                await self.scene.update_page('factory-menu')
+                
         except Exception as e:
-            await callback.answer(f"❌ Ошибка при перекомплектации: {str(e)}", show_alert=True)
+            await callback.answer(f"❌ Ошибка: {str(e)}", show_alert=True)
     
     @Page.on_callback('back')
     async def back_to_count(self, callback: CallbackQuery, args: list):
