@@ -8,8 +8,11 @@ from modules.check_password import check_password
     "get-factories", 
     doc="Обработчик получения списка всех фабрик. Отправляет ответ на request_id", 
     datatypes=[
-        "company_id: Optional[int]",
+        "company_id: int",
         "complectation: Optional[str]",
+        "produce: Optional[bool]",
+        "is_auto: Optional[bool]",
+
         "request_id: str"
         ])
 async def handle_get_factories(client_id: str, message: dict):
@@ -18,6 +21,8 @@ async def handle_get_factories(client_id: str, message: dict):
     conditions = {
         "company_id": message.get("company_id"),
         "complectation": message.get("complectation"),
+        "produce": message.get("produce"),
+        "is_auto": message.get("is_auto"),
     }
 
     # Получаем список фабрик из базы данных
@@ -47,30 +52,6 @@ async def handle_get_factory(client_id: str, message: dict):
             raise ValueError("Factory not found.")
         
         return {"factory": factory.to_dict()}
-    except ValueError as e:
-        return {"error": str(e)}
-
-@message_handler(
-    "get-factory-status", 
-    doc="Обработчик получения статуса фабрики. Отправляет ответ на request_id.", 
-    datatypes=[
-        "factory_id: int", 
-        "request_id: str"
-        ])
-async def handle_get_factory_status(client_id: str, message: dict):
-    """Обработчик получения статуса фабрики"""
-
-    factory_id = message.get("factory_id")
-    
-    if factory_id is None:
-        return {"error": "factory_id is required"}
-
-    try:
-        factory = Factory(factory_id).reupdate()
-        if not factory:
-            raise ValueError("Factory not found.")
-        
-        return {"status": factory.to_dict()}
     except ValueError as e:
         return {"error": str(e)}
 

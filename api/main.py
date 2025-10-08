@@ -9,6 +9,7 @@ from global_modules.api_configurate import get_fastapi_app
 from global_modules.logs import main_logger
 from modules.json_database import just_db
 from modules.sheduler import scheduler
+from game.session import session_manager
 
 # Импортируем роуты
 from routers import connect_ws
@@ -18,7 +19,6 @@ async def lifespan(app: FastAPI):
     # Startup
     main_logger.info("API is starting up...")
     main_logger.info("Creating missing tables on startup...")
-    
     # just_db.drop_all() # Тестово
 
     just_db.create_table('sessions') # Таблица сессий
@@ -31,11 +31,12 @@ async def lifespan(app: FastAPI):
     just_db.create_table('cities') # Таблица с городами
     just_db.create_table('exchange') # Таблица с биржей
     just_db.create_table('factories') # Таблица с заводами
-    just_db.create_table('warehouse') # Таблица с складом
 
-    main_logger.info("Starting task scheduler...")
+    main_logger.info("Loading sessions from database...")
+    session_manager.load_from_base()
 
     await sleep(5)
+    main_logger.info("Starting task scheduler...")
 
     asyncio.create_task(scheduler.start())
     asyncio.create_task(test1())

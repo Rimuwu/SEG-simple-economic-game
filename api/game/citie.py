@@ -15,7 +15,7 @@ SETTINGS: Settings = ALL_CONFIGS['settings']
 CAPITAL: Capital = ALL_CONFIGS['capital']
 REPUTATION: Reputation = ALL_CONFIGS['reputation']
 
-class Factory(BaseClass):
+class Citie(BaseClass):
 
     __tablename__ = "cities"
     __unique_id__ = "id"
@@ -25,7 +25,7 @@ class Factory(BaseClass):
         self.id: int = id
 
     def create(self):
-        """ Создание новой фабрики
+        """ Создание нового города
         """
 
         self.save_to_base()
