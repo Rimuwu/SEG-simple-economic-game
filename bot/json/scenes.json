@@ -88,6 +88,13 @@
                     
                 }
             },
+            "cells-info-page": {
+                "title": "",
+                "content": "",
+                "to_pages": {
+                    "about-info-menu": "↪️ Назад"
+                }
+            },
             "factory-menu": {
                 "title": "",
                 "content": "",

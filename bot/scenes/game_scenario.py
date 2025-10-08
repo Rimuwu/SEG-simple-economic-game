@@ -6,6 +6,7 @@ from scenes.main_page import MainPage
 from scenes.wait_game_page import WaitStart
 from scenes.select_cell_page import SelectCell
 from scenes.about_info_page import AboutInfo
+from scenes.cells_info_page import CellsInfo
 from scenes.factory_menu_page import FactoryMenu
 from scenes.factory_rekit_groups import FactoryRekitGroups
 from scenes.factory_rekit_count import FactoryRekitCount
@@ -27,6 +28,7 @@ class GameManager(Scene):
         WaitStart,
         SelectCell,
         AboutInfo,
+        CellsInfo,
         FactoryMenu,
         FactoryRekitGroups,
         FactoryRekitCount,
