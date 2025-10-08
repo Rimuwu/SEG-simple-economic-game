@@ -1,103 +1,151 @@
 from oms import Page
 from aiogram.types import Message, CallbackQuery
-from modules.ws_client import get_factories, get_company_status
+from modules.ws_client import get_factories
 from oms.utils import callback_generator
+from global_modules.logs import Logger
+
+bot_logger = Logger.get_logger("bot")
 
 
 class FactoryMenu(Page):
     __page_name__ = "factory-menu"
     
+    # Маппинг ресурсов с английского на русский с эмодзи
+    RESOURCES = {
+        # Уровень 1 (базовые ресурсы)
+        "oil_products": {"name": "Нефтепродукты", "emoji": "⛽"},
+        "nails": {"name": "Гвозди", "emoji": "🔩"},
+        "boards": {"name": "Доски", "emoji": "🪵"},
+        "fabric": {"name": "Ткань", "emoji": "🧵"},
+        # Уровень 2
+        "medical_equipment": {"name": "Медицинское оборудование", "emoji": "💉"},
+        "machine": {"name": "Станок", "emoji": "⚙️"},
+        "furniture": {"name": "Мебель", "emoji": "🪑"},
+        "tent": {"name": "Палатка", "emoji": "⛺"},
+        # Уровень 3
+        "barrel": {"name": "Бочка", "emoji": "🛢️"},
+        "tarpaulin": {"name": "Брезент", "emoji": "🎪"},
+        "insulation_material": {"name": "Изоляционный материал", "emoji": "🧱"},
+        "sail": {"name": "Парус", "emoji": "⛵"},
+        # Уровень 4
+        "generator": {"name": "Генератор", "emoji": "⚡"},
+        "body_armor": {"name": "Бронежилет", "emoji": "🦺"},
+        "refrigerator": {"name": "Холодильник", "emoji": "🧊"},
+        "yacht": {"name": "Парусная яхта", "emoji": "🛥️"}
+    }
+    
+    def get_resource_name(self, resource_key: str) -> str:
+        """Получить русское название ресурса"""
+        resource_info = self.RESOURCES.get(resource_key, {"name": resource_key, "emoji": "📦"})
+        return f"{resource_info['emoji']} {resource_info['name']}"
+    
     async def content_worker(self):
+        """Показать статистику всех заводов"""
         scene_data = self.scene.get_data('scene')
         company_id = scene_data.get('company_id')
         
         if not company_id:
             return "❌ Ошибка: компания не найдена"
         
-        # Получаем список фабрик компании
-        factories_response = await get_factories(company_id=company_id)
-        
-        if not factories_response or "factories" not in factories_response:
-            return "❌ Не удалось загрузить список заводов"
-        
-        factories = factories_response["factories"]
-        
-        if not factories:
-            return "🏭 **Управление заводами**\n\nУ вас пока нет заводов.\nПриобретите их в разделе улучшений."
-        
-        # Группируем заводы по статусу и ресурсу
-        auto_factories = {}  # {resource: count}
-        manual_factories = {}  # {resource: count}
-        idle_factories = 0
-        
-        for factory in factories:
-            complectation = factory.get('complectation')
-            is_auto = factory.get('is_auto', False)
-            is_producing = factory.get('is_produce', False)
+        try:
+            # Получаем все заводы
+            factories_response = await get_factories(company_id=company_id)
+            bot_logger.info(f"get_factories response: {factories_response}")
             
-            if not complectation or complectation == 'None':
-                idle_factories += 1
-            elif is_producing and is_auto:
-                auto_factories[complectation] = auto_factories.get(complectation, 0) + 1
-            elif is_producing and not is_auto:
-                manual_factories[complectation] = manual_factories.get(complectation, 0) + 1
+            if not factories_response or "factories" not in factories_response:
+                return "❌ Не удалось загрузить список заводов"
+            
+            factories = factories_response["factories"]
+            total = len(factories)
+            
+            # Классификация заводов
+            idle_factories = []  # Простаивающие (complectation is None)
+            auto_factories = {}  # Автоматические (is_auto = True) по ресурсам
+            manual_factories = {}  # Разовые (is_auto = False, complectation not None) по ресурсам
+            
+            for factory in factories:
+                complectation = factory.get('complectation')
+                is_auto = factory.get('is_auto', False)
+                
+                if complectation is None:
+                    idle_factories.append(factory)
+                elif is_auto:
+                    # Автоматический завод
+                    if complectation not in auto_factories:
+                        auto_factories[complectation] = []
+                    auto_factories[complectation].append(factory)
+                else:
+                    # Разовый завод
+                    if complectation not in manual_factories:
+                        manual_factories[complectation] = []
+                    manual_factories[complectation].append(factory)
+            
+            # Формируем текст
+            content = "🏭 **Меню управления заводами**\n\n"
+            content += f"📊 **Всего заводов:** {total}\n\n"
+            
+            # Автоматические заводы
+            if auto_factories:
+                content += "🔄 **Автоматические заводы** (производят каждый ход):\n"
+                for resource_key, factories_list in auto_factories.items():
+                    resource_display = self.get_resource_name(resource_key)
+                    content += f"  {resource_display}: **{len(factories_list)}** шт.\n"
+                content += "\n"
+            
+            # Разовые заводы
+            if manual_factories:
+                content += "⚡ **Разовые заводы** (производят один раз):\n"
+                for resource_key, factories_list in manual_factories.items():
+                    resource_display = self.get_resource_name(resource_key)
+                    content += f"  {resource_display}: **{len(factories_list)}** шт.\n"
+                content += "\n"
+            
+            # Простаивающие заводы
+            if idle_factories:
+                content += f"⚪️ **Простаивают:** {len(idle_factories)} шт.\n\n"
             else:
-                idle_factories += 1
-        
-        # Формируем текст
-        content = f"🏭 **Управление заводами**\n\n"
-        content += f"📊 **Всего заводов:** {len(factories)}\n\n"
-        
-        if auto_factories:
-            content += "🔄 **Автоматическое производство:**\n"
-            for resource, count in auto_factories.items():
-                content += f"  • {resource}: {count} шт.\n"
-            content += "\n"
-        
-        if manual_factories:
-            content += "⏸️ **Разовое производство:**\n"
-            for resource, count in manual_factories.items():
-                content += f"  • {resource}: {count} шт.\n"
-            content += "\n"
-        
-        if idle_factories > 0:
-            content += f"⚪️ **Простаивает:** {idle_factories} шт.\n\n"
-        
-        content += "Выберите действие:"
-        
-        return content
+                content += "⚪️ **Простаивают:** 0 шт.\n\n"
+            
+            if not auto_factories and not manual_factories and not idle_factories:
+                content += "У вас пока нет заводов. Купите первый завод!"
+            
+            return content
+            
+        except Exception as e:
+            bot_logger.error(f"Ошибка при получении заводов: {e}")
+            return f"❌ Ошибка при загрузке данных: {str(e)}"
     
     async def buttons_worker(self):
+        """Кнопки управления заводами"""
         buttons = [
-            {
-                'text': '🔄 Перекомплектовать',
-                'callback_data': callback_generator(
-                    self.scene.__scene_name__,
-                    'rekit_menu'
-                )
-            },
             {
                 'text': '🛒 Купить заводы',
                 'callback_data': callback_generator(
                     self.scene.__scene_name__,
                     'buy_factories'
                 )
+            },
+            {
+                'text': '🔄 Перекомплектовать',
+                'callback_data': callback_generator(
+                    self.scene.__scene_name__,
+                    'rekit'
+                )
             }
         ]
         
-        self.row_width = 1
+        self.row_width = 2
         return buttons
-    
-    @Page.on_callback('rekit_menu')
-    async def show_rekit_menu(self, callback: CallbackQuery, args: list):
-        """Показать меню перекомплектации с группами заводов"""
-        await self.scene.update_page('factory-rekit-groups-page')
-        await callback.answer()
     
     @Page.on_callback('buy_factories')
     async def show_buy_menu(self, callback: CallbackQuery, args: list):
-        """Показать меню покупки заводов"""
-        await callback.answer("🚧 Функция в разработке", show_alert=True)
-
-
-
+        """Переход на страницу покупки заводов"""
+        # TODO: Реализовать страницу покупки заводов
+        await callback.answer("🚧 Страница покупки заводов в разработке", show_alert=True)
+        # await self.scene.update_page('factory-buy')
+    
+    @Page.on_callback('rekit')
+    async def show_rekit_menu(self, callback: CallbackQuery, args: list):
+        """Переход на страницу выбора группы заводов для перекомплектации"""
+        await self.scene.update_page('factory-rekit-groups')
+        await callback.answer()

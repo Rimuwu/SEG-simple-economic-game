@@ -7,9 +7,9 @@ from scenes.wait_game_page import WaitStart
 from scenes.select_cell_page import SelectCell
 from scenes.about_info_page import AboutInfo
 from scenes.factory_menu_page import FactoryMenu
-from scenes.factory_rekit_groups_page import FactoryRekitGroups
-from scenes.factory_rekit_count_page import FactoryRekitCount
-from scenes.factory_rekit_resource_page import FactoryRekitResource
+from scenes.factory_rekit_groups import FactoryRekitGroups
+from scenes.factory_rekit_count import FactoryRekitCount
+from scenes.factory_rekit_resource import FactoryRekitResource
 from oms import Scene
 from modules.db import db
 

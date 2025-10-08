@@ -95,22 +95,17 @@
                     "main-page": "↪️ Назад"
                 }
             },
-            "factory-rekit-groups-page": {
+            "factory-rekit-groups": {
                 "title": "",
-                "content": "",
-                "to_pages": {}
+                "content": ""
             },
-            "factory-rekit-count-page": {
+            "factory-rekit-count": {
                 "title": "",
-                "content": "",
-                "to_pages": {
-                    "factory-rekit-groups-page": "↪️ Назад"
-                }
+                "content": ""
             },
-            "factory-rekit-resource-page": {
+            "factory-rekit-resource": {
                 "title": "",
-                "content": "",
-                "to_pages": {}
+                "content": ""
             }
         }
     },
