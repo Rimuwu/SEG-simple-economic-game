@@ -145,7 +145,7 @@ provide('outputConsole', outputConsole)
 }
 
 .page-leave-active {
-  transition: opacity 0.3s ease;
+  transition: opacity 0.3s ease 0.5s;
 }
 
 .page-enter-from,

@@ -7,4 +7,7 @@
 /**
  * Mounts the App component to the #app element in index.html
  */
+import App from "./App.vue"
+import {createApp} from "vue" 
+
 createApp(App).mount('#app')

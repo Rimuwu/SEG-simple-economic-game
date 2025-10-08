@@ -18,21 +18,22 @@
   --border-width: clamp(2px, min(0.33vw, 0.4vh), 6px);
 }
 
+
 body {
-  margin: 0;
-  padding: 0;
-  min-width: 320px;
   width: 100vw;
   height: 100vh;
 
-  font-family: "Montserrat", sans-serif;
+  font-family: "Inter", sans-serif;
   font-optical-sizing: auto;
   font-weight: 700;
-  font-style: normal;
   font-size: var(--text-sm);
+
+  margin: 0;
+  padding: 0;
 }
 
 #app {
   width: 100vw;
   height: 100vh;
+  margin: 0; padding: 0;
 }

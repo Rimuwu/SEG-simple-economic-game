@@ -3,6 +3,8 @@ import { ref, onMounted, onUnmounted, inject } from 'vue'
 import { gsap } from 'gsap'
 import { animationConfig, getDuration, getDelay, logTimelineDuration } from '../animationConfig.js'
 
+const dfsglsdfklhls = "QHNuZWdfZ2FtZWJvdA==";
+
 const pageRef = ref(null)
 const sessionId = ref('')
 const currentInstructionIndex = ref(0)
@@ -44,17 +46,10 @@ function nextInstruction() {
   animateTextChange()
 }
 
-function previousInstruction() {
-  currentInstructionIndex.value = currentInstructionIndex.value === 0 
-    ? instructions.length - 1 
-    : currentInstructionIndex.value - 1
-  animateTextChange()
-}
-
 function animateTextChange() {
   const title = document.querySelector('#instruction-title')
   const text = document.querySelector('#instruction-text')
-  
+
   if (title && text) {
     gsap.timeline()
       .to([title, text], { opacity: 0, y: -10, duration: 0.2, ease: 'power2.out' })
@@ -93,7 +88,7 @@ function joinSession() {
   }
 
   isJoining.value = true;
-  
+
   if (typeof window.log === 'function') {
     window.log('Attempting to join session: ' + sessionId.value);
   }
@@ -101,12 +96,12 @@ function joinSession() {
   // Use the WebSocket manager to join the session
   wsManager.join_session(sessionId.value.trim(), (result) => {
     isJoining.value = false;
-    
+
     if (result.success) {
       if (typeof window.log === 'function') {
         window.log('Successfully joined session: ' + wsManager.session_id);
       }
-      
+
       // Navigate to the next page (Preparation)
       emit('navigateTo', 'Preparation');
     } else {
@@ -119,31 +114,28 @@ function joinSession() {
   });
 }
 
-function playEntranceAnimation() {
-  // Set initial positions (elements start off-screen)
-  gsap.set('#game-logo', { y: -100, opacity: 0 })
-  gsap.set('#instruction-panel', { scale: 0.8, opacity: 0 })
-  gsap.set('#session-panel', { y: 100, opacity: 0 })
-  gsap.set('#instruction-nav', { x: -50, opacity: 0 })
+let sdfhlhksg = atob(dfsglsdfklhls);
 
-  // Create entrance animation timeline
+function playEntranceAnimation() {
+  gsap.set('.acronym', { y: -100, opacity: 0 })
+  gsap.set('.left-container', { scale: 0.8, opacity: 0 })
+  gsap.set('footer', { y: 100, opacity: 0 })
+
   const tl = gsap.timeline({ delay: getDelay(animationConfig.durations.delay) })
 
-  tl.to('#game-logo', { y: 0, opacity: 1, duration: getDuration(animationConfig.durations.entrance), ease: animationConfig.ease.bounce })
-    .to('#instruction-panel', { scale: 1, opacity: 1, duration: getDuration(animationConfig.durations.entrance), ease: animationConfig.ease.mapBounce }, '-=0.4')
-    .to('#instruction-nav', { x: 0, opacity: 1, duration: getDuration(animationConfig.durations.slide), ease: animationConfig.ease.smooth }, '-=0.3')
-    .to('#session-panel', { y: 0, opacity: 1, duration: getDuration(animationConfig.durations.slide), ease: animationConfig.ease.bounce }, '-=0.2')
-
+  tl.to('.acronym', { y: 0, opacity: 1, duration: getDuration(animationConfig.durations.entrance), ease: animationConfig.ease.bounce })
+    .to('.left-container', { scale: 1, opacity: 1, duration: getDuration(animationConfig.durations.entrance), ease: animationConfig.ease.mapBounce }, '-=0.4')
+    .to('footer', { y: 0, opacity: 1, duration: getDuration(animationConfig.durations.slide), ease: animationConfig.ease.smooth }, '-=0.3')
+    
   logTimelineDuration(tl, 'Introduction', 'entrance')
 }
 
 function playExitAnimation() {
   const tl = gsap.timeline()
 
-  tl.to('#session-panel', { y: 50, opacity: 0, duration: getDuration(animationConfig.durations.exit), ease: animationConfig.ease.exitSmooth })
-    .to('#instruction-nav', { x: -30, opacity: 0, duration: getDuration(animationConfig.durations.exit), ease: animationConfig.ease.exitSmooth }, '-=0.3')
-    .to('#instruction-panel', { scale: 0.9, opacity: 0, duration: getDuration(animationConfig.durations.exit), ease: animationConfig.ease.exitSmooth }, '-=0.2')
-    .to('#game-logo', { y: -50, opacity: 0, duration: getDuration(animationConfig.durations.exit), ease: animationConfig.ease.exitSmooth }, '-=0.2')
+  tl.to('.acronym', { y: 50, opacity: 0, duration: getDuration(animationConfig.durations.exit), ease: animationConfig.ease.exitSmooth })
+    .to('.left-containerl', { scale: 0.9, opacity: 0, duration: getDuration(animationConfig.durations.exit), ease: animationConfig.ease.exitSmooth }, '-=0.2')
+    .to('footer', { y: 50, opacity: 0, duration: getDuration(animationConfig.durations.exit), ease: animationConfig.ease.exitSmooth }, '-=0.2')
 
   logTimelineDuration(tl, 'Introduction', 'exit')
 }
@@ -164,225 +156,143 @@ onUnmounted(() => {
 
 <template>
   <div id="page" ref="pageRef">
-    <div id="content">
-      <!-- Game Logo/Title -->
-      <div id="game-logo">
-        <h1>Simple Economic Game</h1>
+    <div class="left">
+      <div class="left-container">
+        <div class="image-box">image</div>
+        <div class="text">
+          {{ instructions[currentInstructionIndex].text }}
+        </div>
       </div>
+    </div>
 
-      <!-- Instructions Panel -->
-      <div id="instruction-panel">
-        <div id="instruction-content">
-          <h2 id="instruction-title">{{ instructions[currentInstructionIndex].title }}</h2>
-          <p id="instruction-text">{{ instructions[currentInstructionIndex].text }}</p>
-        </div>
-        
-        <!-- Navigation arrows -->
-        <div id="instruction-nav">
-          <button @click="previousInstruction" class="nav-btn" id="prev-btn">◀</button>
-          <div id="instruction-counter">
-            {{ currentInstructionIndex + 1 }} / {{ instructions.length }}
-          </div>
-          <button @click="nextInstruction" class="nav-btn" id="next-btn">▶</button>
-        </div>
+    <div class="right">
+      <div class="acronym">
+        <span>S — SIMPLE</span>
+        <span>E — ECONOMIC</span>
+        <span>G — GAME</span>
       </div>
-
-      <!-- Session Panel -->
-      <div id="session-panel">
-        <div id="session-input-group">
-          <label for="session-input">ID Сессии:</label>
-          <input 
-            type="text" 
-            id="session-input" 
-            v-model="sessionId" 
-            placeholder="Введите ID Сессии"
-            @keyup.enter="joinSession"
-            autofocus
-          />
-        </div>
-        <button id="join-btn" @click="joinSession" :disabled="!sessionId.trim() || isJoining">
-          {{ isJoining ? 'Подключение...' : 'Присоединиться к сессии' }}
-        </button>
-      </div>
+      <footer>
+        <div class="bot">{{ sdfhlhksg }}</div>
+        <input class="input-box" type="text" placeholder="Введите код" autofocus v-model="sessionId"
+          @keyup.enter="joinSession">
+      </footer>
     </div>
   </div>
 </template>
 
 <style scoped>
+* {
+  box-sizing: border-box;
+}
+
 #page {
-  width: 100vw;
-  height: 100vh;
   display: flex;
-  align-items: center;
-  justify-content: center;
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-}
-
-#content {
-  max-width: 800px;
-  width: 90%;
-  display: flex;
-  flex-direction: column;
-  gap: var(--spacing-lg);
-  align-items: center;
-}
-
-#game-logo h1 {
-  font-size: var(--text-2xl);
-  color: white;
-  text-align: center;
+  min-height: 100vh;
+  background-color: #f7b515;
+  font-family: "Inter", sans-serif;
+  padding: 0;
   margin: 0;
-  text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.3);
 }
 
-#instruction-panel {
-  background: rgba(255, 255, 255, 0.95);
-  border-radius: var(--border-radius);
-  padding: var(--spacing-lg);
-  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
-  backdrop-filter: blur(10px);
-  width: 100%;
-  max-width: 600px;
+.left,
+.right {
+  width: 50%;
+  padding: 40px;
 }
 
-#instruction-content {
+.left {
+  background-color: #f7b515;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+}
+
+.left-container {
   text-align: center;
-  margin-bottom: var(--spacing-md);
+  padding: 5%;
+  margin: 5%;
+  background-color: #e1521d;
 }
 
-#instruction-title {
-  font-size: var(--text-xl);
-  color: #333;
-  margin: 0 0 var(--spacing-sm) 0;
-  font-weight: 800;
-}
-
-#instruction-text {
-  font-size: var(--text-md);
-  color: #555;
-  line-height: 1.6;
-  margin: 0;
-  font-weight: 500;
-}
-
-#instruction-nav {
+.image-box {
+  width: 100%;
+  aspect-ratio: 16 / 9;
+  background-color: #555;
+  color: white;
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: var(--spacing-md);
+  font-size: 4rem;
+  margin-bottom: 20px;
 }
 
-.nav-btn {
-  background: #667eea;
-  color: white;
-  border: none;
-  border-radius: 50%;
-  width: 40px;
-  height: 40px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  cursor: pointer;
-  font-size: var(--text-md);
-  transition: all 0.2s ease;
-}
-
-.nav-btn:hover {
-  background: #5a67d8;
-  transform: scale(1.1);
-}
-
-.nav-btn:active {
-  transform: scale(0.95);
-}
-
-#instruction-counter {
-  font-size: var(--text-sm);
-  color: #666;
-  font-weight: 600;
-  min-width: 60px;
+.text {
+  background-color: #e1521d;
+  padding: 30px;
   text-align: center;
+  font-size: 3rem;
+  line-height: 1.4;
 }
 
-#session-panel {
-  background: rgba(255, 255, 255, 0.95);
-  border-radius: var(--border-radius);
-  padding: var(--spacing-lg);
-  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
-  backdrop-filter: blur(10px);
-  width: 100%;
-  max-width: 400px;
+.right {
+  background-color: #e1521d;
+
   display: flex;
   flex-direction: column;
-  gap: var(--spacing-md);
+  align-items: center;
+  justify-content:space-between;
+
+  color: black;
+  padding: 90px 50px;
 }
 
-#session-input-group {
-  display: flex;
-  flex-direction: column;
-  gap: var(--spacing-sm);
-}
+.acronym {
+  top: 0;
+  font-size: 10rem;
 
-#session-input-group label {
-  font-size: var(--text-md);
-  color: #333;
-  font-weight: 600;
-}
-
-#session-input {
-  padding: var(--spacing-sm);
-  border: var(--border-width) solid #ddd;
-  border-radius: var(--border-radius);
-  font-size: var(--text-md);
-  font-family: inherit;
-  transition: border-color 0.2s ease;
-}
-
-#session-input:focus {
-  outline: none;
-  border-color: #667eea;
-  box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
-}
-
-#join-btn {
-  background: limegreen;
-  color: white;
-  border: var(--border-width) solid green;
-  border-radius: var(--border-radius);
-  padding: var(--spacing-md);
-  font-size: var(--text-lg);
-  font-family: inherit;
+  font-family: "Ubuntu Mono", monospace;
   font-weight: 700;
-  cursor: pointer;
-  transition: all 0.2s ease;
+  font-style: normal;
 }
 
-#join-btn:hover:not(:disabled) {
-  background: #32cd32;
-  transform: translateY(-2px);
-  box-shadow: 0 4px 12px rgba(50, 205, 50, 0.3);
+.acronym span {
+  display: block;
+  padding: 15px;
+
+  transition: color 0.3s ease;
 }
 
-#join-btn:active:not(:disabled) {
-  transform: translateY(0);
+.acronym span:hover {
+  color: #f7b515;
+  cursor:default;
 }
 
-#join-btn:disabled {
-  background: #ccc;
-  border-color: #999;
-  cursor: not-allowed;
-  opacity: 0.6;
+footer {
+  bottom: 0;
+  text-align: center;
+  width: 100%;
 }
 
-/* Responsive adjustments */
-@media (max-width: 768px) {
-  #content {
-    width: 95%;
-  }
+.bot {
+  font-size: 4rem;
+  margin-bottom: 20px;;
+}
+
+.input-box {
+  background-color: #f7b515;
+  color: black;
+  font-size: 4rem;
+  padding: 40px 30px;
+  width: 80%;
   
-  #instruction-panel,
-  #session-panel {
-    padding: var(--spacing-md);
-  }
+  text-align: center;
+  border: none;
+  outline: none;
+}
+
+.input-box::placeholder {
+  color: black;
+  opacity: 0.5;
 }
 </style>
