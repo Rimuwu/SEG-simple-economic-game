@@ -10,6 +10,7 @@ from scenes.factory_menu_page import FactoryMenu
 from scenes.factory_rekit_groups import FactoryRekitGroups
 from scenes.factory_rekit_count import FactoryRekitCount
 from scenes.factory_rekit_resource import FactoryRekitResource
+from scenes.factory_rekit_produce import FactoryRekitProduce
 from oms import Scene
 from modules.db import db
 
@@ -29,7 +30,8 @@ class GameManager(Scene):
         FactoryMenu,
         FactoryRekitGroups,
         FactoryRekitCount,
-        FactoryRekitResource
+        FactoryRekitResource,
+        FactoryRekitProduce
     ]
     
     @staticmethod

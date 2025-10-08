@@ -3,6 +3,7 @@ from aiogram.types import Message, CallbackQuery
 from modules.ws_client import get_factories
 from oms.utils import callback_generator
 from global_modules.logs import Logger
+from modules.resources import get_resource_name
 
 bot_logger = Logger.get_logger("bot")
 
@@ -10,34 +11,9 @@ bot_logger = Logger.get_logger("bot")
 class FactoryMenu(Page):
     __page_name__ = "factory-menu"
     
-    # Маппинг ресурсов с английского на русский с эмодзи
-    RESOURCES = {
-        # Уровень 1 (базовые ресурсы)
-        "oil_products": {"name": "Нефтепродукты", "emoji": "⛽"},
-        "nails": {"name": "Гвозди", "emoji": "🔩"},
-        "boards": {"name": "Доски", "emoji": "🪵"},
-        "fabric": {"name": "Ткань", "emoji": "🧵"},
-        # Уровень 2
-        "medical_equipment": {"name": "Медицинское оборудование", "emoji": "💉"},
-        "machine": {"name": "Станок", "emoji": "⚙️"},
-        "furniture": {"name": "Мебель", "emoji": "🪑"},
-        "tent": {"name": "Палатка", "emoji": "⛺"},
-        # Уровень 3
-        "barrel": {"name": "Бочка", "emoji": "🛢️"},
-        "tarpaulin": {"name": "Брезент", "emoji": "🎪"},
-        "insulation_material": {"name": "Изоляционный материал", "emoji": "🧱"},
-        "sail": {"name": "Парус", "emoji": "⛵"},
-        # Уровень 4
-        "generator": {"name": "Генератор", "emoji": "⚡"},
-        "body_armor": {"name": "Бронежилет", "emoji": "🦺"},
-        "refrigerator": {"name": "Холодильник", "emoji": "🧊"},
-        "yacht": {"name": "Парусная яхта", "emoji": "🛥️"}
-    }
-    
     def get_resource_name(self, resource_key: str) -> str:
         """Получить русское название ресурса"""
-        resource_info = self.RESOURCES.get(resource_key, {"name": resource_key, "emoji": "📦"})
-        return f"{resource_info['emoji']} {resource_info['name']}"
+        return get_resource_name(resource_key)
     
     async def content_worker(self):
         """Показать статистику всех заводов"""
