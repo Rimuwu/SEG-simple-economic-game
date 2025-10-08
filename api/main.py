@@ -19,7 +19,6 @@ async def lifespan(app: FastAPI):
     # Startup
     main_logger.info("API is starting up...")
     main_logger.info("Creating missing tables on startup...")
-
     # just_db.drop_all() # Тестово
 
     just_db.create_table('sessions') # Таблица сессий

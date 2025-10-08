@@ -1,35 +1,12 @@
-from scenes.start_page import Start
-from scenes.name_page import UserName
-from scenes.company_create_page import CompanyCreate
-from scenes.company_join_page import CompanyJoin
-from scenes.main_page import MainPage
-from scenes.wait_game_page import WaitStart
-from scenes.select_cell_page import SelectCell
-from scenes.about_info_page import AboutInfo
-from scenes.factory_menu_page import FactoryMenu
-from scenes.factory_rekit_groups_page import FactoryRekitGroups
-from scenes.factory_rekit_count_page import FactoryRekitCount
-from scenes.factory_rekit_resource_page import FactoryRekitResource
+from scenes.game_info_page import GameInfo
 from oms import Scene
 from modules.db import db
 
 
-class GameManager(Scene):
-
-    __scene_name__ = 'scene-manager'
+class StartManager(Scene):
+    __scene_name__ = 'start-scene-manager'
     __pages__ = [
-        Start,
-        UserName,
-        CompanyCreate,
-        CompanyJoin,
-        MainPage,
-        WaitStart,
-        SelectCell,
-        AboutInfo,
-        FactoryMenu,
-        FactoryRekitGroups,
-        FactoryRekitCount,
-        FactoryRekitResource
+        GameInfo
     ]
     
     @staticmethod

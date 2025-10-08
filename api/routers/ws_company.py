@@ -56,10 +56,10 @@ async def handle_get_company(client_id: str, message: dict):
     }
 
     # Получаем компанию из базы данных
-    company = just_db.find_one('companies',
+    company = just_db.find_one('companies', to_class=Company,
                          **{k: v for k, v in conditions.items() if v is not None})
 
-    return company
+    return company.to_dict()
 
 @message_handler(
     "create-company", 

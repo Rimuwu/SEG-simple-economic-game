@@ -10,3 +10,6 @@ class StartGameStates(StatesGroup):
 
 class DeleteSessionStates(StatesGroup):
     waiting_for_session_id = State()
+    
+class ConfirmLeaveStates(StatesGroup):
+    waiting_for_confirmation = State()
