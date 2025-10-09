@@ -410,7 +410,13 @@ class Session(BaseClass):
             "stage": self.stage,
             "step": self.step,
             "max_steps": self.max_steps,
-            "time_to_next_stage": self.get_time_to_next_stage()
+            "time_to_next_stage": self.get_time_to_next_stage(),
+
+            "event": {
+                "type": self.event_type,
+                "start": self.event_start,
+                "end": self.event_end
+            }
         }
 
 
