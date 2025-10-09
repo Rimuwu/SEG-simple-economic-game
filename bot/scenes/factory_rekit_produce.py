@@ -3,7 +3,7 @@ from aiogram.types import CallbackQuery
 from oms.utils import callback_generator
 from global_modules.logs import Logger
 from modules.ws_client import company_complete_free_factories, get_factories, factory_set_auto
-from modules.resources import RESOURCES
+from modules.resources import RESOURCES, get_resource_name
 
 bot_logger = Logger.get_logger("bot")
 
@@ -23,10 +23,10 @@ class FactoryRekitProduce(Page):
             return "❌ Ошибка: недостаточно данных для перекомплектации"
         
         # Формируем текст
-        resource_info = RESOURCES.get(resource, {"name": resource, "emoji": "📦"})
+        resource_name = get_resource_name(resource)
         
         content = "🔄 **Перекомплектация заводов**\n\n"
-        content += f"Ресурс: {resource_info['emoji']} {resource_info['name']}\n"
+        content += f"Ресурс: {resource_name}\n"
         content += f"Количество: {count}\n\n"
         content += "Выберите режим производства:\n\n"
         content += "🔄 **Автоматическое** - завод будет производить ресурс каждый ход автоматически\n\n"
@@ -115,7 +115,7 @@ class FactoryRekitProduce(Page):
                             await factory_set_auto(factory['id'], True)
                             bot_logger.info(f"Set auto=True for factory {factory['id']}")
             
-            resource_info = RESOURCES.get(resource, {"name": resource, "emoji": "📦"})
+            resource_name = get_resource_name(resource)
             mode_text = "🔄 Автоматическое" if produce_status else "🎯 Разовое"
             
             # Очищаем временные данные
@@ -126,7 +126,7 @@ class FactoryRekitProduce(Page):
             
             # Обновляем сообщение вместо отправки нового
             await callback.message.edit_text(
-                f"✅ Перекомплектовано {count} заводов на {resource_info['emoji']} {resource_info['name']}!\n"
+                f"✅ Перекомплектовано {count} заводов на {resource_name}!\n"
                 f"Режим производства: {mode_text}"
             )
             

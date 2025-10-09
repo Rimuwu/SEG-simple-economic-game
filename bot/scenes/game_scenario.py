@@ -16,6 +16,7 @@ from scenes.factory_rekit_count import FactoryRekitCount
 from scenes.factory_rekit_resource import FactoryRekitResource
 from scenes.factory_rekit_produce import FactoryRekitProduce
 from scenes.change_turn_page import ChangeTurnPage
+from scenes.prison_page import PrisonPage
 from oms import Scene
 from modules.db import db
 
@@ -41,7 +42,8 @@ class GameManager(Scene):
         FactoryRekitCount,
         FactoryRekitResource,
         FactoryRekitProduce,
-        ChangeTurnPage
+        ChangeTurnPage,
+        PrisonPage
     ]
     
     @staticmethod

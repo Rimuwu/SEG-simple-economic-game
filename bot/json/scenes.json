@@ -162,8 +162,11 @@
             "change-turn-page": {
                 "title": "",
                 "content": "*Смена хода...*\n\n"
-        }
-    }
+            },
+            "prison-page": {
+                "title": "",
+                "content": "Вы находитесь в тюрьме."
+            }
     },
     "start-scene-manager": {
         "settings": {

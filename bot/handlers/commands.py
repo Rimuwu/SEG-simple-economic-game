@@ -309,5 +309,12 @@ async def on_disconnect():
         await asyncio.sleep(1)
 
     print("❌ Не удалось подключиться после 15 попыток, выход.")
+
+
+@ws_client.on_message("api-company_to_prison")
+async def on_company_to_prison(message: dict):
+    data = message.get('data', {})
+    company_id = data.get('company_id')
+    await go_to_page(company_id, None, "prison-page")
     
     

@@ -3,7 +3,7 @@ from aiogram.types import Message, CallbackQuery
 from modules.ws_client import get_factories
 from oms.utils import callback_generator
 from global_modules.logs import Logger
-from modules.resources import RESOURCES, get_resource_name
+from modules.resources import RESOURCES, get_resource_name, get_resource_emoji
 
 bot_logger = Logger.get_logger("bot")
 
@@ -109,9 +109,8 @@ class FactoryRekitGroups(Page):
                 
                 # Кнопки для групп заводов по ресурсам
                 for resource_key, count in resource_groups.items():
-                    resource_info = RESOURCES.get(resource_key, {"name": resource_key, "emoji": "📦"})
                     buttons.append({
-                        'text': f'{resource_info["emoji"]} {resource_info["name"]} ({count})',
+                        'text': f'{get_resource_emoji(resource_key)} {RESOURCES[resource_key]["name"]} ({count})',
                         'callback_data': callback_generator(
                             self.scene.__scene_name__,
                             'select_group',

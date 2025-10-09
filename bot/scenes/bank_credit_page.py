@@ -245,8 +245,24 @@ class BankCreditPage(Page):
     @Page.on_callback('take_credit')
     async def take_credit_handler(self, callback: CallbackQuery, args: list):
         """Начало процесса взятия кредита - запрос срока"""
-        # Устанавливаем состояние ожидания ввода срока
         scene_data = self.scene.get_data('scene')
+        company_id = scene_data.get('company_id')
+        
+        # Проверяем репутацию перед началом процесса
+        company_data = await get_company(id=company_id)
+        if isinstance(company_data, dict):
+            reputation = company_data.get('reputation', 0)
+            try:
+                get_credit_conditions(reputation)
+            except ValueError:
+                await callback.answer(
+                    "❌ Недостаточная репутация для взятия кредита!\n"
+                    "Минимальная репутация: 11 ⭐",
+                    show_alert=True
+                )
+                return
+        
+        # Устанавливаем состояние ожидания ввода срока
         scene_data['credit_state'] = 'input_period'
         self.scene.set_data('scene', scene_data)
         
@@ -341,8 +357,28 @@ class BankCreditPage(Page):
         print("=========================================================")
         pprint(result)
         print("=========================================================")
+        
+        # Проверяем результат
         if isinstance(result, str):
             await callback.answer(f"❌ Ошибка: {result}", show_alert=True)
+        elif isinstance(result, dict) and 'error' in result:
+            # Обрабатываем ошибку из API
+            error_msg = result['error']
+            if 'reputation' in error_msg.lower():
+                await callback.answer(
+                    "❌ Недостаточная репутация для взятия кредита!\n"
+                    "Минимальная репутация: 11 ⭐",
+                    show_alert=True
+                )
+            else:
+                await callback.answer(f"❌ Ошибка: {error_msg}", show_alert=True)
+            
+            # Сбрасываем состояние и возвращаемся к основному экрану
+            scene_data['credit_state'] = 'main'
+            scene_data['credit_amount'] = 0
+            scene_data['credit_period'] = 0
+            self.scene.set_data('scene', scene_data)
+            await self.scene.update_message()
         else:
             await callback.answer(
                 f"✅ Кредит оформлен!\n"

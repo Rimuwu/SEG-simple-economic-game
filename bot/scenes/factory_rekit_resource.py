@@ -2,7 +2,7 @@ from oms import Page
 from aiogram.types import Message, CallbackQuery
 from oms.utils import callback_generator
 from global_modules.logs import Logger
-from modules.resources import RESOURCES
+from modules.resources import RESOURCES, get_resource_name
 
 bot_logger = Logger.get_logger("bot")
 
@@ -23,8 +23,7 @@ class FactoryRekitResource(Page):
         if group_type == 'idle':
             group_name = "⚪️ Простаивающие заводы"
         else:
-            resource_info = RESOURCES.get(group_type, {"name": group_type, "emoji": "📦"})
-            group_name = f"{resource_info['emoji']} {resource_info['name']}"
+            group_name = get_resource_name(group_type)
         
         count_display = "все" if count_str == "all" else count_str
         
