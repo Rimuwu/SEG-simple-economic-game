@@ -1,6 +1,7 @@
 import asyncio
 from datetime import datetime, timedelta
 import random
+from typing import Optional
 from game.stages import stage_game_updater
 from global_modules.models.cells import CellType, Cells
 from modules.json_database import just_db
@@ -45,6 +46,10 @@ class Session(BaseClass):
         self.step: int = 0
         self.max_steps: int = 15
         self.change_turn_schedule_id: int = 0
+
+        self.event_type: Optional[str] = None
+        self.event_start: Optional[int] = None
+        self.event_end: Optional[int] = None
 
     def start(self):
         if not self.session_id:
