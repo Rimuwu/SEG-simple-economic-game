@@ -168,14 +168,6 @@ async def company_complete_free_factories(company_id: int, new_resource: str, co
         wait_for_response=True
     )
 
-async def get_company_status(company_id: int):
-    """Получение статуса компании"""
-    return await ws_client.send_message(
-        "get-company-status",
-        company_id=company_id,
-        wait_for_response=True
-    )
-
 async def get_company_users(company_id: int):
     """Получение списка пользователей компании"""
     return await ws_client.send_message(
@@ -185,12 +177,15 @@ async def get_company_users(company_id: int):
     )
 
 # Функции для работы с фабриками
-async def get_factories(company_id: Optional[int] = None, complectation: Optional[str] = None):
+async def get_factories(company_id: int, complectation: Optional[str] = None, 
+                       produce: Optional[bool] = None, is_auto: Optional[bool] = None):
     """Получение списка фабрик"""
     return await ws_client.send_message(
         "get-factories",
         company_id=company_id,
         complectation=complectation,
+        produce=produce,
+        is_auto=is_auto,
         wait_for_response=True
     )
 
@@ -198,14 +193,6 @@ async def get_factory(factory_id: int):
     """Получение информации о фабрике"""
     return await ws_client.send_message(
         "get-factory",
-        factory_id=factory_id,
-        wait_for_response=True
-    )
-
-async def get_factory_status(factory_id: int):
-    """Получение статуса фабрики"""
-    return await ws_client.send_message(
-        "get-factory-status",
         factory_id=factory_id,
         wait_for_response=True
     )

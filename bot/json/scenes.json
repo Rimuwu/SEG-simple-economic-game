@@ -1,5 +1,4 @@
 {
-
     "scene-manager": {
         "settings": {
             "parse_mode": "Markdown",
@@ -11,7 +10,7 @@
                 "content": "Введиие код для подключения к игровой сессии: ",
                 "to_pages": {}
             },
-            "name-enter": { // +
+            "name-enter": {
                 "title": "",
                 "content": "Подключение успешно\nВведите ваше имя для продолжения: ",
                 "to_pages": {
@@ -26,28 +25,28 @@
                     "company-join": "Присоединится"
                 }
             },
-            "company-create": {   // +
+            "company-create": {
                 "title": "",
                 "content": "Введите название компании: ",
                 "to_pages": {
                     "company-option": "Вернуться к выбору"
                 }
             },
-            "company-join": {   // +
+            "company-join": {
                 "title": "",
                 "content": "Введите секретный код: ",
                 "to_pages": {
                     "company-option": "Вернуться к выбору"
                 }
             },
-            "wait-start-page": {   // +
+            "wait-start-page": {
                 "title": "",
                 "content": "*Ожидание начала игры...*\n\n",
                 "to_pages": {
                     "company-option": "Вернуться к выбору"
                 }
             },
-            "select-cell-page": {   // +
+            "select-cell-page": {
                 "title": "",
                 "content": "Выберите клетку, на которой будет ваша располагаться ваша компания: ",
                 "to_pages": {}
@@ -57,7 +56,7 @@
                 "content": "Ожидание выбора клетки владельцем...",
                 "to_pages": {}
             },
-            "wait-game-stage-page": {   // +
+            "wait-game-stage-page": {
                 "title": "",
                 "content": "Вы выбрали клетку. Ожидание начала игрового этапа...",
                 "to_pages": {}
@@ -88,6 +87,55 @@
                     
                 }
             },
+            "cells-info-page": {
+                "title": "",
+                "content": "",
+                "to_pages": {
+                    "about-info-menu": "↪️ Назад"
+                }
+            },
+            "inventory-page": {
+                "title": "",
+                "content": "",
+                "to_pages": {
+                    "about-info-menu": "↪️ Назад"
+                }
+            },
+            "bank-menu": {
+                "title": "",
+                "content": "",
+                "to_pages": {
+                    "main-page": "↪️ Назад"
+                }
+            },
+            "bank-credit-page": {
+                "title": "",
+                "content": "",
+                "to_pages": {
+                    "bank-menu": "↪️ Назад"
+                }
+            },
+            "bank-credit-amount": {
+                "title": "",
+                "content": "",
+                "to_pages": {
+                    "bank-credit-page": "↪️ Назад"
+                }
+            },
+            "bank-credit-period": {
+                "title": "",
+                "content": "",
+                "to_pages": {
+                    "bank-credit-amount": "↪️ Назад"
+                }
+            },
+            "bank-deposit-page": {
+                "title": "",
+                "content": "",
+                "to_pages": {
+                    "bank-menu": "↪️ Назад"
+                }
+            },
             "factory-menu": {
                 "title": "",
                 "content": "",
@@ -95,24 +143,27 @@
                     "main-page": "↪️ Назад"
                 }
             },
-            "factory-rekit-groups-page": {
+            "factory-rekit-groups": {
                 "title": "",
-                "content": "",
-                "to_pages": {}
+                "content": ""
             },
-            "factory-rekit-count-page": {
+            "factory-rekit-count": {
                 "title": "",
-                "content": "",
-                "to_pages": {
-                    "factory-rekit-groups-page": "↪️ Назад"
-                }
+                "content": ""
             },
-            "factory-rekit-resource-page": {
+            "factory-rekit-resource": {
                 "title": "",
-                "content": "",
-                "to_pages": {}
-            }
+                "content": ""
+            },
+            "factory-rekit-produce": {
+                "title": "",
+                "content": ""
+            },
+            "change-turn-page": {
+                "title": "",
+                "content": "*Смена хода...*\n\n"
         }
+    }
     },
     "start-scene-manager": {
         "settings": {
@@ -126,5 +177,4 @@
             }
         }
     }
-
 }

@@ -6,10 +6,16 @@ from scenes.main_page import MainPage
 from scenes.wait_game_page import WaitStart
 from scenes.select_cell_page import SelectCell
 from scenes.about_info_page import AboutInfo
+from scenes.cells_info_page import CellsInfo
+from scenes.inventory_page import InventoryPage
+from scenes.bank_page import BankPage
+from scenes.bank_credit_page import BankCreditPage
 from scenes.factory_menu_page import FactoryMenu
-from scenes.factory_rekit_groups_page import FactoryRekitGroups
-from scenes.factory_rekit_count_page import FactoryRekitCount
-from scenes.factory_rekit_resource_page import FactoryRekitResource
+from scenes.factory_rekit_groups import FactoryRekitGroups
+from scenes.factory_rekit_count import FactoryRekitCount
+from scenes.factory_rekit_resource import FactoryRekitResource
+from scenes.factory_rekit_produce import FactoryRekitProduce
+from scenes.change_turn_page import ChangeTurnPage
 from oms import Scene
 from modules.db import db
 
@@ -26,10 +32,16 @@ class GameManager(Scene):
         WaitStart,
         SelectCell,
         AboutInfo,
+        CellsInfo,
+        InventoryPage,
+        BankPage,
+        BankCreditPage,
         FactoryMenu,
         FactoryRekitGroups,
         FactoryRekitCount,
-        FactoryRekitResource
+        FactoryRekitResource,
+        FactoryRekitProduce,
+        ChangeTurnPage
     ]
     
     @staticmethod

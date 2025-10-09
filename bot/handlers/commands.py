@@ -8,6 +8,7 @@ import asyncio
 from modules.ws_client import *
 from modules.utils import go_to_page, update_page
 from modules.db import db
+from modules.load_scenes import load_scenes_from_db
 from filters.admins import *
 from modules.states import *
 
@@ -37,7 +38,7 @@ async def process_start_session_id(message: Message, state: FSMContext):
     )
     
     await message.delete()
-    if "error" in response.keys():
+    if response is not None and "error" in response.keys():
         await message.bot.edit_message_text(
         chat_id=message.chat.id,
         message_id=msg_id,
@@ -272,6 +273,7 @@ async def on_pong(message: dict):
 
 @ws_client.on_event("connect")
 async def on_connect():
+    load_scenes_from_db(scene_manager)
     print("🔗 Подключено к WebSocket серверу")
 
 
@@ -287,6 +289,9 @@ async def on_update_session_stage(message: dict):
         await go_to_page(session_id, "wait-start-page", "select-cell-page")
     elif new_stage == "Game":
         await go_to_page(session_id, "wait-game-stage-page", "main-page")
+        await go_to_page(session_id, "change-turn-page", "main-page")
+    elif new_stage == "ChangeTurn":
+        await go_to_page(session_id, None, "change-turn-page")
 
 
 @ws_client.on_event("disconnect")
