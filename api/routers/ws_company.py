@@ -321,12 +321,13 @@ async def handle_update_company_improve(client_id: str, message: dict):
 
 @message_handler(
     "company-take-credit", 
-    doc="Обработчик получения кредита компанией. Требуется пароль для взаимодействия.",
+    doc="Обработчик получения кредита компанией. Требуется пароль для взаимодействия. Отправляет ответ на request_id.",
     datatypes=[
         "company_id: int",
         "amount: int",
         "period: int",
 
+        "request_id: str",
         "password: str"
     ],
     messages=["api-company_credit_taken (broadcast)"]
@@ -348,10 +349,12 @@ async def handle_company_take_credit(client_id: str, message: dict):
         company = Company(_id=company_id).reupdate()
         if not company: raise ValueError("Company not found.")
 
-        company.take_credit(amount, period)
+        credit_data = company.take_credit(amount, period)
 
     except ValueError as e:
         return {"error": str(e)}
+
+    return credit_data
 
 @message_handler(
     "company-pay-credit", 
