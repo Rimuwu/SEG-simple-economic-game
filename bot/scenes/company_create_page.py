@@ -40,7 +40,7 @@ class CompanyCreate(Page):
 
             if response and response.get('company'):
                 # Сохраняем данные компании в сцене
-                self.scene.update_key(
+                await self.scene.update_key(
                     'scene',
                     'company_id',
                     response['company']["id"]

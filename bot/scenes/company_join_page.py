@@ -53,7 +53,7 @@ class CompanyJoin(Page):
             company_data = await get_company(id=user_company_id)
             if company_data:
                 # Сохраняем данные компании в сцене
-                self.scene.update_key(
+                await self.scene.update_key(
                     'scene',
                     'company_id',
                     company_data.get('id')

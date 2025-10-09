@@ -21,11 +21,9 @@ async def main():
     bot_logger.info("Запуск бота...")
 
     try:
+        # db.drop_all()
         db.create_table('messages')
         db.create_table('scenes')
-
-        # Загрузка сцен из бд 
-        load_scenes_from_db(scene_manager)
 
         register_handlers(dp)
 

@@ -24,7 +24,7 @@ class Start(Page):
             await self.scene.update_page(self.__page_name__)
         else:
 
-            self.scene.update_key(
+            await self.scene.update_key(
                 'scene',
                 'session',
                 value
