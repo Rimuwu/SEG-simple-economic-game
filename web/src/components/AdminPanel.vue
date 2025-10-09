@@ -21,11 +21,22 @@
       <button @click="testMapRefresh">Refresh Map</button>
       <button @click="debugMapInfo">Debug Map Info</button>
     </div>
+    <div class="panel-section">
+      <h3>Preparation State</h3>
+      <button @click="togglePrepState">Toggle Preparation State</button>
+    </div>
   </div>
 </template>
 
 <script setup>
 import { inject } from 'vue'
+
+// Toggle prepState between 0 and 1 using the global window.prepState
+function togglePrepState() {
+  if (window.prepState && typeof window.prepState.value === 'number') {
+    window.prepState.value = window.prepState.value === 0 ? 1 : 0;
+  }
+}
 
 const wsManager = inject('wsManager', null)
 

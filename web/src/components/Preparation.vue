@@ -1,7 +1,7 @@
 <script setup>
 import './mapScripts.js'
 import Map from './Map.vue'
-import { onMounted, onUnmounted, ref, inject, reactive } from 'vue'
+import { onMounted, onUnmounted, ref, inject, reactive, watch } from 'vue'
 import { gsap } from 'gsap'
 import { animationConfig, getDuration, getDelay, logTimelineDuration } from '../animationConfig.js'
 
@@ -20,6 +20,12 @@ const wsManager = inject('wsManager', null)
  * Reactive state for the list of companies displayed in the columns.
  */
 const companiesState = reactive({ list: [] })
+
+const prepState = ref(0)
+let color_scheme = [
+  ["#12488E", "#C67D1D"],
+  ["#7EBE25", "#0C9273"],
+]
 
 /**
  * Handles updates to the companies list from polling events.
@@ -78,6 +84,17 @@ function playExitAnimation() {
   logTimelineDuration(tl, 'Preparation', 'exit')
 }
 
+function stateChange() {
+  window.log("stateChange called, new state: " + prepState.value)
+  if (state == 0) {
+    document.documentElement.style.setProperty("--color-1", color_scheme[0][0])
+    document.documentElement.style.setProperty("--color-2", color_scheme[0][1])
+  } else if (state == 1) {
+    document.documentElement.style.setProperty("--color-1", color_scheme[1][0])
+    document.documentElement.style.setProperty("--color-2", color_scheme[1][1])
+  }
+}
+
 /**
  * Lifecycle hook: runs on component mount.
  * Sets up entrance animation, exit event listener, and starts company polling.
@@ -85,10 +102,19 @@ function playExitAnimation() {
 onMounted(() => {
   playEntranceAnimation()
   pageRef.value?.addEventListener('triggerExit', playExitAnimation)
+
+  // Watch for changes in prepState and call stateChange
+  watch(prepState, () => {
+    stateChange()
+  })
+
   if (wsManager) {
     window.addEventListener('companies-updated', handleCompaniesUpdated)
     wsManager.startCompaniesPolling(5000)
   }
+
+  window.preparationState = prepState;
+
 })
 
 /**
@@ -101,6 +127,7 @@ onUnmounted(() => {
     wsManager.stopCompaniesPolling()
     window.removeEventListener('companies-updated', handleCompaniesUpdated)
   }
+
 })
 
 wsManager.session_id = "AFRIKA";
@@ -133,10 +160,15 @@ wsManager.session_id = "AFRIKA";
 </template>
 
 <style scoped>
+* {
+  --color-1: #12488E;
+  --color-2: #C67D1D;
+}
+
 #page {
   display: flex;
   height: 100vh;
-  background-color: #C67D1D;
+  background-color: var(--color-2);
   font-family: "Inter", sans-serif;
   padding: 0;
   margin: 0;
@@ -146,11 +178,12 @@ wsManager.session_id = "AFRIKA";
 .right {
   width: 50%;
   padding: 40px;
+  transition: background-color 1s ease-in-out;
 }
 
 
 .left {
-  background-color: #12488E;
+  background-color: var(--color-1);
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -158,7 +191,7 @@ wsManager.session_id = "AFRIKA";
 }
 
 .right {
-  background-color: #C67D1D;
+  background-color: var(--color-2);
 
   color: black;
   padding: 90px 50px;
@@ -206,7 +239,7 @@ wsManager.session_id = "AFRIKA";
 .footer {
   width: 90%;
 
-  background: #C67D1D;
+  background: var(--color-2);
   display: flex;
   flex-direction: row;
   align-items: center;
