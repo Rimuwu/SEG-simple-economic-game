@@ -1,5 +1,5 @@
 from game.user import User
-from modules import websocket_manager
+from modules.websocket_manager import websocket_manager
 from modules.check_password import check_password
 from modules.ws_hadnler import message_handler
 from modules.json_database import just_db
@@ -544,6 +544,49 @@ async def handle_notforgame_update_company_items(
         else:
             company.remove_resource(item_id, 
                                     abs(quantity_change))
+
+    except ValueError as e:
+        return {"error": str(e)}
+
+@message_handler(
+    "notforgame-update-company-name", 
+    doc="Обработчик обновления названия компании. Требуется пароль для взаимодействия.",
+    datatypes=[
+        "company_id: int",
+        "new_name: str",
+        "password: str"
+    ],
+    messages=['api-company_name_updated (broadcast)']
+)
+async def handle_notforgame_update_company_name(
+    client_id: str, message: dict):
+    """Обработчик обновления названия компании"""
+
+    password = message.get("password", 0)
+    company_id = message.get("company_id", 0)
+    new_name = message.get("new_name", "")
+
+    for i in [company_id, password, new_name]:
+        if i is None: 
+            return {"error": "Missing required fields."}
+
+
+    try:
+        check_password(password)
+
+        company = Company(_id=company_id).reupdate()
+        if not company: raise ValueError("Company not found.")
+
+        company.name = new_name
+        company.save_to_base()
+
+        await websocket_manager.broadcast({
+            "type": "api-company_name_updated",
+            "data": {
+                "company_id": company.id,
+                "new_name": company.name
+            }
+        })
 
     except ValueError as e:
         return {"error": str(e)}
