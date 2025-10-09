@@ -207,7 +207,6 @@ wsManager.session_id = "AFRIKA";
   width: 90%;
 
   background: #C67D1D;
-  padding: 25px;
   display: flex;
   flex-direction: row;
   align-items: center;
@@ -218,6 +217,10 @@ wsManager.session_id = "AFRIKA";
   font-size: 4rem;
 
   color: white;
+}
+
+.footer span {
+  margin: 25px;
 }
 
 .map {

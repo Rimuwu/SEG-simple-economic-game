@@ -58,146 +58,133 @@ onUnmounted(() => {
 })
 </script>
 
+
 <template>
+  <!--
+    Preparation page layout.
+    Left column: title, map, session key.
+    Right columns: alternating company slots (left/right).
+  -->
   <div id="page" ref="pageRef">
-    <div id="column-left">
-      <div id="map-title">
-        Карта мира
-      </div>
-
-      <Map />
-
-      <div id="timer">
-        Время до конца этапа: 00:00
+    <div class="left">
+      <Map class="map" />
+      <div class="footer">
+        <div>До конца этапа 02:53</div>
+        <div>4/5</div>
       </div>
     </div>
+    <div class="right">
+      <div class="grid">
+        
+        <div class="cities">
+          <p class="title">ГОРОДА</p>
+          <div class="content">
+          </div>
+        </div>
 
-    <div id="column-right">
-      <div id="column-right-header">
-        <p class="column-title"> Спрос </p>
-        <p class="column-title"> Биржа </p>
-      </div>
-      <div id="column-right-content">
-        <div id="list-col-left" class="column">
-          <div v-for="n in 4" :key="n" class="list-item" :id="'demand-' + n">
-            Товар {{ n }}
+        <div class="stock">
+          <p class="title">БИРЖА</p>
+          <div class="content">
           </div>
         </div>
-        <div id="list-col-right" class="column">
-          <div v-for="n in 4" :key="n" class="list-item" :id="'stock-' + n">
-            Компания А выставила Y продукта X за Z продукта / монет {{ n }}
+        <div class="upgrades">
+          <p class="title">УЛУЧШЕНИЯ</p>
+          <div class="content">
           </div>
         </div>
+        <div class="contracts">
+          <p class="title">КОНТРАКТЫ</p>
+          <div class="content">
+          </div>
+        </div>
+
+
       </div>
     </div>
   </div>
-
 </template>
 
 <style scoped>
 #page {
   display: flex;
+  height: 100vh;
+  background-color: #3D8C00;
+  font-family: "Inter", sans-serif;
+  padding: 0;
   margin: 0;
-  padding: var(--spacing-sm);
-
-  gap: var(--spacing-lg);
-  width: calc(100vw - var(--spacing-sm) * 2);
-  height: calc(100vh - var(--spacing-sm) * 2);
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
 }
 
-#column-left {
-  flex: 1;
-  height: 100%;
+.left,
+.right {
+  width: 50%;
+  padding: 40px;
+}
+
+
+.left {
+  background-color: #3D8C00;
   display: flex;
   flex-direction: column;
   align-items: center;
+  justify-content: center;
+}
+
+.right {
+  background-color: #0C6892;
+
+  color: black;
+  padding: 90px 50px;
+}
+
+.grid {
+  margin: auto;
+  display: grid;
+  padding: 0; margin: 0;
+
+  width: 100%;
+  height: 100%;
+
+  justify-items: stretch;
+  align-items: center;
+  align-content: space-between;
   justify-content: space-between;
-  gap: var(--spacing-sm);
+
+  grid-template-columns: 47.5% 47.5%;
+  grid-template-rows: 47.5% 47.5%;
 }
 
-#column-right {
-  flex: 1;
-  display: flex;
-  flex-direction: column;
+.title {
+  font-size: 2.5rem;
+  margin: 0;
+  text-transform: uppercase;
+  margin-bottom: 20px;
+  color: white;
 }
 
-#column-right-content {
-  flex: 1;
-  display: flex;
-  gap: var(--spacing-sm);
-}
 
-#column-right-header {
+.footer {
+  width: 90%;
+
   display: flex;
   flex-direction: row;
-}
+  align-items: center;
+  justify-content: space-between;
 
-.column-title {
-  flex: 1;
-  font-size: var(--text-xl);
-  font-weight: 700;
-  text-align: center;
-  margin-bottom: var(--spacing-sm);
+  font-weight: normal;
+  font-size: 4rem;
+
+  gap: 5%;
+
   color: white;
-  text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.3);
 }
 
-.column {
-  flex: 1;
-  display: flex;
-  flex-direction: column;
-  gap: var(--spacing-sm);
-  margin: var(--spacing-sm);
+.footer div {
+  background: #0C6792;
+  padding: 25px 50px;
 }
 
-.list-item {
-  background: rgba(255, 255, 255, 0.95);
-  color: #333;
-  border: var(--border-width) solid rgba(255, 255, 255, 0.3);
-  border-radius: var(--border-radius);
-  padding: var(--spacing-sm);
-  font-size: var(--text-md);
-  text-align: center;
-  flex: 1;
-  font-weight: 600;
-  transition: all 0.2s ease;
-  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.15);
-  backdrop-filter: blur(10px);
-  /* Initial state for animation */
-  transform: translateY(20px);
-  opacity: 0;
-}
-
-.list-item:hover {
-  background: rgba(255, 255, 255, 1);
-  transform: translateY(-2px);
-  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.2);
-}
-
-#map-title {
-  font-size: var(--text-xl);
-  font-weight: 700;
-  text-align: center;
-  margin: var(--spacing-sm) 0;
-  padding: var(--spacing-sm) 0;
+.map {
   width: 90%;
-  color: white;
-  text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.3);
-}
-
-#timer {
-  font-size: var(--text-lg);
-  text-align: center;
-  margin: var(--spacing-sm);
-  padding: var(--spacing-md);
-  width: 90%;
-  background: rgba(255, 255, 255, 0.95);
-  color: #333;
-  border-radius: var(--border-radius);
-  border: var(--border-width) solid rgba(255, 255, 255, 0.3);
-  font-weight: 700;
-  backdrop-filter: blur(10px);
-  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+  margin: 0; padding: 0;
 }
 </style>
