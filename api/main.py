@@ -10,6 +10,7 @@ from global_modules.logs import main_logger
 from modules.json_database import just_db
 from modules.sheduler import scheduler
 from game.session import session_manager
+from game.exchange import Exchange
 
 # Импортируем роуты
 from routers import connect_ws
@@ -29,7 +30,7 @@ async def lifespan(app: FastAPI):
     just_db.create_table('step_schedule') # Таблица с задачами по шагам
     just_db.create_table('contracts') # Таблица с контрактами
     just_db.create_table('cities') # Таблица с городами
-    just_db.create_table('exchange') # Таблица с биржей
+    just_db.create_table('exchanges') # Таблица с биржей
     just_db.create_table('factories') # Таблица с заводами
 
     main_logger.info("Loading sessions from database...")
@@ -79,9 +80,19 @@ async def test1():
     print("Performing initial setup...")
 
     # try:
-    session = session_manager.create_session('AFRIKA')
+    if session_manager.get_session('AFRIKA'):
+        session = session_manager.get_session('AFRIKA')
+        session.delete()
 
-    session.update_stage(SessionStages.FreeUserConnect)
+    session = session_manager.create_session('AFRIKA')
+    # return
+    
+    # just_db.update(
+    #     'sessions', {'session_id': 'AFRIKA'}, 
+    #     {'stage': 'CellSelect'}
+    # )
+
+    session.update_stage(SessionStages.FreeUserConnect, True)
     user: User = User().create(_id=1, 
                          username="TestUser", 
                          session_id=session.session_id)
@@ -91,142 +102,72 @@ async def test1():
 
     company = user.create_company("TestCompany")
     company.set_owner(1)
-    user2.add_to_company(company.secret_code)
 
-    # session.update_stage(SessionStages.CellSelect)
-    # session.reupdate()
+    company2 = user2.create_company("TestCompany2")
+    company2.set_owner(2)
+
+    # user2.add_to_company(company.secret_code)
+
+    session.update_stage(SessionStages.CellSelect, True)
+    company.reupdate()
+    company2.reupdate()
 
     # free_cells = session.get_free_cells()
     # print(free_cells)
-
-    # company.set_position(0, 0)
-    # session.reupdate()
-
-    # free_cells = session.get_free_cells()
-    # print(free_cells)
-
-async def initial_setup():
-
-    from game.user import User
-    from game.session import Session, session_manager, SessionStages
-    from game.company import Company
-
-    await asyncio.sleep(2)
-
-    print("Performing initial setup...")
-
-    # try:
-    session = session_manager.create_session('AFRIKA')
-
-    session.update_stage(SessionStages.FreeUserConnect)
-    user: User = User().create(_id=1, 
-                         username="TestUser", 
-                         session_id=session.session_id)
-    user2: User = User().create(_id=2, 
-                         username="TestUser2", 
-                         session_id=session.session_id)
-
-    company = user.create_company("TestCompany")
-    user2.add_to_company(company.secret_code)
-
-    rows = session.map_size['rows']
-    cols = session.map_size['cols']
-
-    # a = 0
-    # for r in range(rows):
-    #     row = []
-    #     for c in range(cols):
-    #         row.append(cells[a])
-    #         a += 1
-    #     pprint.pprint(row)
-
-    session.update_stage(SessionStages.CellSelect)
-
-    free_cells = session.get_free_cells()
 
     company.set_position(0, 0)
+    company2.set_position(2, 3)
+    session.reupdate()
 
-    session.update_stage(SessionStages.Game)
+    # free_cells = session.get_free_cells()
+    # print(free_cells)
+
+    session.update_stage(SessionStages.Game, True)
     company.reupdate()
+    company2.reupdate()
 
-    fs = company.get_factories()
-    # fs[0].set_produce(True)
-    # fs[0].set_auto(True)
+    # print(company.warehouses.keys())
+
+    c_m_k_1 = list(company.warehouses.keys())[0]
+    col_1 = company.warehouses[c_m_k_1]
     
-    # for factory in fs:
-    #     if factory.complectation == None:
-    #         factory.pere_complete(
-    #             random.choice(['generator', 'body_armor', 'tent'])
-    #         )
-    print('===' * 50)
-    print(len(fs))
+    c_m_k_2 = list(company2.warehouses.keys())[0]
+    col_2 = company2.warehouses[c_m_k_2]
     
-    company.complete_free_factories(
-        find_resource=None,
-        new_resource='generator',
-        count=10
+    print(company.warehouses, company2.warehouses)
+    print(c_m_k_1, c_m_k_2)
+    
+    exchange = Exchange(0).create(
+        company.id, session.session_id, 
+        c_m_k_1, col_1 // 2, 2, 'barter', 0,
+        c_m_k_2, col_2 // 2
     )
-
-    session.update_stage(SessionStages.Game)
-    company.reupdate()
     
-    session.update_stage(SessionStages.Game)
-    company.reupdate()
 
-
-    # company.add_resource('wood', 10)
-    # # company.add_resource('oil', 90)
-
-
-    # try:
-    #     company.add_resource('wood', 5)
-    # except Exception as e:
-    #     print(e)
-
-    # company.remove_resource('wood', 5)
-    
-    # print(
-    #     company.get_max_warehouse_size()
-    # )
-
-    # company.improve('warehouse')
-    
-    # print(
-    #     company.get_max_warehouse_size()
+    # exchange = Exchange(0).create(
+    #     company.id, session.session_id, 
+    #     c_m_k_1, col_1 // 2, 2, 'money', 1000
     # )
     
-    # print('===' * 50)
 
-    # company.add_balance(10000)
+    company.reupdate()
+    company2.reupdate()
+    print(company.warehouses, company2.warehouses)
 
-    # session.update_stage(SessionStages.Game)
-    # company.reupdate()
-
-    # company.take_credit(5000, 5)
-
-    # company.add_balance(10000)
-
-    # session.update_stage(SessionStages.Game)
-    # company.reupdate()
+    exchange.buy(company2.id)
     
-    # company.add_balance(10000)
-
-    # company.pay_taxes(600)
+    company.reupdate()
+    company2.reupdate()
+    print(company.warehouses, company2.warehouses)
+    
+    exchange.reupdate()
+    exchange.cancel_offer()
+    
+    
+    company.reupdate()
+    company2.reupdate()
+    print(company.warehouses, company2.warehouses)
 
     # session.update_stage(SessionStages.Game)
     # company.reupdate()
-    
-    # company.pay_taxes(1200)
-    # company.pay_credit(0, 5040)
-
-    # session.update_stage(SessionStages.Game)
-    # company.reupdate()
-    
-    # company.pay_credit(0, 5040)
-
-    # company.remove_reputation(20)
-
-    # for i in range(15):
-    #     session.update_stage(SessionStages.Game)
-    #     await sleep(0.5)
-
+    # company2.reupdate()

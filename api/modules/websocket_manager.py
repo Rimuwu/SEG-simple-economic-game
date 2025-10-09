@@ -127,7 +127,7 @@ class WebSocketManager:
                     success_count += 1
 
         main_logger.info(
-            f"Broadcast ({message['type']}) for {success_count} clients\n({message['data']})\n")
+            f"Broadcast ({message['type']}) for {success_count} clients")
         return success_count
 
     def get_connected_clients(self) -> List[str]:
