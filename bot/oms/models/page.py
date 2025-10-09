@@ -303,8 +303,9 @@ class Page:
 
     def page_blocked(self):
         """ Отвечает сцене, можно ли перейти на эту страницу
+            Возвращает кортеж (bool, str) - можно ли перейти, и сообщение если нельзя
         """
-        return True
+        return True, 'all_ok'
 
     async def content_worker(self) -> str:
         """ Функция вызывающаяся для получения контента

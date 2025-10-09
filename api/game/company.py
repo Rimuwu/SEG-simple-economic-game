@@ -282,7 +282,11 @@ class Company(BaseClass):
 
         return data
 
-    def add_balance(self, amount: int):
+    def add_balance(self, amount: int, income_percent: float = 1.0):
+        if not isinstance(income_percent, float):
+            raise ValueError("Income percent must be a float.")
+        if income_percent < 0:
+            raise ValueError("Income percent must be non-negative.")
         if not isinstance(amount, int):
             raise ValueError("Amount must be an integer.")
         if amount <= 0:
@@ -290,7 +294,7 @@ class Company(BaseClass):
 
         old_balance = self.balance
         self.balance += amount
-        self.this_turn_income += amount
+        self.this_turn_income += int(amount * income_percent)
 
         self.save_to_base()
         self.reupdate()
@@ -449,19 +453,25 @@ class Company(BaseClass):
         if len(self.credits) >= SETTINGS.max_credits_per_company:
             raise ValueError("Maximum number of active credits reached for this company.")
 
-        self.credits.append(
-            {
-                "total_to_pay": total,
-                "need_pay": 0,
-                "paid": 0,
+        if c_sum > CAPITAL.bank.credit.max:
+            raise ValueError(f"Credit sum exceeds the maximum limit of {CAPITAL.bank.credit.max}.")
 
-                "steps_total": steps,
-                "steps_now": 0
-            }
-        )
-        
+        elif c_sum < CAPITAL.bank.credit.min:
+            raise ValueError(f"Credit sum is below the minimum limit of {CAPITAL.bank.credit.min}.")
+
+        credit_data = {
+            "total_to_pay": total,
+            "need_pay": 0,
+            "paid": 0,
+
+            "steps_total": steps,
+            "steps_now": 0
+        }
+        self.credits.append(credit_data)
+
         self.save_to_base()
-        self.add_balance(c_sum)
+        self.add_balance(c_sum, 0) # деньги без процентов в доход
+
         asyncio.create_task(websocket_manager.broadcast({
             "type": "api-company_credit_taken",
             "data": {
@@ -470,6 +480,7 @@ class Company(BaseClass):
                 "steps": steps
             }
         }))
+        return credit_data
 
     def credit_paid_step(self):
         """ Вызывается при каждом шаге игры для компании.
@@ -479,7 +490,8 @@ class Company(BaseClass):
         for index, credit in enumerate(self.credits):
 
             if credit["steps_now"] <= credit["steps_total"]:
-                credit["need_pay"] += (credit["total_to_pay"] - credit['need_pay'] - credit ['paid']) // (credit["steps_total"] - credit["steps_now"])
+                steps_left = max(1, credit["steps_total"] - credit["steps_now"])
+                credit["need_pay"] += (credit["total_to_pay"] - credit['need_pay'] - credit ['paid']) // steps_left
 
             elif credit["steps_now"] > credit["steps_total"]:
                 credit["need_pay"] += credit["total_to_pay"] - credit['paid']
