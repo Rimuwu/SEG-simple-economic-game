@@ -8,8 +8,11 @@ import asyncio
 from modules.ws_client import *
 from modules.utils import go_to_page, update_page
 from modules.db import db
+from modules.load_scenes import load_scenes_from_db
 from filters.admins import *
-from app.states import *
+from modules.states import *
+
+from oms import scene_manager
 
 from bot_instance import dp, bot
 
@@ -35,7 +38,7 @@ async def process_start_session_id(message: Message, state: FSMContext):
     )
     
     await message.delete()
-    if "error" in response.keys():
+    if response is not None and "error" in response.keys():
         await message.bot.edit_message_text(
         chat_id=message.chat.id,
         message_id=msg_id,
@@ -90,13 +93,13 @@ async def process_session_id(message: Message, state: FSMContext):
         return
     
     await update_session_stage(
-        session_id=response["session"]['session_id'],
+        session_id=response["session"]['id'],
         stage='FreeUserConnect',
     )
     await message.bot.edit_message_text(
         chat_id=message.chat.id,
         message_id=msg_id,
-        text=f"✅ Успешно создана игровая сессия!\n🆔 Код сессии: `{response['session']['session_id']}`",
+        text=f"✅ Успешно создана игровая сессия!\n🆔 Код сессии: `{response['session']['id']}`",
         parse_mode="Markdown"
     )
     await state.clear()
@@ -113,10 +116,23 @@ async def process_delete_session_id(message: Message, state: FSMContext):
     session_id = message.text
     data = await state.get_data()
     msg_id = data['msg_id']
+    
+    users = await get_users(session_id=session_id)
+    reposnse2 = await get_session(session_id=session_id)
     response = await delete_session(
         session_id=session_id,
         really=True
     )
+    print("==========================")
+    print(users)
+    print(reposnse2)
+    print(response)
+    print(message.text)
+    print("==========================")
+    for user in users:
+        scene = scene_manager.get_scene(user['id'])
+        if scene:
+            await scene.end()
     
     await message.delete()
     if response is not None and "error" in response.keys():
@@ -134,7 +150,103 @@ async def process_delete_session_id(message: Message, state: FSMContext):
         text=f"✅ Сессия с ID `{session_id}` успешно удалена!",
         parse_mode="Markdown"
     )
-    db.drop_all()
+    await state.clear()
+
+
+@dp.message(AdminFilter(), Command("step"))
+async def change_session_stage(message: Message):
+    """
+    Команда для изменения этапа сессии
+    Формат: /step <код_сессии> <этап>
+    Этапы: FreeUserConnect, CellSelect, Game, End
+    """
+    # Парсим аргументы команды
+    args = message.text.split(maxsplit=2)
+    
+    if len(args) < 3:
+        await message.answer(
+            "❌ Неверный формат команды!\n\n"
+            "Используйте: `/step <код_сессии> <этап>`\n\n"
+            "Доступные этапы:\n"
+            "• `FreeUserConnect` - свободное подключение\n"
+            "• `CellSelect` - выбор клетки\n"
+            "• `Game` - игра\n"
+            "• `End` - конец игры",
+            parse_mode="Markdown"
+        )
+        return
+    
+    session_id = args[1].strip()
+    stage = args[2].strip()
+    
+    # Проверяем валидность этапа
+    valid_stages = ['FreeUserConnect', 'CellSelect', 'Game', 'End']
+    if stage not in valid_stages:
+        await message.answer(
+            f"❌ Неверный этап: `{stage}`\n\n"
+            f"Доступные этапы: {', '.join([f'`{s}`' for s in valid_stages])}",
+            parse_mode="Markdown"
+        )
+        return
+    
+    # Выполняем запрос к API
+    try:
+        response = await update_session_stage(
+            session_id=session_id,
+            stage=stage
+        )
+        
+        if response is None:
+            await message.answer(
+                f"⚠️ Запрос отправлен: сессия `{session_id}` → этап `{stage}`",
+                parse_mode="Markdown"
+            )
+        elif isinstance(response, dict) and "error" in response:
+            await message.answer(
+                f"❌ Ошибка: {response['error']}",
+                parse_mode="Markdown"
+            )
+        else:
+            await message.answer(
+                f"✅ Этап сессии `{session_id}` изменён на `{stage}`",
+                parse_mode="Markdown"
+            )
+    except Exception as e:
+        await message.answer(
+            f"❌ Ошибка при выполнении команды: {str(e)}",
+            parse_mode="Markdown"
+        )
+
+
+@dp.message(Command("leave"))
+async def leave_session(message: Message, state: FSMContext):
+    msg = await message.answer("Отправьте 'Да' для подтверждения выхода из сессии или что угодно для отмены.")
+    await state.update_data(msg_id=msg.message_id)
+    await state.set_state(ConfirmLeaveStates.waiting_for_confirmation)
+
+
+@dp.message(ConfirmLeaveStates.waiting_for_confirmation)
+async def confirm_leave(message: Message, state: FSMContext):
+    await message.delete()
+    data = await state.get_data()
+    msg_id = data['msg_id']
+    if message.text.lower() != "да":
+        await message.bot.edit_message_text(
+            chat_id=message.chat.id,
+            message_id=msg_id,
+            text="Выход из сессии отменен."
+        )
+        await state.clear()
+        return
+    user_id = message.from_user.id
+    await delete_user(user_id=user_id)
+    scene = scene_manager.get_scene(user_id)
+    await message.bot.edit_message_text(
+        chat_id=message.chat.id,
+        message_id=msg_id,
+        text="Ваше существование в сессии приравнено к 0, спасибо за игру."
+    )
+    await scene.end()
     await state.clear()
 
     
@@ -161,6 +273,7 @@ async def on_pong(message: dict):
 
 @ws_client.on_event("connect")
 async def on_connect():
+    load_scenes_from_db(scene_manager)
     print("🔗 Подключено к WebSocket серверу")
 
 
@@ -176,6 +289,9 @@ async def on_update_session_stage(message: dict):
         await go_to_page(session_id, "wait-start-page", "select-cell-page")
     elif new_stage == "Game":
         await go_to_page(session_id, "wait-game-stage-page", "main-page")
+        await go_to_page(session_id, "change-turn-page", "main-page")
+    elif new_stage == "ChangeTurn":
+        await go_to_page(session_id, None, "change-turn-page")
 
 
 @ws_client.on_event("disconnect")
@@ -193,3 +309,5 @@ async def on_disconnect():
         await asyncio.sleep(1)
 
     print("❌ Не удалось подключиться после 15 попыток, выход.")
+    
+    

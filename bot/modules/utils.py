@@ -56,7 +56,9 @@ async def go_to_page(session_id, old_page_name, new_page_name):
                 scene = scene_manager.get_scene(user_id)
                 if scene and scene.page:
                     current_page_name = scene.page
-                    if current_page_name == old_page_name:
+                    if old_page_name is not None and current_page_name == old_page_name:
+                        await scene.update_page(new_page_name)
+                    else:
                         await scene.update_page(new_page_name)
 
 
