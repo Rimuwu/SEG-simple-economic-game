@@ -453,19 +453,19 @@ class Company(BaseClass):
         if len(self.credits) >= SETTINGS.max_credits_per_company:
             raise ValueError("Maximum number of active credits reached for this company.")
 
-        self.credits.append(
-            {
-                "total_to_pay": total,
-                "need_pay": 0,
-                "paid": 0,
+        credit_data = {
+            "total_to_pay": total,
+            "need_pay": 0,
+            "paid": 0,
 
-                "steps_total": steps,
-                "steps_now": 0
-            }
-        )
-        
+            "steps_total": steps,
+            "steps_now": 0
+        }
+        self.credits.append(credit_data)
+
         self.save_to_base()
-        self.add_balance(c_sum)
+        self.add_balance(c_sum, 0) # деньги без процентов в доход
+
         asyncio.create_task(websocket_manager.broadcast({
             "type": "api-company_credit_taken",
             "data": {
