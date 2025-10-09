@@ -172,7 +172,7 @@ onUnmounted(() => {
         <span>G — GAME</span>
       </div>
       <footer>
-        <div class="bot">{{ sdfhlhksg }}</div>
+        <div class="oisdfuoiuiodsfho">{{ sdfhlhksg }}</div>
         <input class="input-box" type="text" placeholder="Введите код" autofocus v-model="sessionId"
           @keyup.enter="joinSession">
       </footer>
@@ -187,7 +187,7 @@ onUnmounted(() => {
 
 #page {
   display: flex;
-  min-height: 100vh;
+  height: 100vh;
   background-color: #f7b515;
   font-family: "Inter", sans-serif;
   padding: 0;
@@ -274,7 +274,7 @@ footer {
   width: 100%;
 }
 
-.bot {
+.oisdfuoiuiodsfho {
   font-size: 4rem;
   margin-bottom: 20px;;
 }

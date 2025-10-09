@@ -29,7 +29,7 @@ import { WebSocketManager } from './ws'
  * Tracks the current view/page being displayed.
  * @type {import('vue').Ref<string>}
  */
-const currentView = ref('Introduction')
+const currentView = ref('Preparation')
 /**
  * Controls visibility of the admin panel overlay.
  * @type {import('vue').Ref<boolean>}

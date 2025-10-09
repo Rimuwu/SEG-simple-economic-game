@@ -32,6 +32,10 @@ body {
   padding: 0;
 }
 
+html {
+    font-size: 20px;
+}
+
 #app {
   width: 100vw;
   height: 100vh;

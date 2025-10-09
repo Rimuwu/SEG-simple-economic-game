@@ -55,24 +55,16 @@ onMounted(async () => {
     await nextTick()
 
     // Setup resize observation for dynamic square sizing
-    updateMapSize('mount')
-    windowResizeHandler = () => updateMapSize('window-resize')
-    window.addEventListener('resize', windowResizeHandler)
+    // updateMapSize('mount')
+    // windowResizeHandler = () => updateMapSize('window-resize')
+    // window.addEventListener('resize', windowResizeHandler)
 
-    if ('ResizeObserver' in window) {
-        resizeObserver = new ResizeObserver(() => updateMapSize('parent-resize'))
-        if (mapRoot.value && mapRoot.value.parentElement) {
-            resizeObserver.observe(mapRoot.value.parentElement)
-        }
-    }
-
-    // Set border radius for corner tiles (after tiles exist)
-    if (tileRefs.value[0]) {
-        tileRefs.value[0].style.borderTopLeftRadius = "4px"
-        tileRefs.value[cols - 1].style.borderTopRightRadius = "4px"
-        tileRefs.value[(rows - 1) * cols].style.borderBottomLeftRadius = "4px"
-        tileRefs.value[rows * cols - 1].style.borderBottomRightRadius = "4px"
-    }
+    // if ('ResizeObserver' in window) {
+    //     resizeObserver = new ResizeObserver(() => updateMapSize('parent-resize'))
+    //     if (mapRoot.value && mapRoot.value.parentElement) {
+    //         resizeObserver.observe(mapRoot.value.parentElement)
+    //     }
+    // }
 
     // Make functions globally available
     window.setTile = setTile
@@ -146,19 +138,24 @@ if (wsManager) {
     display: grid;
     grid-template-columns: repeat(7, 1fr);
     grid-template-rows: repeat(7, 1fr);
-    background: #333;
-    border-radius: 6px;
-    gap: 4px;
-    padding: 4px;
+    background: white;
+    /* gap: 4px; */
+    padding: 15px;
+
     box-sizing: border-box;
     overflow: hidden;
-    /* Width/height are set dynamically via JS to enforce squareness */
+    
+    aspect-ratio: 1/1;
+
+    gap: 0;
 }
 
 .tile {
     width: 100%;
     height: 100%;
     aspect-ratio: 1/1;
+
+    box-shadow: inset 0 0 0 2px rgba(1,1,1,0.5);
     
     display: flex;
     align-items: center;
@@ -171,7 +168,7 @@ if (wsManager) {
     padding: 0;
     
     /* Responsive font sizing based on cell size */
-    font-size: clamp(8px, min(1.2vw, 1.2vh), 16px);
+    font-size: 1.5rem;
     
     /* Text handling for overflow */
     word-wrap: break-word;
@@ -180,18 +177,5 @@ if (wsManager) {
     
     /* Smooth transitions */
     transition: background-color 1s ease, font-size 0.3s ease;
-}
-
-/* Responsive font sizing adjustments */
-@media (max-width: 768px) {
-    .tile {
-        font-size: clamp(6px, 2vw, 12px);
-    }
-}
-
-@media (max-width: 480px) {
-    .tile {
-        font-size: clamp(5px, 2.5vw, 10px);
-    }
 }
 </style>
