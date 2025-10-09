@@ -108,6 +108,9 @@ class Company(BaseClass):
         session = session_manager.get_session(self.session_id)
         if not session or session.stage != "FreeUserConnect":
             return False
+
+        if len(self.users) >= SETTINGS.max_players_in_company:
+            return False
         return True
 
     @property

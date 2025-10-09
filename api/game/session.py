@@ -19,6 +19,7 @@ cells_types = cells.types
 
 GAME_TIME = settings.time_on_game_stage * 60
 CHANGETURN_TIME = settings.time_on_change_stage * 60
+TURN_CELL_TIME = settings.turn_cell_time_minutes * 60
 
 class SessionStages(Enum):
     FreeUserConnect = "FreeUserConnect" # Подключаем пользователей
@@ -73,7 +74,7 @@ class Session(BaseClass):
                 sh_id = scheduler.schedule_task(
                     stage_game_updater, 
                     datetime.now() + timedelta(
-                        seconds=CHANGETURN_TIME
+                        seconds=TURN_CELL_TIME
                         ),
                     kwargs={"session_id": self.session_id}
                 )
@@ -136,6 +137,10 @@ class Session(BaseClass):
         return self.stage == SessionStages.FreeUserConnect.value
 
     def can_add_company(self):
+        col_companies = len(self.companies)
+        if col_companies >= settings.max_companies:
+            return False
+
         return self.stage == SessionStages.FreeUserConnect.value
 
     def can_select_cells(self):
