@@ -459,7 +459,9 @@ class Company(BaseClass):
                 "steps_now": 0
             }
         )
-
+        
+        self.save_to_base()
+        self.add_balance(c_sum)
         asyncio.create_task(websocket_manager.broadcast({
             "type": "api-company_credit_taken",
             "data": {

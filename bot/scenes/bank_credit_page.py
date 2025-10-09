@@ -34,7 +34,7 @@ class BankCreditPage(Page):
         
         # Экран ввода срока кредита
         elif credit_state == 'input_period':
-            return await self._input_period_screen()
+            return await self._input_period_screen(company_data)
         
         # Экран ввода суммы кредита
         elif credit_state == 'input_amount':
@@ -94,15 +94,21 @@ class BankCreditPage(Page):
         
         return text
     
-    async def _input_period_screen(self):
+    async def _input_period_screen(self, company_data):
         """Экран ввода срока кредита"""
-        text = """⏱ *Взятие кредита*
+        # Получаем текущий ход и максимум
+        current_step = company_data.get('step', 0)
+        max_step = company_data.get('max_step', 15)
+        max_period = max_step - current_step
+        
+        text = f"""⏱ *Взятие кредита*
 
 *Шаг 1: Введите срок кредита*
 
 На какое количество ходов хотите взять кредит?
 Минимум: 1 ход
-Рекомендуется: 3-10 ходов"""
+Максимум: {max_period} ход(ов)
+(Текущий ход: {current_step}, до конца игры: {max_period})"""
         
         return text
     
@@ -251,11 +257,18 @@ class BankCreditPage(Page):
     @Page.on_callback('pay_credit')
     async def pay_credit_handler(self, callback: CallbackQuery, args: list):
         """Оплата кредита"""
-        if not args or len(args) == 0:
+        # Проверяем структуру args - если первый элемент 'pay_credit', берем второй
+        if args and args[0] == 'pay_credit':
+            if len(args) < 2:
+                await callback.answer("❌ Ошибка: не указан индекс кредита", show_alert=True)
+                return
+            credit_index = int(args[1])
+        elif args and len(args) > 0:
+            credit_index = int(args[0])
+        else:
             await callback.answer("❌ Ошибка: не указан индекс кредита", show_alert=True)
             return
         
-        credit_index = int(args[0])
         scene_data = self.scene.get_data('scene')
         company_id = scene_data.get('company_id')
         
@@ -361,11 +374,29 @@ class BankCreditPage(Page):
         """Обработка ввода чисел (срок или сумма)"""
         scene_data = self.scene.get_data('scene')
         credit_state = scene_data.get('credit_state', 'main')
+        company_id = scene_data.get('company_id')
         
         # Ввод срока кредита
         if credit_state == 'input_period':
             if value < 1:
                 await message.answer("❌ Срок должен быть не менее 1 хода")
+                return
+            
+            # Получаем данные компании для проверки максимального срока
+            company_data = await get_company(id=company_id)
+            if isinstance(company_data, str):
+                await message.answer(f"❌ Ошибка: {company_data}")
+                return
+            
+            current_step = company_data.get('step', 0)
+            max_step = company_data.get('max_step', 15)
+            max_period = max_step - current_step
+            
+            if value > max_period:
+                await message.answer(
+                    f"❌ Срок не может превышать {max_period} ход(ов)!\n"
+                    f"(Текущий ход: {current_step}, до конца игры: {max_period})"
+                )
                 return
             
             # Сохраняем срок и переходим к вводу суммы
