@@ -471,50 +471,79 @@ async def handle_company_complete_free_factories(client_id: str, message: dict):
         return {"error": str(e)}
 
 
-# @message_handler(
-#     "company-create-exchange", 
-#     doc="Обработчик массовой перекомплектации свободных фабрик компании. Требуется пароль для взаимодействия.",
-#     datatypes=[
-#         "company_id: int",
-#         "find_resource: Optional[str]",
-#         "new_resource: str",
-#         "count: int",
-#         "produce_status: Optional[bool]",
+@message_handler(
+    "notforgame-update-company-balance", 
+    doc="Обработчик обновления баланса компании. Требуется пароль для взаимодействия. НЕ ИСПОЛЬЗОВАТЬ В ИГРОВОМ ПРОЦЕССЕ!",
+    datatypes=[
+        "company_id: int",
+        "balance_change: int",
+        "password: str"
+    ],
+    messages=[]
+)
+async def handle_notforgame_update_company_balance(
+    client_id: str, message: dict):
+    """Обработчик обновления баланса компании"""
 
-#         "password: str"
-#     ],
-#     messages=["api-factory-start-complectation (broadcast для каждой фабрики)"]
-# )
-# async def handle_company_complete_free_factories(client_id: str, message: dict):
-#     """Обработчик массовой перекомплектации свободных фабрик компании"""
+    password = message.get("password", 0)
+    company_id = message.get("company_id", 0)
+    balance_change = message.get("balance_change", 0)
 
-#     password = message.get("password")
-#     company_id = message.get("company_id")
-#     find_resource = message.get("find_resource")  
-#     new_resource = message.get("new_resource")
-#     count = message.get("count")
-#     produce_status = message.get("produce_status", False)
+    for i in [company_id, password, balance_change]:
+        if i is None: 
+            return {"error": "Missing required fields."}
 
-#     # Проверяем обязательные параметры
-#     for param_name, param_value in [("company_id", company_id), ("new_resource", new_resource), ("count", count), ("password", password)]:
-#         if param_value is None:
-#             return {"error": f"Missing required field: {param_name}"}
 
-#     try:
-#         check_password(password)
+    try:
+        check_password(password)
 
-#         company = Company(_id=company_id).reupdate()
-#         if not company: raise ValueError("Company not found.")
+        company = Company(_id=company_id).reupdate()
+        if not company: raise ValueError("Company not found.")
 
-#         # Вызываем метод массовой перекомплектации
-#         company.complete_free_factories(
-#             find_resource=find_resource,
-#             new_resource=new_resource,
-#             count=count,
-#             produce_status=produce_status
-#         )
+        if balance_change > 0:
+            company.add_balance(balance_change)
+        else:
+            company.remove_balance(abs(balance_change))
 
-#         return {"success": True}
+    except ValueError as e:
+        return {"error": str(e)}
 
-#     except ValueError as e:
-#         return {"error": str(e)}
+@message_handler(
+    "notforgame-update-company-items", 
+    doc="Обработчик обновления предметов компании. Требуется пароль для взаимодействия. НЕ ИСПОЛЬЗОВАТЬ В ИГРОВОМ ПРОЦЕССЕ!",
+    datatypes=[
+        "company_id: int",
+        "item_id: str",
+        "quantity_change: int",
+        "password: str"
+    ],
+    messages=[]
+)
+async def handle_notforgame_update_company_items(
+    client_id: str, message: dict):
+    """Обработчик обновления предметов компании"""
+
+    password = message.get("password", 0)
+    company_id = message.get("company_id", 0)
+    item_id = message.get("item_id", "")
+    quantity_change = message.get("quantity_change", 0)
+
+    for i in [company_id, password, item_id, quantity_change]:
+        if i is None: 
+            return {"error": "Missing required fields."}
+
+
+    try:
+        check_password(password)
+
+        company = Company(_id=company_id).reupdate()
+        if not company: raise ValueError("Company not found.")
+
+        if quantity_change > 0:
+            company.add_resource(item_id, quantity_change)
+        else:
+            company.remove_resource(item_id, 
+                                    abs(quantity_change))
+
+    except ValueError as e:
+        return {"error": str(e)}
