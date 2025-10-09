@@ -282,7 +282,11 @@ class Company(BaseClass):
 
         return data
 
-    def add_balance(self, amount: int):
+    def add_balance(self, amount: int, income_percent: float = 1.0):
+        if not isinstance(income_percent, float):
+            raise ValueError("Income percent must be a float.")
+        if income_percent < 0:
+            raise ValueError("Income percent must be non-negative.")
         if not isinstance(amount, int):
             raise ValueError("Amount must be an integer.")
         if amount <= 0:
@@ -290,7 +294,7 @@ class Company(BaseClass):
 
         old_balance = self.balance
         self.balance += amount
-        self.this_turn_income += amount
+        self.this_turn_income += int(amount * income_percent)
 
         self.save_to_base()
         self.reupdate()
