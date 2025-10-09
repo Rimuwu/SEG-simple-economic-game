@@ -101,6 +101,41 @@
                     "about-info-menu": "↪️ Назад"
                 }
             },
+            "bank-menu": {
+                "title": "",
+                "content": "",
+                "to_pages": {
+                    "main-page": "↪️ Назад"
+                }
+            },
+            "bank-credit-page": {
+                "title": "",
+                "content": "",
+                "to_pages": {
+                    "bank-menu": "↪️ Назад"
+                }
+            },
+            "bank-credit-amount": {
+                "title": "",
+                "content": "",
+                "to_pages": {
+                    "bank-credit-page": "↪️ Назад"
+                }
+            },
+            "bank-credit-period": {
+                "title": "",
+                "content": "",
+                "to_pages": {
+                    "bank-credit-amount": "↪️ Назад"
+                }
+            },
+            "bank-deposit-page": {
+                "title": "",
+                "content": "",
+                "to_pages": {
+                    "bank-menu": "↪️ Назад"
+                }
+            },
             "factory-menu": {
                 "title": "",
                 "content": "",
