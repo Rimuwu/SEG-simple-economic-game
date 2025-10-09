@@ -15,5 +15,5 @@ def load_scenes_from_db(manager: SceneManager):
             result['message_id'],
             result['data'],
             bot,
-            True
+            False
         )

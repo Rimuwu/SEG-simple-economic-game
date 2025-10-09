@@ -289,7 +289,7 @@ async def on_update_session_stage(message: dict):
         await go_to_page(session_id, "wait-start-page", "select-cell-page")
     elif new_stage == "Game":
         await go_to_page(session_id, "wait-game-stage-page", "main-page")
-        await go_to_page(session_id, "change-turn-page"s, "main-page")
+        await go_to_page(session_id, "change-turn-page", "main-page")
     elif new_stage == "ChangeTurn":
         await go_to_page(session_id, None, "change-turn-page")
 
