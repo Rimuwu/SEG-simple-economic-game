@@ -391,6 +391,77 @@ async def handle_company_pay_credit(client_id: str, message: dict):
         return {"error": str(e)}
 
 @message_handler(
+    "company-take-deposit", 
+    doc="Обработчик создания вклада компанией. Требуется пароль для взаимодействия. Отправляет ответ на request_id.",
+    datatypes=[
+        "company_id: int",
+        "amount: int",
+        "period: int",
+
+        "request_id: str",
+        "password: str"
+    ],
+    messages=["api-company_deposit_taken (broadcast)"]
+)
+async def handle_company_take_deposit(client_id: str, message: dict):
+    """Обработчик создания вклада компанией"""
+
+    password = message.get("password")
+    company_id = message.get("company_id")
+    amount = message.get("amount")
+    period = message.get("period")
+
+    for i in [company_id, amount, period, password]:
+        if i is None: return {"error": "Missing required fields."}
+
+    try:
+        check_password(password)
+
+        company = Company(_id=company_id).reupdate()
+        if not company: raise ValueError("Company not found.")
+
+        deposit_data = company.take_deposit(amount, period)
+
+    except ValueError as e:
+        return {"error": str(e)}
+
+    return deposit_data
+
+@message_handler(
+    "company-withdraw-deposit", 
+    doc="Обработчик снятия вклада компанией. Требуется пароль для взаимодействия.",
+    datatypes=[
+        "company_id: int",
+        "deposit_index: int",
+
+        "password: str"
+    ],
+    messages=["api-company_deposit_withdrawn (broadcast)"]
+)
+async def handle_company_withdraw_deposit(client_id: str, message: dict):
+    """Обработчик снятия вклада компанией"""
+
+    password = message.get("password")
+    company_id = message.get("company_id")
+    deposit_index = message.get("deposit_index")
+
+    for i in [company_id, deposit_index, password]:
+        if i is None: return {"error": "Missing required fields."}
+
+    try:
+        check_password(password)
+
+        company = Company(_id=company_id).reupdate()
+        if not company: raise ValueError("Company not found.")
+
+        company.withdraw_deposit(deposit_index)
+
+    except ValueError as e:
+        return {"error": str(e)}
+
+    return {"success": True}
+
+@message_handler(
     "company-pay-taxes", 
     doc="Обработчик погашения налогов компанией. Требуется пароль для взаимодействия.",
     datatypes=[
@@ -590,3 +661,4 @@ async def handle_notforgame_update_company_name(
 
     except ValueError as e:
         return {"error": str(e)}
+
