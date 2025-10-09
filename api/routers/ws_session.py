@@ -75,10 +75,11 @@ async def handle_create_session(client_id: str, message: dict):
 
 @message_handler(
     "update-session-stage", 
-    doc="Обработчик обновления стадии сессии. Требуется пароль для взаимодействия.",
+    doc="Обработчик обновления стадии сессии. Требуется пароль для взаимодействия. add_shedule - Запускать ли таймер после обновления этапа. Например таймер для обновления этапа с выбора клетки на игру автоматически. По умолчанию - True",
     datatypes=[
         "session_id: Optional[str]",
         "stage: Literal['FreeUserConnect', 'CellSelect', 'Game', 'End']",
+        "add_shedule: Optional[bool]"
         "password: str",
     ],
     messages=["api-update_session_stage (broadcast)"]
@@ -89,6 +90,7 @@ async def handle_update_session_stage(client_id: str, message: dict):
     session_id = message.get("session_id", "")
     stage: str = message.get("stage", "")
     password = message.get("password", "")
+    add_shedule = message.get('add_shedule', True)
 
     stages_to_types = {
         "FreeUserConnect": SessionStages.FreeUserConnect,
@@ -106,7 +108,8 @@ async def handle_update_session_stage(client_id: str, message: dict):
         if stage not in stages_to_types:
             raise ValueError("Invalid stage value.")
 
-        session.update_stage(stages_to_types[stage])
+        session.update_stage(stages_to_types[stage], 
+                             not add_shedule)
     except ValueError as e:
         return {"error": str(e)}
 
