@@ -453,6 +453,12 @@ class Company(BaseClass):
         if len(self.credits) >= SETTINGS.max_credits_per_company:
             raise ValueError("Maximum number of active credits reached for this company.")
 
+        if c_sum > CAPITAL.bank.credit.max:
+            raise ValueError(f"Credit sum exceeds the maximum limit of {CAPITAL.bank.credit.max}.")
+
+        elif c_sum < CAPITAL.bank.credit.min:
+            raise ValueError(f"Credit sum is below the minimum limit of {CAPITAL.bank.credit.min}.")
+
         credit_data = {
             "total_to_pay": total,
             "need_pay": 0,
@@ -484,7 +490,8 @@ class Company(BaseClass):
         for index, credit in enumerate(self.credits):
 
             if credit["steps_now"] <= credit["steps_total"]:
-                credit["need_pay"] += (credit["total_to_pay"] - credit['need_pay'] - credit ['paid']) // (credit["steps_total"] - credit["steps_now"])
+                steps_left = max(1, credit["steps_total"] - credit["steps_now"])
+                credit["need_pay"] += (credit["total_to_pay"] - credit['need_pay'] - credit ['paid']) // steps_left
 
             elif credit["steps_now"] > credit["steps_total"]:
                 credit["need_pay"] += credit["total_to_pay"] - credit['paid']
