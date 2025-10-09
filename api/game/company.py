@@ -32,6 +32,7 @@ class Company(BaseClass):
         self.balance: int = 0
 
         self.in_prison: bool = False
+        self.prison_end_step: Optional[int] = None
 
         self.credits: list = []
         self.deposits: list = []
@@ -107,6 +108,9 @@ class Company(BaseClass):
     def can_user_enter(self):
         session = session_manager.get_session(self.session_id)
         if not session or session.stage != "FreeUserConnect":
+            return False
+
+        if len(self.users) >= SETTINGS.max_players_in_company:
             return False
         return True
 
@@ -588,12 +592,15 @@ class Company(BaseClass):
         if not session:
             raise ValueError("Session not found.")
 
+        end_step = session.step + REPUTATION.prison.stages
+
         self.in_prison = True
+        self.prison_end_step = end_step
         self.save_to_base()
         self.reupdate()
 
         session.create_step_schedule(
-            session.step + REPUTATION.prison.stages,
+            end_step,
             leave_from_prison,
             session_id=self.session_id,
             company_id=self.id
@@ -602,7 +609,8 @@ class Company(BaseClass):
         asyncio.create_task(websocket_manager.broadcast({
             "type": "api-company_to_prison",
             "data": {
-                "company_id": self.id
+                "company_id": self.id,
+                "end_step": end_step
             }
         }))
 
@@ -614,6 +622,7 @@ class Company(BaseClass):
             raise ValueError("Company is not in prison.")
 
         self.in_prison = False
+        self.prison_end_step = None
         self.save_to_base()
         self.reupdate()
 
@@ -900,6 +909,7 @@ class Company(BaseClass):
             # Репутация и статус
             "reputation": self.reputation,
             "in_prison": self.in_prison,
+            "prison_end_step": self.prison_end_step,
             
             # Позиция и местоположение
             "cell_position": self.cell_position,
