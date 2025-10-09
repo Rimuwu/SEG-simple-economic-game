@@ -111,7 +111,7 @@ class Scene:
             raise ValueError(f"Страница {page_name} не найдена в сцене {self.__scene_name__}")
 
         page_model: Page = self.pages[page_name]
-        status, answer = await page_model.page_blocked()
+        status, answer = page_model.page_blocked()
         if status:
 
             await self.update_key('scene', 'last_page', self.page)
