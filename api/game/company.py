@@ -68,7 +68,7 @@ class Company(BaseClass):
             self.__tablename__) + 1
 
         with_this_name = just_db.find_one(
-            self.__tablename__, name=name)
+            self.__tablename__, name=name, session_id=session_id)
         if with_this_name:
             raise ValueError(f"Company with name '{name}' already exists.")
 
@@ -83,7 +83,7 @@ class Company(BaseClass):
         not_in_use = True
         while not_in_use:
             self.secret_code = generate_number(6)
-            if not just_db.find_one("companies", 
+            if not just_db.find_one("companies",
                                     secret_code=self.secret_code):
                 not_in_use = False
 
@@ -114,8 +114,11 @@ class Company(BaseClass):
     def users(self) -> list['User']:
         from game.user import User
 
-        return [user for user in just_db.find(
-            "users", to_class=User, company_id=self.id)]
+        users = just_db.find(
+            User.__tablename__, to_class=User, 
+            company_id=self.id
+        )
+        return users
 
     def set_position(self, x: int, y: int):
         if isinstance(x, int) is False or isinstance(y, int) is False:
@@ -168,6 +171,7 @@ class Company(BaseClass):
 
         for user in self.users: user.leave_from_company()
         for factory in self.get_factories(): factory.delete()
+        for exchange in self.exchages: exchange.delete()
 
         asyncio.create_task(websocket_manager.broadcast({
             "type": "api-company_deleted",
@@ -782,23 +786,6 @@ class Company(BaseClass):
 
         factory.set_produce(produce)
 
-    def sell_on_market(self, 
-                       resource: str, amount: int, price_per_unit: int | str,
-                       type: str  # "sell" | "exchange"
-                       ):
-        """ Выставляет товар на биржу от компании. (Продажа)
-        """
-
-        pass
-
-    def buy_from_market(self, 
-                         order_id: int, amount: int
-                         ):
-        """ Покупает товар с биржи от компании.
-        """
-
-        pass
-
     def create_contract(self, 
                         company_id: int | None, 
                         resource: str, amount: int, price_per_unit: int | str,
@@ -861,11 +848,24 @@ class Company(BaseClass):
             if resource_id and raw_col > 0:
                 try:
                     self.add_resource(resource_id, raw_col)
-                except Exception: pass
+                except Exception as e: 
+                    print(f'stage add comp res. of {self.id} error: {e}')
 
         factories = self.get_factories()
         for factory in factories:
             factory.on_new_game_stage()
+
+    @property
+    def exchages(self) -> list['Exchange']:
+        from game.exchange import Exchange
+
+        exchanges = just_db.find(
+            Exchange.__tablename__, to_class=Exchange,
+            company_id = self.id,
+            session_id=self.session_id
+        )
+
+        return exchanges
 
     def to_dict(self):
         """Возвращает полный статус компании со всеми данными"""
@@ -917,4 +917,6 @@ class Company(BaseClass):
             
             # Дополнительные возможности
             "can_user_enter": self.can_user_enter(),
+
+            "exchages": self.exchages
         }

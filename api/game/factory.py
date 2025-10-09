@@ -180,7 +180,7 @@ class Factory(BaseClass):
                         'company_id': self.company_id
                     }
                 }))
-            
+
             self.save_to_base()
 
     def set_produce(self, produce: bool):
