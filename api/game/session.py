@@ -81,6 +81,32 @@ class Session(BaseClass):
                 self.change_turn_schedule_id = sh_id
 
         elif new_stage == SessionStages.Game:
+            from game.company import Company
+
+            if self.step == 0:
+                for company in self.companies:
+                    company: Company
+
+                    if len(company.users) == 0:
+                        company.delete()
+                        main_logger.warning(f"Company {company.name} has no users and has been deleted.")
+                        continue
+
+                    elif not company.cell_position:
+                        free_cells = self.get_free_cells()
+
+                        if not free_cells: 
+                            company.delete()
+                            main_logger.warning(f"No free cells available to assign to company {company.name}. Company has been deleted.")
+                            continue
+
+                        cell = random.choice(free_cells)
+                        company.set_position(cell[0], cell[1])
+
+                        company.save_to_base()
+                        company.reupdate()
+                        main_logger.info(f"Assigned cell {company.cell_position} to company {company.name}")
+
             self.execute_step_schedule()
 
             for company in self.companies:
@@ -378,7 +404,8 @@ class Session(BaseClass):
             "cell_counts": self.cell_counts,
             "stage": self.stage,
             "step": self.step,
-            "max_steps": self.max_steps
+            "max_steps": self.max_steps,
+            "time_to_next_stage": self.get_time_to_next_stage()
         }
 
 
