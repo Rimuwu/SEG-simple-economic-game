@@ -8,7 +8,7 @@ from global_modules.db.baseclass import BaseClass
 from modules.json_database import just_db
 from game.session import session_manager
 from global_modules.load_config import ALL_CONFIGS, Resources, Improvements, Settings, Capital, Reputation
-from global_modules.bank import calc_credit, get_credit_conditions, check_max_credit_steps
+from global_modules.bank import calc_credit, get_credit_conditions, check_max_credit_steps, calc_deposit, get_deposit_conditions, check_max_deposit_steps
 from game.factory import Factory
 
 RESOURCES: Resources = ALL_CONFIGS["resources"]
@@ -474,7 +474,7 @@ class Company(BaseClass):
         self.credits.append(credit_data)
 
         self.save_to_base()
-        self.add_balance(c_sum, 0) # деньги без процентов в доход
+        self.add_balance(c_sum, 0.0) # деньги без процентов в доход
 
         asyncio.create_task(websocket_manager.broadcast({
             "type": "api-company_credit_taken",
@@ -714,18 +714,129 @@ class Company(BaseClass):
         }))
         return True
 
-    def take_deposit(self, d_sum: int):
+    def take_deposit(self, d_sum: int, steps: int):
         """ 
-            Сумма депозита у нас между минимумом и максимумом
+            Создаёт вклад на указанную сумму и срок
+            d_sum - сумма вклада
+            steps - срок вклада в ходах
+        """
+        self.in_prison_check()
+
+        if not isinstance(d_sum, int) or not isinstance(steps, int):
+            raise ValueError("Sum and steps must be integers.")
+        if d_sum <= 0 or steps <= 0:
+            raise ValueError("Sum and steps must be positive integers.")
+
+        deposit_condition = get_deposit_conditions(self.reputation)
+        if not deposit_condition.possible:
+            raise ValueError("Deposit is not possible with the current reputation.")
+
+        income_per_turn, total_income = calc_deposit(
+            d_sum, deposit_condition.percent, steps
+        )
+
+        session = session_manager.get_session(self.session_id)
+        if not session:
+            raise ValueError("Session not found.")
+
+        if not check_max_deposit_steps(steps, 
+                                       session.step, 
+                                       session.max_steps):
+            raise ValueError("Deposit duration exceeds the maximum game steps.")
+
+        if d_sum > CAPITAL.bank.contribution.max:
+            raise ValueError(f"Deposit sum exceeds the maximum limit of {CAPITAL.bank.contribution.max}.")
+
+        elif d_sum < CAPITAL.bank.contribution.min:
+            raise ValueError(f"Deposit sum is below the minimum limit of {CAPITAL.bank.contribution.min}.")
+
+        if self.balance < d_sum:
+            raise ValueError("Insufficient balance to create deposit.")
+
+        deposit_data = {
+            "initial_sum": d_sum,
+            "current_balance": d_sum,  # Баланс вклада (сумма + накопленные проценты)
+            "income_per_turn": income_per_turn,
+            "total_earned": 0,  # Сколько уже заработано процентов
+            
+            "steps_total": steps,
+            "steps_now": 0,
+            
+            "can_withdraw_from": session.step + 3  # Можно забрать через 3 хода
+        }
+        
+        # Снимаем деньги с баланса компании
+        self.remove_balance(d_sum)
+        
+        self.deposits.append(deposit_data)
+        self.save_to_base()
+        self.reupdate()
+
+        asyncio.create_task(websocket_manager.broadcast({
+            "type": "api-company_deposit_taken",
+            "data": {
+                "company_id": self.id,
+                "amount": d_sum,
+                "steps": steps
+            }
+        }))
+        return deposit_data
+
+    def deposit_income_step(self):
+        """ Вызывается при каждом шаге игры для компании.
+            Начисляет доход по вкладам на баланс вклада (не на счёт компании).
         """
 
-        pass
+        for deposit in self.deposits:
+            if deposit["steps_now"] < deposit["steps_total"]:
+                # Начисляем проценты на баланс вклада
+                deposit["current_balance"] += deposit["income_per_turn"]
+                deposit["total_earned"] += deposit["income_per_turn"]
+
+            deposit["steps_now"] += 1
+
+        self.save_to_base()
+        self.reupdate()
 
     def withdraw_deposit(self, deposit_index: int):
         """ Забирает депозит с индексом deposit_index.
+            Возвращает всю сумму (начальная + проценты) на счёт компании.
         """
+        self.in_prison_check()
 
-        pass
+        if not isinstance(deposit_index, int):
+            raise ValueError("Deposit index must be an integer.")
+        if deposit_index < 0 or deposit_index >= len(self.deposits):
+            raise ValueError("Invalid deposit index.")
+
+        deposit = self.deposits[deposit_index]
+        
+        session = session_manager.get_session(self.session_id)
+        if not session:
+            raise ValueError("Session not found.")
+        
+        # Проверяем, можно ли забрать деньги (прошло минимум 3 хода)
+        if session.step < deposit["can_withdraw_from"]:
+            raise ValueError(f"Cannot withdraw deposit yet. Available from step {deposit['can_withdraw_from']}.")
+
+        # Возвращаем весь баланс вклада на счёт компании
+        amount_to_return = deposit["current_balance"]
+        self.add_balance(amount_to_return, 0.0)  # Деньги без учёта в доходе
+
+        # Удаляем вклад
+        del self.deposits[deposit_index]
+        self.save_to_base()
+        self.reupdate()
+
+        asyncio.create_task(websocket_manager.broadcast({
+            "type": "api-company_deposit_withdrawn",
+            "data": {
+                "company_id": self.id,
+                "deposit_index": deposit_index,
+                "amount": amount_to_return
+            }
+        }))
+        return True
 
 
     def raw_in_step(self):
@@ -860,6 +971,7 @@ class Company(BaseClass):
                 self.save_to_base()
                 self.reupdate()
 
+        self.deposit_income_step()  # Начисляем проценты по вкладам
         self.credit_paid_step()
         self.taxate()
 
