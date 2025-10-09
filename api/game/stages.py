@@ -17,11 +17,13 @@ async def stage_game_updater(session_id: str):
     if not session: return 0
     if session.stage == SessionStages.CellSelect.value or session.stage == SessionStages.ChangeTurn.value:
         session.update_stage(SessionStages.Game)
-        scheduler.schedule_task(
+        sh_id = scheduler.schedule_task(
             stage_game_updater, 
             datetime.now() + timedelta(seconds=GAME_TIME),
             kwargs={"session_id": session_id}
         )
+        session.change_turn_schedule_id = sh_id
+        session.save_to_base()
 
     elif session.stage == SessionStages.Game.value:
         if session.step >= session.max_steps:
@@ -29,11 +31,13 @@ async def stage_game_updater(session_id: str):
             return 0
 
         session.update_stage(SessionStages.ChangeTurn)
-        scheduler.schedule_task(
+        sh_id = scheduler.schedule_task(
             stage_game_updater, 
             datetime.now() + timedelta(seconds=CHANGETURN_TIME),
             kwargs={"session_id": session_id}
         )
+        session.change_turn_schedule_id = sh_id
+        session.save_to_base()
 
 async def leave_from_prison(session_id: str, company_id: int):
     """ Фнукция для выхода из тюрьмы по времени

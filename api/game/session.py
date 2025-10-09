@@ -17,6 +17,9 @@ settings: Settings = ALL_CONFIGS['settings']
 cells: Cells = ALL_CONFIGS['cells']
 cells_types = cells.types
 
+GAME_TIME = settings.time_on_game_stage * 60
+CHANGETURN_TIME = settings.time_on_change_stage * 60
+
 class SessionStages(Enum):
     FreeUserConnect = "FreeUserConnect" # Подключаем пользователей
     CellSelect = "CellSelect" # Выбираем клетки
@@ -40,6 +43,7 @@ class Session(BaseClass):
         self.stage: str = SessionStages.FreeUserConnect.value
         self.step: int = 0
         self.max_steps: int = 15
+        self.change_turn_schedule_id: int = 0
 
     def start(self):
         if not self.session_id:
@@ -66,13 +70,14 @@ class Session(BaseClass):
             self.generate_cells()
 
             if not whitout_shedule:
-                scheduler.schedule_task(
+                sh_id = scheduler.schedule_task(
                     stage_game_updater, 
                     datetime.now() + timedelta(
-                        seconds=settings.turn_cell_time_minutes * 60
+                        seconds=CHANGETURN_TIME
                         ),
                     kwargs={"session_id": self.session_id}
                 )
+                self.change_turn_schedule_id = sh_id
 
         elif new_stage == SessionStages.Game:
             self.execute_step_schedule()
@@ -343,6 +348,19 @@ class Session(BaseClass):
                 }
             }
         }))
+
+    def get_time_to_next_stage(self) -> int:
+        """ Возвращает время в секундах до следующей стадии игры.
+            Если стадия не связана со временем, возвращает 0.
+        """
+        from modules.sheduler import scheduler
+
+        get_schedule = scheduler.get_scheduled_tasks(
+            self.change_turn_schedule_id
+            )
+        if get_schedule:
+            return int((datetime.fromisoformat(get_schedule['execute_at']) - datetime.now()).total_seconds())
+        return 0
 
     def to_dict(self):
         return {
