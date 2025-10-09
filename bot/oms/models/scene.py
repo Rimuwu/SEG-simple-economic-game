@@ -1,4 +1,3 @@
-import asyncio
 from typing import Callable, Optional, Type
 
 from aiogram import Bot
@@ -112,7 +111,8 @@ class Scene:
             raise ValueError(f"Страница {page_name} не найдена в сцене {self.__scene_name__}")
 
         page_model: Page = self.pages[page_name]
-        if page_model.page_blocked():
+        status, answer = await page_model.page_blocked()
+        if status:
 
             await self.update_key('scene', 'last_page', self.page)
             self.page = page_name
@@ -122,6 +122,8 @@ class Scene:
 
         else:
             print(f'Страница {page_name} заблокирована для перехода')
+
+        return status, answer
 
     def get_page(self, page_name: str):
         if page_name not in self.pages:
@@ -251,6 +253,7 @@ class Scene:
                     parse_mode=self.scene.settings.parse_mode,
                     reply_markup=markup
                 )
+
         except Exception as e:
             print(f"OMS: Ошибка при обновлении сообщения: {e}")
             # Если не удалось обновить, пересоздаем сообщение
