@@ -474,6 +474,7 @@ class Company(BaseClass):
                 "steps": steps
             }
         }))
+        return credit_data
 
     def credit_paid_step(self):
         """ Вызывается при каждом шаге игры для компании.
