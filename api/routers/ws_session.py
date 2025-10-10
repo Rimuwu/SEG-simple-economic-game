@@ -251,3 +251,29 @@ async def handle_get_all_item_prices(client_id: str, message: dict):
 
     except ValueError as e:
         return {"error": str(e)}
+
+@message_handler(
+    "get-session-event", 
+    doc="Обработчик получения события сессии. Отправляет ответ на request_id",
+    datatypes=[
+        "session_id: str",
+        "request_id: str",
+    ]
+)
+async def handle_get_session_event(client_id: str, message: dict):
+    """Обработчик получения события сессии"""
+
+    session_id = message.get("session_id", "")
+
+    try:
+        session = session_manager.get_session(session_id=session_id)
+        if not session: 
+            raise ValueError("Session not found.")
+
+        event = session.public_event_data()
+        return {
+            "event": event
+        }
+
+    except ValueError as e:
+        return {"error": str(e)}
