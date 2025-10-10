@@ -5,7 +5,8 @@
         "basePrice": 75,
         "massModifier": 1,
         "raw": true, // Это сырьё, не нужно городам
-        "lvl": 0
+        "lvl": 0,
+        "branch": "oil"
     },
     "metal": {
         "label": "Металл",
@@ -13,7 +14,8 @@
         "basePrice": 15,
         "massModifier": 5,
         "raw": true,
-        "lvl": 0
+        "lvl": 0,
+        "branch": "metal"
     },
     "wood": {
         "label": "Дерево",
@@ -21,7 +23,8 @@
         "basePrice": 15,
         "massModifier": 5,
         "raw": true,
-        "lvl": 0
+        "lvl": 0,
+        "branch": "wood"
     },
     "cotton": {
         "label": "Хлопок",
@@ -29,7 +32,8 @@
         "basePrice": 75,
         "massModifier": 1,
         "raw": true,
-        "lvl": 0
+        "lvl": 0,
+        "branch": "cotton"
     },
     "oil_products": {
         "label": "Нефтепродукты",
@@ -43,7 +47,8 @@
             "turns": 1,
             "output": 1
         },
-        "lvl": 1
+        "lvl": 1,
+        "branch": "oil"
     },
     "nails": {
         "label": "Гвозди",
@@ -57,7 +62,8 @@
             "turns": 1,
             "output": 10
         },
-        "lvl": 1
+        "lvl": 1,
+        "branch": "metal"
     },
     "boards": {
         "label": "Доски",
@@ -71,7 +77,8 @@
             "turns": 1,
             "output": 1
         },
-        "lvl": 1
+        "lvl": 1,
+        "branch": "wood"
     },
     "fabric": {
         "label": "Ткань",
@@ -85,7 +92,8 @@
             "turns": 1,
             "output": 2
         },
-        "lvl": 1
+        "lvl": 1,
+        "branch": "cotton"
     },
     "medical_equipment": {
         "label": "Медицинское оборудование",
@@ -100,7 +108,8 @@
             "turns": 2,
             "output": 1
         },
-        "lvl": 2
+        "lvl": 2,
+        "branch": "oil"
     },
     "machine": {
         "label": "Станок",
@@ -115,7 +124,8 @@
             "turns": 2,
             "output": 1
         },
-        "lvl": 2
+        "lvl": 2,
+        "branch": "metal"
     },
     "furniture": {
         "label": "Мебель",
@@ -130,7 +140,8 @@
             "turns": 2,
             "output": 1
         },
-        "lvl": 2
+        "lvl": 2,
+        "branch": "wood"
     },
     "tent": {
         "label": "Палатка",
@@ -145,7 +156,8 @@
             "turns": 2,
             "output": 1
         },
-        "lvl": 2
+        "lvl": 2,
+        "branch": "cotton"
     },
     "barrel": {
         "label": "Бочка",
@@ -160,7 +172,8 @@
             "turns": 1,
             "output": 1
         },
-        "lvl": 2
+        "lvl": 2,
+        "branch": "oil"
     },
     "tarpaulin": {
         "label": "Брезент",
@@ -175,7 +188,8 @@
             "turns": 1,
             "output": 1
         },
-        "lvl": 2
+        "lvl": 2,
+        "branch": "metal"
     },
     "insulation": {
         "label": "Изоляционный материал",
@@ -190,7 +204,8 @@
             "turns": 1,
             "output": 1
         },
-        "lvl": 2
+        "lvl": 2,
+        "branch": "wood"
     },
     "sail": {
         "label": "Парус",
@@ -205,7 +220,8 @@
             "turns": 1,
             "output": 1
         },
-        "lvl": 2
+        "lvl": 2,
+        "branch": "cotton"
     },
     "generator": {
         "label": "Генератор",
@@ -221,7 +237,8 @@
             "turns": 1,
             "output": 1
         },
-        "lvl": 3
+        "lvl": 3,
+        "branch": "oil"
     },
     "body_armor": {
         "label": "Бронежилет",
@@ -237,7 +254,8 @@
             "turns": 1,
             "output": 1
         },
-        "lvl": 3
+        "lvl": 3,
+        "branch": "metal"
     },
     "refrigerator": {
         "label": "Холодильник",
@@ -253,7 +271,8 @@
             "turns": 1,
             "output": 1
         },
-        "lvl": 3
+        "lvl": 3,
+        "branch": "wood"
     },
     "yacht": {
         "label": "Парусная яхта",
@@ -269,6 +288,7 @@
             "turns": 1,
             "output": 1
         },
-        "lvl": 3
+        "lvl": 3,
+        "branch": "cotton"
     }
 }

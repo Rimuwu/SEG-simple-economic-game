@@ -117,6 +117,10 @@ class Session(BaseClass):
             for company in self.companies:
                 company.on_new_game_stage(self.step + 1)
 
+            # Обновляем города
+            for city in self.cities:
+                city.on_new_game_stage()
+
             self.step += 1
 
         elif new_stage == SessionStages.End:
@@ -191,6 +195,14 @@ class Session(BaseClass):
 
         return [us for us in just_db.find(
             "users", to_class=User, session_id=self.session_id)
+                     ]
+
+    @property
+    def cities(self) -> list['Citie']:
+        from game.citie import Citie
+
+        return [city for city in just_db.find(
+            "cities", to_class=Citie, session_id=self.session_id)
                      ]
 
     def get_cell_with_label(self, label: str, 
@@ -292,7 +304,37 @@ class Session(BaseClass):
         main_logger.info(f"Cell counts: {self.cell_counts}")
 
         self.save_to_base()
+        
+        # Создаём города на клетках с типом 'city'
+        self._create_cities()
+        
         return self.cells
+
+    def _create_cities(self):
+        """Создаёт города на клетках типа 'city'"""
+        from game.citie import Citie, NAMES
+
+        cities_count = self.cell_counts.get('city', 0)
+        city_names = random.sample(NAMES, cities_count)
+
+        for index, cell_type in enumerate(self.cells):
+            if cell_type == 'city':
+                # Вычисляем координаты из индекса
+                x = index // self.map_size["cols"]
+                y = index % self.map_size["cols"]
+                
+                # Проверяем, нет ли уже города на этой позиции
+                existing_city = just_db.find_one(
+                    "cities", 
+                    session_id=self.session_id, 
+                    cell_position=f"{x}.{y}"
+                )
+                
+                if not existing_city:
+                    city = Citie().create(self.session_id, x, y,
+                                          city_names[index]
+                                        )
+                    main_logger.info(f"Created city at position {x}.{y} with branch {city.branch}")
 
     def can_select_cell(self, x: int, y: int):
         """ Проверяет, можно ли выбрать клетку с координатами (x, y) для компании.
@@ -329,6 +371,7 @@ class Session(BaseClass):
     def delete(self):
         for company in self.companies: company.delete()
         for user in self.users: user.delete()
+        for city in self.cities: city.delete()
 
         just_db.delete(self.__tablename__, session_id=self.session_id)
         session_manager.remove_session(self.session_id)
@@ -403,6 +446,7 @@ class Session(BaseClass):
             "id": self.session_id,
             "companies": [company.to_dict() for company in self.companies],
             "users": [user.to_dict() for user in self.users],
+            "cities": [city.to_dict() for city in self.cities],
             "cells": self.cells,
             "map_size": self.map_size,
             "map_pattern": self.map_pattern,
