@@ -312,8 +312,11 @@ class Session(BaseClass):
 
     def _create_cities(self):
         """Создаёт города на клетках типа 'city'"""
-        from game.citie import Citie
-        
+        from game.citie import Citie, NAMES
+
+        cities_count = self.cell_counts.get('city', 0)
+        city_names = random.sample(NAMES, cities_count)
+
         for index, cell_type in enumerate(self.cells):
             if cell_type == 'city':
                 # Вычисляем координаты из индекса
@@ -328,7 +331,9 @@ class Session(BaseClass):
                 )
                 
                 if not existing_city:
-                    city = Citie().create(self.session_id, x, y)
+                    city = Citie().create(self.session_id, x, y,
+                                          city_names[index]
+                                        )
                     main_logger.info(f"Created city at position {x}.{y} with branch {city.branch}")
 
     def can_select_cell(self, x: int, y: int):
