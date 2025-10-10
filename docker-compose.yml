@@ -45,6 +45,7 @@ services:
     environment:
       VITE_API_URL: ${VITE_API_URL}
       VITE_DEBUG: ${DEBUG}
+      VITE_AUTHORS: ${VITE_AUTHORS}
 
 
 networks:
