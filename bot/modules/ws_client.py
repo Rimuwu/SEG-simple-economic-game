@@ -153,6 +153,27 @@ async def company_pay_taxes(company_id: str, amount: int):
         wait_for_response=True
     )
 
+async def company_take_deposit(company_id: str, amount: int, period: int):
+    """Создание вклада компанией"""
+    return await ws_client.send_message(
+        "company-take-deposit",
+        company_id=company_id,
+        amount=amount,
+        period=period,
+        password=UPDATE_PASSWORD,
+        wait_for_response=True
+    )
+
+async def company_withdraw_deposit(company_id: str, deposit_index: int):
+    """Снятие вклада компанией"""
+    return await ws_client.send_message(
+        "company-withdraw-deposit",
+        company_id=company_id,
+        deposit_index=deposit_index,
+        password=UPDATE_PASSWORD,
+        wait_for_response=True
+    )
+
 async def company_complete_free_factories(company_id: int, new_resource: str, count: int, 
                                         find_resource: Optional[str] = None, 
                                         produce_status: Optional[bool] = None):
@@ -281,6 +302,14 @@ async def delete_session(session_id: str, really: bool = False):
         wait_for_response=True
     )
 
+async def get_session_time_to_next_stage(session_id: str):
+    """Получение времени до следующей стадии сессии"""
+    return await ws_client.send_message(
+        "get-session-time-to-next-stage",
+        session_id=session_id,
+        wait_for_response=True
+    )
+
 # Функции для работы с пользователями
 async def get_users(company_id: Optional[int] = None, session_id: Optional[str] = None):
     """Получение списка пользователей"""
@@ -330,6 +359,109 @@ async def delete_user(user_id: int):
     return await ws_client.send_message(
         "delete-user",
         user_id=user_id,
+        password=UPDATE_PASSWORD,
+        wait_for_response=True
+    )
+
+# Функции биржи (Exchange)
+async def get_exchanges(session_id: Optional[str] = None, company_id: Optional[int] = None, 
+                       sell_resource: Optional[str] = None, offer_type: Optional[str] = None):
+    """Получить список предложений биржи с фильтрацией"""
+    return await ws_client.send_message(
+        "get-exchanges",
+        session_id=session_id,
+        company_id=company_id,
+        sell_resource=sell_resource,
+        offer_type=offer_type,
+        wait_for_response=True
+    )
+
+async def get_exchange(id: int):
+    """Получить информацию о конкретном предложении биржи"""
+    return await ws_client.send_message(
+        "get-exchange",
+        id=id,
+        wait_for_response=True
+    )
+
+async def create_exchange_offer(
+    company_id: int,
+    session_id: str,
+    sell_resource: str,
+    sell_amount_per_trade: int,
+    count_offers: int,
+    offer_type: Literal['money', 'barter'],
+    price: Optional[int] = None,
+    barter_resource: Optional[str] = None,
+    barter_amount: Optional[int] = None
+):
+    """Создать предложение на бирже
+    
+    Args:
+        company_id: ID компании
+        session_id: ID сессии
+        sell_resource: Ресурс для продажи
+        sell_amount_per_trade: Количество ресурса за сделку
+        count_offers: Количество предложений
+        offer_type: Тип предложения ('money' или 'barter')
+        price: Цена (для offer_type='money')
+        barter_resource: Ресурс бартера (для offer_type='barter')
+        barter_amount: Количество ресурса бартера (для offer_type='barter')
+    """
+    return await ws_client.send_message(
+        "create-exchange-offer",
+        company_id=company_id,
+        session_id=session_id,
+        sell_resource=sell_resource,
+        sell_amount_per_trade=sell_amount_per_trade,
+        count_offers=count_offers,
+        offer_type=offer_type,
+        price=price,
+        barter_resource=barter_resource,
+        barter_amount=barter_amount,
+        password=UPDATE_PASSWORD,
+        wait_for_response=True
+    )
+
+async def update_exchange_offer(
+    offer_id: int,
+    sell_amount_per_trade: Optional[int] = None,
+    price: Optional[int] = None,
+    barter_amount: Optional[int] = None
+):
+    """Обновить параметры предложения биржи"""
+    return await ws_client.send_message(
+        "update-exchange-offer",
+        offer_id=offer_id,
+        sell_amount_per_trade=sell_amount_per_trade,
+        price=price,
+        barter_amount=barter_amount,
+        password=UPDATE_PASSWORD,
+        wait_for_response=True
+    )
+
+async def cancel_exchange_offer(offer_id: int):
+    """Отменить предложение биржи (возврат товара)"""
+    return await ws_client.send_message(
+        "cancel-exchange-offer",
+        offer_id=offer_id,
+        password=UPDATE_PASSWORD,
+        wait_for_response=True
+    )
+
+async def buy_exchange_offer(offer_id: int, buyer_company_id: int, quantity: int):
+    """Купить предложение с биржи
+    
+    Args:
+        offer_id: ID предложения
+        buyer_company_id: ID компании-покупателя
+        quantity: Количество для покупки
+    """
+    return await ws_client.send_message(
+        "buy-exchange-offer",
+        offer_id=offer_id,
+        buyer_company_id=buyer_company_id,
+        quantity=quantity,
         password=UPDATE_PASSWORD,
         wait_for_response=True
     )
