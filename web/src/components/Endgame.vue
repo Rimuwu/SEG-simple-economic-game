@@ -1,52 +1,12 @@
 <script setup>
-import { ref, onMounted, onUnmounted, nextTick } from 'vue'
-import { gsap } from 'gsap'
-import { animationConfig, getDuration, getDelay, logTimelineDuration } from '../animationConfig.js'
+import { ref, onMounted } from 'vue'
 
 const pageRef = ref(null)
-
-function playEntranceAnimation() {
-  // Set initial positions (elements start off-screen)
-  gsap.set('#graphs', { x: -300, opacity: 0 })
-  gsap.set('#by-money', { x: 200, y: -100, opacity: 0 })
-  gsap.set('#by-rep', { x: 200, opacity: 0 })
-  gsap.set('#by-level', { x: 200, y: 100, opacity: 0 })
-
-  // Create entrance animation timeline
-  const tl = gsap.timeline({ delay: getDelay(animationConfig.durations.delay) })
-  
-  tl.to('#graphs', { x: 0, opacity: 1, duration: getDuration(animationConfig.durations.entrance), ease: animationConfig.ease.smooth })
-    .to('#by-money', { x: 0, y: 0, opacity: 1, duration: getDuration(animationConfig.durations.slide), ease: animationConfig.ease.mapBounce }, '-=0.4')
-    .to('#by-rep', { x: 0, opacity: 1, duration: getDuration(animationConfig.durations.slide), ease: animationConfig.ease.mapBounce }, '-=0.5')
-    .to('#by-level', { x: 0, y: 0, opacity: 1, duration: getDuration(animationConfig.durations.slide), ease: animationConfig.ease.mapBounce }, '-=0.5')
-
-  logTimelineDuration(tl, 'Endgame', 'entrance')
-}
-
-function playExitAnimation() {
-  const tl = gsap.timeline()
-  
-  tl.to('#by-level', { x: 150, y: 50, opacity: 0, duration: getDuration(animationConfig.durations.exit), ease: animationConfig.ease.exitSmooth })
-    .to('#by-rep', { x: 150, opacity: 0, duration: getDuration(animationConfig.durations.exit), ease: animationConfig.ease.exitSmooth }, '-=0.3')
-    .to('#by-money', { x: 150, y: -50, opacity: 0, duration: getDuration(animationConfig.durations.exit), ease: animationConfig.ease.exitSmooth }, '-=0.3')
-    .to('#graphs', { x: -200, opacity: 0, duration: getDuration(animationConfig.durations.exit), ease: animationConfig.ease.exitSmooth }, '-=0.2')
-
-  logTimelineDuration(tl, 'Endgame', 'exit')
-}
 
 const AUTHORS = import.meta.env.VITE_AUTHORS;
 
 onMounted(() => {
-  playEntranceAnimation()
-  
-  // Listen for exit animation trigger
-  pageRef.value?.addEventListener('triggerExit', playExitAnimation)
-
   document.getElementById("authors").innerHTML = AUTHORS.split("/").join("<br/>");
-})
-
-onUnmounted(() => {
-  pageRef.value?.removeEventListener('triggerExit', playExitAnimation)
 })
 
 </script>

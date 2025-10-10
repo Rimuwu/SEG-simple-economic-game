@@ -2,8 +2,6 @@
 import './mapScripts.js'
 import Map from './Map.vue'
 import { onMounted, onUnmounted, ref, inject, reactive, watch } from 'vue'
-import { gsap } from 'gsap'
-import { animationConfig, getDuration, getDelay, logTimelineDuration } from '../animationConfig.js'
 
 /**
  * Ref to the root page container for animation and event handling.
@@ -50,40 +48,6 @@ function getCompanyForSlot(index, isLeft) {
   return null
 }
 
-/**
- * Plays the entrance animation for the preparation page using GSAP.
- */
-function playEntranceAnimation() {
-  gsap.set('#start-btn', { y: -100, opacity: 0 })
-  gsap.set('#session-key', { y: 100, opacity: 0 })
-  gsap.set('#column-right .column:first-child', { x: -200, opacity: 0 })
-  gsap.set('#column-right .column:last-child', { x: 200, opacity: 0 })
-  gsap.set('#map', { scale: 0.5, opacity: 0 })
-
-  const tl = gsap.timeline({ delay: getDelay(animationConfig.durations.delay) })
-  tl.to('#start-btn', { y: 0, opacity: 1, duration: getDuration(animationConfig.durations.entrance), ease: animationConfig.ease.bounce })
-    .to('#map', { scale: 1, opacity: 1, duration: getDuration(animationConfig.durations.map), ease: animationConfig.ease.mapBounce }, '-=0.4')
-    .to('#session-key', { y: 0, opacity: 1, duration: getDuration(animationConfig.durations.entrance), ease: animationConfig.ease.bounce }, '-=0.6')
-    .to('#column-right .column:first-child', { x: 0, opacity: 1, duration: getDuration(animationConfig.durations.slide), ease: animationConfig.ease.smooth }, '-=0.5')
-    .to('#column-right .column:last-child', { x: 0, opacity: 1, duration: getDuration(animationConfig.durations.slide), ease: animationConfig.ease.smooth }, '-=0.6')
-    .to('.list-item', { y: 0, opacity: 1, duration: getDuration(animationConfig.durations.listItem), ease: animationConfig.ease.smooth, stagger: getDuration(animationConfig.durations.stagger) }, '-=0.3')
-  logTimelineDuration(tl, 'Preparation', 'entrance')
-}
-
-/**
- * Plays the exit animation for the preparation page using GSAP.
- */
-function playExitAnimation() {
-  const tl = gsap.timeline()
-  tl.to('.list-item', { y: 20, opacity: 0, duration: getDuration(animationConfig.durations.listItemExit), ease: animationConfig.ease.exitSmooth, stagger: getDuration(0.02) })
-    .to('#column-right .column:first-child', { x: -100, opacity: 0, duration: getDuration(animationConfig.durations.exit), ease: animationConfig.ease.exitSmooth }, '-=0.1')
-    .to('#column-right .column:last-child', { x: 100, opacity: 0, duration: getDuration(animationConfig.durations.exit), ease: animationConfig.ease.exitSmooth }, '-=0.4')
-    .to('#start-btn', { y: -50, opacity: 0, duration: getDuration(animationConfig.durations.exit), ease: animationConfig.ease.exitSmooth }, '-=0.3')
-    .to('#session-key', { y: 50, opacity: 0, duration: getDuration(animationConfig.durations.exit), ease: animationConfig.ease.exitSmooth }, '-=0.4')
-    .to('#map', { scale: 0.8, opacity: 0, duration: getDuration(animationConfig.durations.exit), ease: animationConfig.ease.exitSmooth }, '-=0.3')
-  logTimelineDuration(tl, 'Preparation', 'exit')
-}
-
 function stateChange() {
   window.log("stateChange called, new state: " + prepState.value)
   if (state == 0) {
@@ -100,9 +64,6 @@ function stateChange() {
  * Sets up entrance animation, exit event listener, and starts company polling.
  */
 onMounted(() => {
-  playEntranceAnimation()
-  pageRef.value?.addEventListener('triggerExit', playExitAnimation)
-
   // Watch for changes in prepState and call stateChange
   watch(prepState, () => {
     stateChange()
@@ -122,7 +83,6 @@ onMounted(() => {
  * Cleans up event listeners and stops company polling.
  */
 onUnmounted(() => {
-  pageRef.value?.removeEventListener('triggerExit', playExitAnimation)
   if (wsManager) {
     wsManager.stopCompaniesPolling()
     window.removeEventListener('companies-updated', handleCompaniesUpdated)

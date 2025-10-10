@@ -1,7 +1,5 @@
 <script setup>
 import { ref, onMounted, onUnmounted, inject } from 'vue'
-import { gsap } from 'gsap'
-import { animationConfig, getDuration, getDelay, logTimelineDuration } from '../animationConfig.js'
 
 const dfsglsdfklhls = "QHNuZWdfZ2FtZWJvdA==";
 
@@ -43,18 +41,6 @@ const instructions = [
 
 function nextInstruction() {
   currentInstructionIndex.value = (currentInstructionIndex.value + 1) % instructions.length
-  animateTextChange()
-}
-
-function animateTextChange() {
-  const title = document.querySelector('#instruction-title')
-  const text = document.querySelector('#instruction-text')
-
-  if (title && text) {
-    gsap.timeline()
-      .to([title, text], { opacity: 0, y: -10, duration: 0.2, ease: 'power2.out' })
-      .to([title, text], { opacity: 1, y: 0, duration: 0.3, ease: 'power2.out' })
-  }
 }
 
 function startInstructionRotation() {
@@ -116,41 +102,12 @@ function joinSession() {
 
 let sdfhlhksg = atob(dfsglsdfklhls);
 
-function playEntranceAnimation() {
-  gsap.set('.acronym', { y: -100, opacity: 0 })
-  gsap.set('.left-container', { scale: 0.8, opacity: 0 })
-  gsap.set('footer', { y: 100, opacity: 0 })
-
-  const tl = gsap.timeline({ delay: getDelay(animationConfig.durations.delay) })
-
-  tl.to('.acronym', { y: 0, opacity: 1, duration: getDuration(animationConfig.durations.entrance), ease: animationConfig.ease.bounce })
-    .to('.left-container', { scale: 1, opacity: 1, duration: getDuration(animationConfig.durations.entrance), ease: animationConfig.ease.mapBounce }, '-=0.4')
-    .to('footer', { y: 0, opacity: 1, duration: getDuration(animationConfig.durations.slide), ease: animationConfig.ease.smooth }, '-=0.3')
-    
-  logTimelineDuration(tl, 'Introduction', 'entrance')
-}
-
-function playExitAnimation() {
-  const tl = gsap.timeline()
-
-  tl.to('.acronym', { y: 50, opacity: 0, duration: getDuration(animationConfig.durations.exit), ease: animationConfig.ease.exitSmooth })
-    .to('.left-containerl', { scale: 0.9, opacity: 0, duration: getDuration(animationConfig.durations.exit), ease: animationConfig.ease.exitSmooth }, '-=0.2')
-    .to('footer', { y: 50, opacity: 0, duration: getDuration(animationConfig.durations.exit), ease: animationConfig.ease.exitSmooth }, '-=0.2')
-
-  logTimelineDuration(tl, 'Introduction', 'exit')
-}
-
 onMounted(() => {
-  playEntranceAnimation()
   startInstructionRotation()
-
-  // Listen for exit animation trigger
-  pageRef.value?.addEventListener('triggerExit', playExitAnimation)
 })
 
 onUnmounted(() => {
   stopInstructionRotation()
-  pageRef.value?.removeEventListener('triggerExit', playExitAnimation)
 })
 </script>
 
