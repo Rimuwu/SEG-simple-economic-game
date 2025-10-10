@@ -17,6 +17,59 @@ SETTINGS: Settings = ALL_CONFIGS['settings']
 CAPITAL: Capital = ALL_CONFIGS['capital']
 REPUTATION: Reputation = ALL_CONFIGS['reputation']
 
+NAMES = [
+    "Золотогорск",
+    "Лесной Град",
+    "Речной Край",
+    "Горный Хребет",
+    "Солнечный Берег",
+    "Тёмный Лес",
+    "Светлый Путь",
+    "Железный Город",
+    "Кристалльный Остров",
+    "Огненная Долина",
+    "Ледяной Пик",
+    "Морской Ветер",
+    "Пустынный Оазис",
+    "Небесный Город",
+    "Земляной Вал",
+    "Водный Мир",
+    "Воздушный Замок",
+    "Каменный Щит",
+    "Деревянный Лабиринт",
+    "Металлический Гигант",
+    "Хлопковый Рай",
+    "Нефтяной Клад",
+    "Дубовый Лес",
+    "Стальной Пик",
+    "Шелковый Путь",
+    "Угольный Бассейн",
+    "Рубиновый Город",
+    "Изумрудный Остров",
+    "Сапфировый Берег",
+    "Алмазный Край",
+    "Бриллиантовый Вал",
+    "Жемчужный Мир",
+    "Янтарный Замок",
+    "Ониксовый Щит",
+    "Малахитовый Лабиринт",
+    "Обсидиановый Гигант",
+    "Топазовый Рай",
+    "Аметистовый Клад",
+    "Гранатовый Лес",
+    "Аквамариновый Пик",
+    "Лазуритовый Ветер",
+    "Турмалиновый Оазис",
+    "Опаловый Город",
+    "Гелиодоровый Долина",
+    "Цирконовый Пик",
+    "Корундовый Ветер",
+    "Спинелевый Оазис",
+    "Танзанитовый Город",
+    "Александритовый Край",
+    "Берилловый Вал"
+]
+
 class Citie(BaseClass):
 
     __tablename__ = "cities"
@@ -28,11 +81,14 @@ class Citie(BaseClass):
         self.session_id: str = ""
         self.cell_position: str = ""  # "x.y"
         self.branch: str = ""  # Приоритетная ветка: 'oil', 'metal', 'wood', 'cotton'
-        
+
+        self.name: str = ""
+
         # Спрос на товары: {resource_id: {'amount': int, 'price': int}}
         self.demands: dict = {}
 
-    def create(self, session_id: str, x: int, y: int):
+    def create(self, session_id: str, x: int, y: int, 
+               name: Optional[str] = None):
         """ Создание нового города
         
         Args:
@@ -41,7 +97,7 @@ class Citie(BaseClass):
             y: координата Y
         """
         from game.session import session_manager
-        
+
         session = session_manager.get_session(session_id)
         if not session:
             raise ValueError("Session not found")
@@ -54,10 +110,11 @@ class Citie(BaseClass):
         self.branch = determine_city_branch(
             x, y, session_id, session.cells, session.map_size, CELLS
         )
-        
+        self.name = name if name else random.choice(NAMES)
+
         # Инициализируем спрос
         self._update_demands(session)
-        
+
         self.save_to_base()
         self.reupdate()
 
@@ -224,7 +281,9 @@ class Citie(BaseClass):
             "session_id": self.session_id,
             "cell_position": self.cell_position,
             "branch": self.branch,
-            "demands": self.demands
+            "demands": self.demands,
+            
+            "name": self.name
         }
 
     def delete(self):
