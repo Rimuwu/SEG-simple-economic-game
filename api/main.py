@@ -1,5 +1,6 @@
 from asyncio import sleep
 import asyncio
+from pprint import pprint
 import random
 from fastapi import FastAPI, Request
 from contextlib import asynccontextmanager
@@ -11,6 +12,7 @@ from modules.json_database import just_db
 from modules.sheduler import scheduler
 from game.session import session_manager
 from game.exchange import Exchange
+from game.citie import Citie
 
 # Импортируем роуты
 from routers import connect_ws
@@ -32,6 +34,7 @@ async def lifespan(app: FastAPI):
     just_db.create_table('cities') # Таблица с городами
     just_db.create_table('exchanges') # Таблица с биржей
     just_db.create_table('factories') # Таблица с заводами
+    just_db.create_table('item_price') # Таблица с ценами на товары
 
     main_logger.info("Loading sessions from database...")
     session_manager.load_from_base()
@@ -118,30 +121,80 @@ async def test1():
     company.set_position(0, 0)
     company2.set_position(2, 3)
     session.reupdate()
+    
+
+    city: Citie = session.cities[0]
 
     # free_cells = session.get_free_cells()
     # print(free_cells)
 
+    # session.update_stage(SessionStages.Game, True)
+    # company.reupdate()
+    # company2.reupdate()
+    
+    just_db.update(
+        'factories', {}, {'is_auto': True}
+    )
+    
+    session.update_stage(SessionStages.Game, True)
+    company.reupdate()
+    company2.reupdate()
+    
+    session.update_stage(SessionStages.Game, True)
+    company.reupdate()
+    company2.reupdate()
+    
+
+    # # print(company.warehouses.keys())
+
+    if len(company.warehouses) > 1:
+        c_m_k_1 = list(company.warehouses.keys())[1]
+        col_1 = company.warehouses[c_m_k_1]
+    else:
+        c_m_k_1 = list(company.warehouses.keys())[0]
+        col_1 = company.warehouses[c_m_k_1]
+    
+    # c_m_k_2 = list(company2.warehouses.keys())[1]
+    # col_2 = company2.warehouses[c_m_k_2]
+    
+    city.sell_resource(company.id, c_m_k_1, col_1 // 4)
+
+    await sleep(3)
+    
+    session.update_stage(SessionStages.Game, True)
+    company.reupdate()
+    company2.reupdate()
+    
+    session.update_item_price('nails', 150)
+    
+    session.update_stage(SessionStages.Game, True)
+    company.reupdate()
+    company2.reupdate()
+    
     session.update_stage(SessionStages.Game, True)
     company.reupdate()
     company2.reupdate()
 
-    # print(company.warehouses.keys())
+    if len(company.warehouses) > 1:
+        c_m_k_1 = list(company.warehouses.keys())[1]
+        col_1 = company.warehouses[c_m_k_1]
+    else:
+        c_m_k_1 = list(company.warehouses.keys())[0]
+        col_1 = company.warehouses[c_m_k_1]
+    
+    # c_m_k_2 = list(company2.warehouses.keys())[1]
+    # col_2 = company2.warehouses[c_m_k_2]
+    
+    city.sell_resource(company.id, c_m_k_1, 1)
 
-    c_m_k_1 = list(company.warehouses.keys())[0]
-    col_1 = company.warehouses[c_m_k_1]
+    # print(company.warehouses, company2.warehouses)
+    # print(c_m_k_1, c_m_k_2)
     
-    c_m_k_2 = list(company2.warehouses.keys())[0]
-    col_2 = company2.warehouses[c_m_k_2]
-    
-    print(company.warehouses, company2.warehouses)
-    print(c_m_k_1, c_m_k_2)
-    
-    exchange = Exchange(0).create(
-        company.id, session.session_id, 
-        c_m_k_1, col_1 // 2, 2, 'barter', 0,
-        c_m_k_2, col_2 // 2
-    )
+    # exchange = Exchange(0).create(
+    #     company.id, session.session_id, 
+    #     c_m_k_1, col_1 // 2, 2, 'barter', 0,
+    #     c_m_k_2, col_2 // 2
+    # )
     
 
     # exchange = Exchange(0).create(
@@ -150,23 +203,23 @@ async def test1():
     # )
     
 
-    company.reupdate()
-    company2.reupdate()
-    print(company.warehouses, company2.warehouses)
+    # company.reupdate()
+    # company2.reupdate()
+    # print(company.warehouses, company2.warehouses)
 
-    exchange.buy(company2.id)
+    # exchange.buy(company2.id)
     
-    company.reupdate()
-    company2.reupdate()
-    print(company.warehouses, company2.warehouses)
+    # company.reupdate()
+    # company2.reupdate()
+    # print(company.warehouses, company2.warehouses)
     
-    exchange.reupdate()
-    exchange.cancel_offer()
+    # exchange.reupdate()
+    # exchange.cancel_offer()
     
     
-    company.reupdate()
-    company2.reupdate()
-    print(company.warehouses, company2.warehouses)
+    # company.reupdate()
+    # company2.reupdate()
+    # print(company.warehouses, company2.warehouses)
 
     # session.update_stage(SessionStages.Game)
     # company.reupdate()

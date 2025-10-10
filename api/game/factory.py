@@ -161,9 +161,16 @@ class Factory(BaseClass):
 
                 # Добавляем продукцию на склад компании
                 if self.complectation:
-                    company.add_resource(
-                        self.complectation, output)
-                    self.produced += output
+                    try:
+                        company.add_resource(
+                            self.complectation, output)
+                        self.produced += output
+                    except Exception as e:
+                        max_col = company.get_warehouse_free_size()
+                        if max_col > 0:
+                            company.add_resource(
+                                self.complectation, max_col)
+                            self.produced += max_col
 
                 self.progress[0] = 0
 

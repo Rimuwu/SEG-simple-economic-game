@@ -104,7 +104,8 @@ class WebSocketManager:
             await self.disconnect(client_id)
             return False
 
-    async def broadcast(self, message: Any, exclude: List[str] = None) -> int:
+    async def broadcast(self, message: Any, 
+                        exclude: List[str] = None) -> int:
         """
         Отправить сообщение всем подключенным клиентам
 

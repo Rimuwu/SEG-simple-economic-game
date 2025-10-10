@@ -27,9 +27,10 @@ async def handle_get_factories(client_id: str, message: dict):
 
     # Получаем список фабрик из базы данных
     factories = just_db.find('factories',
+                             to_class=Factory,
                          **{k: v for k, v in conditions.items() if v is not None})
 
-    return {"factories": factories}
+    return [factory.to_dict() for factory in factories]
 
 @message_handler(
     "get-factory", 
@@ -50,7 +51,7 @@ async def handle_get_factory(client_id: str, message: dict):
         factory = Factory(factory_id).reupdate()
         if not factory:
             raise ValueError("Factory not found.")
-        
+
         return {"factory": factory.to_dict()}
     except ValueError as e:
         return {"error": str(e)}

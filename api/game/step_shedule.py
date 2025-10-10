@@ -75,6 +75,7 @@ class StepSchedule(BaseClass):
 
         if not session:
             just_db.delete(self.__tablename__, id=self.id)
+            print(f'Session {self.session_id} not found. Deleting schedule {self.id}.')
             return False
 
         if session.step != self.in_step:

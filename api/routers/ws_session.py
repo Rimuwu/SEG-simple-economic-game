@@ -20,9 +20,10 @@ async def handle_get_sessions(client_id: str, message: dict):
 
     # Получаем список сессий из базы данных
     sessions = just_db.find('sessions',
+                            to_class=Session,
                          **{k: v for k, v in conditions.items() if v is not None})
 
-    return sessions
+    return [s.to_dict() for s in sessions]
 
 @message_handler(
     "get-session", 
@@ -42,9 +43,10 @@ async def handle_get_session(client_id: str, message: dict):
 
     # Получаем сессию из базы данных
     session = just_db.find_one('sessions',
+                               to_class=Session,
                          **{k: v for k, v in conditions.items() if v is not None})
 
-    return session
+    return session.to_dict()
 
 @message_handler(
     "create-session", 
@@ -188,8 +190,90 @@ async def handle_get_session_time_to_next_stage(
     if not session: raise ValueError("Session not found.")
 
     t = session.get_time_to_next_stage()
-    return {"time_to_next_stage": t, 
-            "stage_now": session.stage, 
-            "max_steps": session.max_steps, 
-            "step": session.step
+    return {
+        "time_to_next_stage": t, 
+        "stage_now": session.stage, 
+        "max_steps": session.max_steps, 
+        "step": session.step
     }
+
+@message_handler(
+    "get-item-price", 
+    doc="Обработчик получения цены конкретного товара в сессии. Отправляет ответ на request_id",
+    datatypes=[
+        "session_id: str",
+        "item_id: str",
+        "request_id: str",
+    ]
+)
+async def handle_get_item_price(client_id: str, message: dict):
+    """Обработчик получения цены конкретного товара"""
+
+    session_id = message.get("session_id", "")
+    item_id = message.get("item_id", "")
+
+    try:
+        session = session_manager.get_session(session_id=session_id)
+        if not session: 
+            raise ValueError("Session not found.")
+
+        price = session.get_item_price(item_id)
+        return {
+            "item_id": item_id,
+            "price": price
+        }
+
+    except ValueError as e:
+        return {"error": str(e)}
+
+@message_handler(
+    "get-all-item-prices", 
+    doc="Обработчик получения всех цен товаров в сессии. Отправляет ответ на request_id",
+    datatypes=[
+        "session_id: str",
+        "request_id: str",
+    ]
+)
+async def handle_get_all_item_prices(client_id: str, message: dict):
+    """Обработчик получения всех цен товаров"""
+
+    session_id = message.get("session_id", "")
+
+    try:
+        session = session_manager.get_session(session_id=session_id)
+        if not session: 
+            raise ValueError("Session not found.")
+
+        all_prices = session.get_all_item_prices_dict()
+        return {
+            "prices": all_prices
+        }
+
+    except ValueError as e:
+        return {"error": str(e)}
+
+@message_handler(
+    "get-session-event", 
+    doc="Обработчик получения события сессии. Отправляет ответ на request_id",
+    datatypes=[
+        "session_id: str",
+        "request_id: str",
+    ]
+)
+async def handle_get_session_event(client_id: str, message: dict):
+    """Обработчик получения события сессии"""
+
+    session_id = message.get("session_id", "")
+
+    try:
+        session = session_manager.get_session(session_id=session_id)
+        if not session: 
+            raise ValueError("Session not found.")
+
+        event = session.public_event_data()
+        return {
+            "event": event
+        }
+
+    except ValueError as e:
+        return {"error": str(e)}
