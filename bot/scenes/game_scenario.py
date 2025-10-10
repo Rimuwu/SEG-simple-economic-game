@@ -10,6 +10,7 @@ from scenes.cells_info_page import CellsInfo
 from scenes.inventory_page import InventoryPage
 from scenes.bank_page import BankPage
 from scenes.bank_credit_page import BankCreditPage
+from scenes.bank_deposit_page import BankDepositPage
 from scenes.factory_menu_page import FactoryMenu
 from scenes.factory_rekit_groups import FactoryRekitGroups
 from scenes.factory_rekit_count import FactoryRekitCount
@@ -37,6 +38,7 @@ class GameManager(Scene):
         InventoryPage,
         BankPage,
         BankCreditPage,
+        BankDepositPage,
         FactoryMenu,
         FactoryRekitGroups,
         FactoryRekitCount,
