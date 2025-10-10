@@ -107,6 +107,200 @@ globalThis.refreshMap = () => {
   }
 }
 
+// ==================== DEBUG FUNCTIONS ====================
+// These functions are available in DevTools console for debugging
+
+/**
+ * Get the current game state for debugging
+ * Usage in console: getGameState()
+ */
+globalThis.getGameState = () => {
+  if (!wsManager || !wsManager.gameState) {
+    console.error('❌ GameState not available')
+    return null
+  }
+  const state = wsManager.gameState.toJSON()
+  console.log('🎮 Current Game State:')
+  console.table({
+    'Session ID': state.session.id || 'None',
+    'Stage': state.session.stage || 'None',
+    'Step': `${state.session.step}/${state.session.max_steps}`,
+    'Connected': state.connected ? '✅' : '❌',
+    'Companies': state.companies.length,
+    'Users': state.users.length,
+    'Factories': state.factories.length,
+    'Exchanges': state.exchanges.length,
+    'Map Loaded': state.map.loaded ? '✅' : '❌'
+  })
+  return state
+}
+
+/**
+ * Get detailed game state as JSON
+ * Usage: getGameStateJSON()
+ */
+globalThis.getGameStateJSON = () => {
+  if (!wsManager || !wsManager.gameState) {
+    console.error('❌ GameState not available')
+    return null
+  }
+  return wsManager.gameState.toJSON()
+}
+
+/**
+ * Log current game state to console
+ * Usage: logGameState()
+ */
+globalThis.logGameState = () => {
+  if (!wsManager || !wsManager.gameState) {
+    console.error('❌ GameState not available')
+    return
+  }
+  wsManager.gameState.logState()
+}
+
+/**
+ * Get all companies
+ * Usage: getCompanies()
+ */
+globalThis.getCompanies = () => {
+  if (!wsManager) return []
+  console.table(wsManager.gameState.state.companies)
+  return wsManager.gameState.state.companies
+}
+
+/**
+ * Get all users
+ * Usage: getUsers()
+ */
+globalThis.getUsers = () => {
+  if (!wsManager) return []
+  console.table(wsManager.gameState.state.users)
+  return wsManager.gameState.state.users
+}
+
+/**
+ * Get session info
+ * Usage: getSession()
+ */
+globalThis.getSession = () => {
+  if (!wsManager) return null
+  const session = wsManager.gameState.state.session
+  console.log('📍 Session Info:', session)
+  return session
+}
+
+/**
+ * Get map data
+ * Usage: getMap()
+ */
+globalThis.getMap = () => {
+  if (!wsManager) return null
+  const map = wsManager.gameState.getMapData()
+  console.log('🗺️ Map Data:', {
+    size: map.size,
+    cellCount: map.cells.length,
+    loaded: map.loaded,
+    pattern: map.pattern
+  })
+  return map
+}
+
+/**
+ * Get exchange offers
+ * Usage: getExchanges()
+ */
+globalThis.getExchanges = () => {
+  if (!wsManager) return []
+  console.table(wsManager.gameState.state.exchanges)
+  return wsManager.gameState.state.exchanges
+}
+
+/**
+ * Get factories
+ * Usage: getFactories()
+ */
+globalThis.getFactories = () => {
+  if (!wsManager) return []
+  console.table(wsManager.gameState.state.factories)
+  return wsManager.gameState.state.factories
+}
+
+/**
+ * Get winners (if game ended)
+ * Usage: getWinners()
+ */
+globalThis.getWinners = () => {
+  if (!wsManager) return null
+  const winners = wsManager.gameState.getWinners()
+  console.log('🏆 Winners:', winners)
+  return winners
+}
+
+/**
+ * Get current user info
+ * Usage: getCurrentUser()
+ */
+globalThis.getCurrentUser = () => {
+  if (!wsManager) return null
+  const user = wsManager.gameState.state.currentUser
+  console.log('👤 Current User:', user)
+  return user
+}
+
+/**
+ * Refresh all game data
+ * Usage: refreshGameData()
+ */
+globalThis.refreshGameData = () => {
+  if (!wsManager) {
+    console.error('❌ WebSocket manager not available')
+    return
+  }
+  console.log('🔄 Refreshing all game data...')
+  wsManager.fetchAllGameData()
+}
+
+/**
+ * Show available debug commands
+ * Usage: debugHelp()
+ */
+globalThis.debugHelp = () => {
+  console.log(`
+🎮 Available Debug Commands:
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+📊 State Access:
+  getGameState()      - Get formatted game state overview
+  getGameStateJSON()  - Get raw game state as JSON
+  logGameState()      - Log detailed state to console
+
+🎯 Specific Data:
+  getSession()        - Get session information
+  getCompanies()      - Get all companies (table format)
+  getUsers()          - Get all users (table format)
+  getMap()            - Get map data
+  getExchanges()      - Get exchange offers
+  getFactories()      - Get factories
+  getWinners()        - Get game winners (if ended)
+  getCurrentUser()    - Get current user info
+
+🔧 Actions:
+  refreshGameData()   - Refresh all game data from server
+  refreshMap()        - Refresh map display
+
+💡 Direct Access:
+  wsManager           - WebSocketManager instance
+  wsManager.gameState - GameState instance
+  wsManager.state     - Reactive state object
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  `)
+}
+
+// Log available debug commands on load
+console.log('🎮 Game loaded! Type debugHelp() for available commands.')
+
 provide('wsManager', wsManager)
 provide('outputConsole', outputConsole)
 </script>

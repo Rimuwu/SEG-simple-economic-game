@@ -89,8 +89,6 @@ onUnmounted(() => {
   }
 
 })
-
-wsManager.session_id = "AFRIKA";
 </script>
 
 <template>
