@@ -77,13 +77,20 @@ if (wsManager) {
     overflow: hidden;
     
     aspect-ratio: 1/1;
+    width: 80vh;
+    max-width: 80vw;
+    height: 80vh;
+    max-height: 80vw;
 
     gap: 0;
 }
 
 .tile {
+    /* Force fixed dimensions */
     width: 100%;
     height: 100%;
+    min-width: 0;
+    min-height: 0;
     aspect-ratio: 1/1;
 
     box-shadow: inset 0 0 0 2px rgba(1,1,1,0.5);
@@ -96,15 +103,20 @@ if (wsManager) {
     cursor: pointer;
     font-weight: 600;
     margin: 0;
-    padding: 0;
+    padding: 4px;
+    box-sizing: border-box;
 
-    
-    font-size: 1.5rem;
+    /* Responsive font size based on container */
+    font-size: clamp(0.6rem, 1.2vw, 1.2rem);
+    line-height: 1.1;
     
     /* Text handling for overflow */
     word-wrap: break-word;
+    word-break: break-word;
+    hyphens: auto;
     text-align: center;
     overflow: hidden;
+    text-overflow: ellipsis;
     
     /* Smooth transitions */
     transition: background-color 1s ease, font-size 0.3s ease;
