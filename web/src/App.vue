@@ -1,4 +1,3 @@
-globalThis.wsManager = wsManager
 <script setup>
 import { ref, reactive, provide } from 'vue'
 
@@ -42,11 +41,27 @@ const showAdmin = ref(false)
 const outputConsole = ref(null)
 
 /**
- * Changes the current view/page.
+ * Controls the transition animation state
+ * @type {import('vue').Ref<boolean>}
+ */
+const isTransitioning = ref(false)
+
+/**
+ * Changes the current view/page with transition animation.
  * @param {string} view - The view name to show.
  */
 function handleShow(view) {
-  currentView.value = view
+  isTransitioning.value = true
+  
+  // Wait for animation to reach middle (screen covered), then change view
+  setTimeout(() => {
+    currentView.value = view
+  }, 400) // Half of the 800ms animation
+  
+  // Reset transitioning state after animation completes
+  setTimeout(() => {
+    isTransitioning.value = false
+  }, 800)
 }
 
 /**
@@ -64,23 +79,6 @@ function handleMouseMove(e) {
  */
 function handleAdminLeave() {
   showAdmin.value = false
-}
-
-/**
- * Triggers exit animation for the leaving component.
- * @param {HTMLElement} el
- */
-function handleBeforeLeave(el) {
-  const exitEvent = new CustomEvent('triggerExit')
-  el.dispatchEvent(exitEvent)
-}
-
-/**
- * Placeholder for enter animation logic (handled in child components).
- * @param {HTMLElement} el
- */
-function handleEnter(el) {
-  // The enter animation is handled by each component's onMounted
 }
 
 /**
@@ -124,30 +122,61 @@ provide('outputConsole', outputConsole)
       style="position: fixed; left: 0; top: 0; width: 320px; z-index: 1000;" />
     <!-- Floating output console for logs and errors -->
     <OutputConsole ref="outputConsole" />
-    <!-- Page transition wrapper for animated navigation between views -->
-    <component :is="currentView === 'Introduction' ? Introduction :
-        currentView === 'Preparation' ? Preparation :
-          currentView === 'Between' ? Between :
-            currentView === 'Endgame' ? Endgame :
-              Game
-      " :key="currentView" @navigateTo="handleShow" />
+
+      <component :is="currentView === 'Introduction' ? Introduction :
+          currentView === 'Preparation' ? Preparation :
+            currentView === 'Between' ? Between :
+              currentView === 'Endgame' ? Endgame :
+                Game
+        " :key="currentView" @navigateTo="handleShow" />
+
+    <!-- Black transition overlay -->
+    <div class="transition-overlay" :class="{ 'transitioning': isTransitioning }"></div>
   </div>
 </template>
 
 <style scoped>
 /*
-  Page transition styles for fade-in/fade-out between views.
+  Black rectangle sliding transition overlay.
 */
-.page-enter-active {
-  transition: opacity 0.1s ease;
+.transition-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100vh;
+  background-color: #1E1E1E;
+  z-index: 999;
+  transform: translateY(-100%);
+  pointer-events: none;
 }
 
+/*
+  Page transition styles with sliding black rectangle effect.
+  The overlay slides down from top, covers the screen, then slides down to bottom.
+*/
 .page-leave-active {
-  transition: opacity 0.3s ease;
+  transition-delay: 0s;
 }
 
-.page-enter-from,
-.page-leave-to {
-  opacity: 0;
+.page-enter-active {
+  transition-delay: 0.4s;
+}
+
+/* Animation for the black overlay */
+@keyframes slideDown {
+  0% {
+    transform: translateY(-100%);
+  }
+  50% {
+    transform: translateY(0);
+  }
+  100% {
+    transform: translateY(100%);
+  }
+}
+
+.transitioning {
+  animation: slideDown 0.8s ease-in-out;
 }
 </style>
