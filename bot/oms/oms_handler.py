@@ -36,20 +36,9 @@ def register_handlers(router: Union[Router, Dispatcher]):
         to_page = args[0]
 
         if user_session:
-            await user_session.update_page(to_page)
-
-    # @router.callback_query(
-    #     F.data.split(":")[:2] == [CALLBACK_PREFIX, 'scene_data']
-    #                 )
-    # async def scene_data(callback: CallbackQuery):
-    #     user_id = callback.from_user.id
-    #     user_session = scene_manager.get_scene(user_id)
-
-    #     prefix, c_type, scene_name, *args = callback.data.split(':')
-    #     to_page = args[0]
-
-        # if user_session:
-        #     # await user_session.update_page(to_page)
+            status, answer = await user_session.update_page(to_page)
+            if not status:
+                await callback.answer(answer, show_alert=True)
 
     @router.callback_query(
         InScene(),

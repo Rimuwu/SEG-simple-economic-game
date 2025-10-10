@@ -168,3 +168,28 @@ async def handle_delete_session(
         session.delete()
     except ValueError as e:
         return {"error": str(e)}
+
+@message_handler(
+    "get-session-time-to-next-stage", 
+    doc="Обработчик получения времени до следующей стадии сессии. Отправляет ответ на request_id",
+    datatypes=[
+        "session_id: str",
+        "request_id: str",
+    ],
+    messages=[]
+)
+async def handle_get_session_time_to_next_stage(
+    client_id: str, message: dict):
+    """Обработчик получения времени до следующей стадии сессии"""
+
+    session_id = message.get("session_id", "")
+
+    session = session_manager.get_session(session_id=session_id)
+    if not session: raise ValueError("Session not found.")
+
+    t = session.get_time_to_next_stage()
+    return {"time_to_next_stage": t, 
+            "stage_now": session.stage, 
+            "max_steps": session.max_steps, 
+            "step": session.step
+    }

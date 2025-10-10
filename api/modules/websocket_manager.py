@@ -91,7 +91,7 @@ class WebSocketManager:
                 await websocket.send_text(json.dumps(message, ensure_ascii=False))
 
             if log:
-                main_logger.info(f"Sent to {client_id}: {message}")
+                main_logger.info(f"Sent message to {client_id}")
 
             return True
 

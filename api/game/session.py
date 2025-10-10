@@ -1,6 +1,7 @@
 import asyncio
 from datetime import datetime, timedelta
 import random
+from typing import Optional
 from game.stages import stage_game_updater
 from global_modules.models.cells import CellType, Cells
 from modules.json_database import just_db
@@ -16,6 +17,10 @@ from modules.sheduler import scheduler
 settings: Settings = ALL_CONFIGS['settings']
 cells: Cells = ALL_CONFIGS['cells']
 cells_types = cells.types
+
+GAME_TIME = settings.time_on_game_stage * 60
+CHANGETURN_TIME = settings.time_on_change_stage * 60
+TURN_CELL_TIME = settings.turn_cell_time_minutes * 60
 
 class SessionStages(Enum):
     FreeUserConnect = "FreeUserConnect" # Подключаем пользователей
@@ -40,6 +45,11 @@ class Session(BaseClass):
         self.stage: str = SessionStages.FreeUserConnect.value
         self.step: int = 0
         self.max_steps: int = 15
+        self.change_turn_schedule_id: int = 0
+
+        self.event_type: Optional[str] = None
+        self.event_start: Optional[int] = None
+        self.event_end: Optional[int] = None
 
     def start(self):
         if not self.session_id:
@@ -66,15 +76,42 @@ class Session(BaseClass):
             self.generate_cells()
 
             if not whitout_shedule:
-                scheduler.schedule_task(
+                sh_id = scheduler.schedule_task(
                     stage_game_updater, 
                     datetime.now() + timedelta(
-                        seconds=settings.turn_cell_time_minutes * 60
+                        seconds=TURN_CELL_TIME
                         ),
                     kwargs={"session_id": self.session_id}
                 )
+                self.change_turn_schedule_id = sh_id
 
         elif new_stage == SessionStages.Game:
+            from game.company import Company
+
+            if self.step == 0:
+                for company in self.companies:
+                    company: Company
+
+                    if len(company.users) == 0:
+                        company.delete()
+                        main_logger.warning(f"Company {company.name} has no users and has been deleted.")
+                        continue
+
+                    elif not company.cell_position:
+                        free_cells = self.get_free_cells()
+
+                        if not free_cells: 
+                            company.delete()
+                            main_logger.warning(f"No free cells available to assign to company {company.name}. Company has been deleted.")
+                            continue
+
+                        cell = random.choice(free_cells)
+                        company.set_position(cell[0], cell[1])
+
+                        company.save_to_base()
+                        company.reupdate()
+                        main_logger.info(f"Assigned cell {company.cell_position} to company {company.name}")
+
             self.execute_step_schedule()
 
             for company in self.companies:
@@ -131,6 +168,10 @@ class Session(BaseClass):
         return self.stage == SessionStages.FreeUserConnect.value
 
     def can_add_company(self):
+        col_companies = len(self.companies)
+        if col_companies >= settings.max_companies:
+            return False
+
         return self.stage == SessionStages.FreeUserConnect.value
 
     def can_select_cells(self):
@@ -344,6 +385,19 @@ class Session(BaseClass):
             }
         }))
 
+    def get_time_to_next_stage(self) -> int:
+        """ Возвращает время в секундах до следующей стадии игры.
+            Если стадия не связана со временем, возвращает 0.
+        """
+        from modules.sheduler import scheduler
+
+        get_schedule = scheduler.get_scheduled_tasks(
+            self.change_turn_schedule_id
+            )
+        if get_schedule:
+            return int((datetime.fromisoformat(get_schedule['execute_at']) - datetime.now()).total_seconds())
+        return 0
+
     def to_dict(self):
         return {
             "id": self.session_id,
@@ -355,7 +409,14 @@ class Session(BaseClass):
             "cell_counts": self.cell_counts,
             "stage": self.stage,
             "step": self.step,
-            "max_steps": self.max_steps
+            "max_steps": self.max_steps,
+            "time_to_next_stage": self.get_time_to_next_stage(),
+
+            "event": {
+                "type": self.event_type,
+                "start": self.event_start,
+                "end": self.event_end
+            }
         }
 
 
