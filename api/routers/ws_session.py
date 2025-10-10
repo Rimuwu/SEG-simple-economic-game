@@ -188,8 +188,9 @@ async def handle_get_session_time_to_next_stage(
     if not session: raise ValueError("Session not found.")
 
     t = session.get_time_to_next_stage()
-    return {"time_to_next_stage": t, 
-            "stage_now": session.stage, 
-            "max_steps": session.max_steps, 
-            "step": session.step
+    return {
+        "time_to_next_stage": t, 
+        "stage_now": session.stage, 
+        "max_steps": session.max_steps, 
+        "step": session.step
     }
