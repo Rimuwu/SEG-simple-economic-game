@@ -27,14 +27,14 @@ class EventEffects:
     """Эффекты события"""
     # Модификаторы дохода для cell_type_event
     income_multiplier: float | None = field(default=None)
-    
+
     # Модификаторы цены и спроса на предметы
     increase_price: dict[str, float] = field(default_factory=dict)
     increase_demand: dict[str, float] = field(default_factory=dict)
 
     # Модификаторы скорости и лимитов
     tasks_speed: float | None = field(default=None)
-    resource_extraction_speed: float | None = field(default=None)
+    resource_extraction_speed: float | None = field(default=None) # Добыча ресурсов всех типов
     contracts_limit_decrease: int | None = field(default=None)
 
     # Логистика
