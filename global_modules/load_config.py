@@ -3,6 +3,7 @@ from pathlib import Path
 
 from global_modules.models.cells import Cells
 from global_modules.models.capital import Capital
+from global_modules.models.events import Events
 from global_modules.models.improvements import Improvements
 from global_modules.models.reputation import Reputation
 from global_modules.models.resources import Resources
@@ -34,12 +35,14 @@ def load_configs(config_dir: str = "config"):
         load_json("resources.json", config_path))
     settings = Settings.load_from_json(
         load_json("settings.json", config_path))
+    events = Events.load_from_json(
+        load_json("events.json", config_path))
 
-    return cells, capital, improvements, reputation, resources, settings
+    return cells, capital, improvements, reputation, resources, settings, events
 
 
 def get_configs(config_dir: str = "config"):
-    CELLS_CONFIG, CAPITAL_CONFIG, IMPROVEMENTS_CONFIG, REPUTATION_CONFIG, RESOURCES_CONFIG, SETTINGS_CONFIG = load_configs(config_dir)
+    CELLS_CONFIG, CAPITAL_CONFIG, IMPROVEMENTS_CONFIG, REPUTATION_CONFIG, RESOURCES_CONFIG, SETTINGS_CONFIG, EVENTS_CONFIG = load_configs(config_dir)
 
     ALL_CONFIGS = {
         "cells": CELLS_CONFIG,
@@ -47,7 +50,8 @@ def get_configs(config_dir: str = "config"):
         "improvements": IMPROVEMENTS_CONFIG,
         "reputation": REPUTATION_CONFIG,
         "resources": RESOURCES_CONFIG,
-        "settings": SETTINGS_CONFIG
+        "settings": SETTINGS_CONFIG,
+        "events": EVENTS_CONFIG
     }
 
     return ALL_CONFIGS
