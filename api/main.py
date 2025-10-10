@@ -73,154 +73,151 @@ async def root(request: Request):
 
 async def test1():
     
-    
     from game.user import User
     from game.session import Session, session_manager, SessionStages
     from game.company import Company
+    from game.contract import Contract
 
     await asyncio.sleep(2)
 
-    print("Performing initial setup...")
+    print("🚀 Тестирование бартерного контракта с полным отслеживанием...")
 
-    # try:
+    # Очистка и создание сессии
     if session_manager.get_session('AFRIKA'):
         session = session_manager.get_session('AFRIKA')
         session.delete()
 
     session = session_manager.create_session('AFRIKA')
-    # return
     
-    # just_db.update(
-    #     'sessions', {'session_id': 'AFRIKA'}, 
-    #     {'stage': 'CellSelect'}
-    # )
-
     session.update_stage(SessionStages.FreeUserConnect, True)
-    user: User = User().create(_id=1, 
-                         username="TestUser", 
-                         session_id=session.session_id)
-    user2: User = User().create(_id=2, 
-                         username="TestUser2", 
-                         session_id=session.session_id)
+    
+    # Создание пользователей и компаний
+    print("👥 Создаём поставщика и заказчика...")
+    user1: User = User().create(_id=1, username="MetalSupplier", session_id=session.session_id)
+    user2: User = User().create(_id=2, username="WoodCustomer", session_id=session.session_id)
 
-    company = user.create_company("TestCompany")
-    company.set_owner(1)
+    supplier = user1.create_company("MetalCorp")  # Поставщик металла
+    supplier.set_owner(1)
 
-    company2 = user2.create_company("TestCompany2")
-    company2.set_owner(2)
-
-    # user2.add_to_company(company.secret_code)
+    customer = user2.create_company("WoodCorp")   # Заказчик металла, поставщик дерева
+    customer.set_owner(2)
 
     session.update_stage(SessionStages.CellSelect, True)
-    company.reupdate()
-    company2.reupdate()
-
-    # free_cells = session.get_free_cells()
-    # print(free_cells)
-
-    company.set_position(0, 0)
-    company2.set_position(2, 3)
-    session.reupdate()
+    for company in [supplier, customer]:
+        company.reupdate()
     
-
-    city: Citie = session.cities[0]
-
-    # free_cells = session.get_free_cells()
-    # print(free_cells)
-
-    # session.update_stage(SessionStages.Game, True)
-    # company.reupdate()
-    # company2.reupdate()
-    
-    just_db.update(
-        'factories', {}, {'is_auto': True}
-    )
+    # Размещение компаний на карте
+    supplier.set_position(0, 0)
+    customer.set_position(2, 3)
     
     session.update_stage(SessionStages.Game, True)
-    company.reupdate()
-    company2.reupdate()
+    for company in [supplier, customer]:
+        company.reupdate()
     
-    session.update_stage(SessionStages.Game, True)
-    company.reupdate()
-    company2.reupdate()
-    
+    # ПОЛНАЯ ОЧИСТКА ИНВЕНТАРЯ
+    print("🧹 Полностью очищаем инвентарь...")
+    supplier.warehouses = {}
+    customer.warehouses = {}
+    supplier.balance = 0
+    customer.balance = 0
+    supplier.save_to_base()
+    customer.save_to_base()
 
-    # # print(company.warehouses.keys())
+    # Настройка начальных ресурсов для тестирования контракта
+    print("💰 Настраиваем начальные ресурсы...")
+    
+    # Даём поставщику металл для поставки и заказчику деньги для оплаты
+    supplier.add_resource("metal", 100)  # Металл для поставки
+    customer.add_balance(5000)  # Деньги для оплаты контракта
+    
+    print(f"Поставщик {supplier.name}: металл = {supplier.warehouses.get('metal', 0)}, баланс = {supplier.balance}")
+    print(f"Заказчик {customer.name}: баланс = {customer.balance}")
 
-    if len(company.warehouses) > 1:
-        c_m_k_1 = list(company.warehouses.keys())[1]
-        col_1 = company.warehouses[c_m_k_1]
-    else:
-        c_m_k_1 = list(company.warehouses.keys())[0]
-        col_1 = company.warehouses[c_m_k_1]
+    # СОЗДАНИЕ ТЕСТОВОГО КОНТРАКТА
+    print("\n📋 Создаём тестовый контракт...")
     
-    # c_m_k_2 = list(company2.warehouses.keys())[1]
-    # col_2 = company2.warehouses[c_m_k_2]
-    
-    city.sell_resource(company.id, c_m_k_1, col_1 // 4)
+    try:
+        # Создаём контракт: поставщик будет поставлять 10 единиц металла за 100 монет каждый ход в течение 3 ходов
+        contract = Contract().create(
+            supplier_company_id=supplier.id,
+            customer_company_id=customer.id, 
+            session_id=session.session_id,
+            resource="metal",           # Поставляемый ресурс
+            amount_per_turn=10,        # Количество за ход
+            duration_turns=3,          # Длительность в ходах
+            payment_amount=100         # Оплата за ход
+        )
+        
+        print(f"✅ Контракт создан! ID: {contract.id}")
+        print(f"   Поставляется: {contract.amount_per_turn} {contract.resource} за {contract.payment_amount} монет/ход")
+        print(f"   Длительность: {contract.duration_turns} ходов")
+        print(f"   Общая стоимость: {contract.payment_amount * contract.duration_turns} монет")
+        
+        # ПРИНЯТИЕ КОНТРАКТА
+        print("\n🤝 Поставщик принимает контракт...")
+        contract.accept_contract()
+        
+        supplier.reupdate()
+        customer.reupdate()
+        
+        print(f"Поставщик {supplier.name}: баланс = {supplier.balance} (+{contract.payment_amount * contract.duration_turns})")
+        print(f"Заказчик {customer.name}: баланс = {customer.balance} (-{contract.payment_amount * contract.duration_turns})")
+        
+        # ВЫПОЛНЕНИЕ КОНТРАКТА ПО ХОДАМ
+        print("\n🚚 Начинаем выполнение контракта...")
+        
+        for turn in range(1, contract.duration_turns + 1):
+            print(f"\n--- ХОД {turn} ---")
+            
+            # Увеличиваем счётчик ходов в сессии
+            session.step += 1
+            session.save_to_base()
+            
+            # Выполняем поставку
+            try:
+                contract.reupdate()  # Обновляем данные контракта
+                if turn != 2:
+                    contract.execute_turn(session.step)
+                
+                supplier.reupdate()
+                customer.reupdate()
+                
+                print(f"✅ Поставка выполнена!")
+                print(f"   Поставщик {supplier.name}: металл = {supplier.warehouses.get('metal', 0)} (-{contract.amount_per_turn})")
+                print(f"   Заказчик {customer.name}: металл = {customer.warehouses.get('metal', 0)} (+{contract.amount_per_turn})")
+                print(f"   Осталось ходов: {contract.remaining_turns}")
+                
+            except Exception as e:
+                print(f"❌ Ошибка при выполнении поставки: {e}")
+                break
+        
+        print("\n🎉 Тестирование контракта завершено!")
+        
+        # Проверяем итоговое состояние
+        supplier.reupdate()
+        customer.reupdate()
+        
+        print(f"\nИтоговое состояние:")
+        print(f"Поставщик {supplier.name}:")
+        print(f"  - Металл: {supplier.warehouses.get('metal', 0)}")
+        print(f"  - Баланс: {supplier.balance}")
+        print(f"  - Репутация: {supplier.reputation}")
+        
+        print(f"Заказчик {customer.name}:")
+        print(f"  - Металл: {customer.warehouses.get('metal', 0)}")
+        print(f"  - Баланс: {customer.balance}")
+        print(f"  - Репутация: {customer.reputation}")
+        
+        # Проверяем, удалился ли контракт после завершения
+        try:
+            contract.reupdate()
+            print(f"Контракт всё ещё существует: ID {contract.id}, осталось ходов: {contract.remaining_turns}")
+        except:
+            print("✅ Контракт успешно удалён после завершения")
+        
+    except Exception as e:
+        print(f"❌ Ошибка при создании/выполнении контракта: {e}")
+        import traceback
+        traceback.print_exc()
 
-    await sleep(3)
     
-    session.update_stage(SessionStages.Game, True)
-    company.reupdate()
-    company2.reupdate()
-    
-    session.update_item_price('nails', 150)
-    
-    session.update_stage(SessionStages.Game, True)
-    company.reupdate()
-    company2.reupdate()
-    
-    session.update_stage(SessionStages.Game, True)
-    company.reupdate()
-    company2.reupdate()
-
-    if len(company.warehouses) > 1:
-        c_m_k_1 = list(company.warehouses.keys())[1]
-        col_1 = company.warehouses[c_m_k_1]
-    else:
-        c_m_k_1 = list(company.warehouses.keys())[0]
-        col_1 = company.warehouses[c_m_k_1]
-    
-    # c_m_k_2 = list(company2.warehouses.keys())[1]
-    # col_2 = company2.warehouses[c_m_k_2]
-    
-    city.sell_resource(company.id, c_m_k_1, 1)
-
-    # print(company.warehouses, company2.warehouses)
-    # print(c_m_k_1, c_m_k_2)
-    
-    # exchange = Exchange(0).create(
-    #     company.id, session.session_id, 
-    #     c_m_k_1, col_1 // 2, 2, 'barter', 0,
-    #     c_m_k_2, col_2 // 2
-    # )
-    
-
-    # exchange = Exchange(0).create(
-    #     company.id, session.session_id, 
-    #     c_m_k_1, col_1 // 2, 2, 'money', 1000
-    # )
-    
-
-    # company.reupdate()
-    # company2.reupdate()
-    # print(company.warehouses, company2.warehouses)
-
-    # exchange.buy(company2.id)
-    
-    # company.reupdate()
-    # company2.reupdate()
-    # print(company.warehouses, company2.warehouses)
-    
-    # exchange.reupdate()
-    # exchange.cancel_offer()
-    
-    
-    # company.reupdate()
-    # company2.reupdate()
-    # print(company.warehouses, company2.warehouses)
-
-    # session.update_stage(SessionStages.Game)
-    # company.reupdate()
-    # company2.reupdate()
