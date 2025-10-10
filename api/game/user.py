@@ -26,7 +26,9 @@ class User(BaseClass):
 
         self.id = _id
 
-        with_this_name = just_db.find_one("users", username=username, session_id=session_id)
+        with_this_name = just_db.find_one("users", 
+                                          username=username, 
+                                          session_id=session_id)
         if with_this_name:
             raise ValueError(f"Username '{username}' is already taken in this session.")
         self.username = username
@@ -40,7 +42,7 @@ class User(BaseClass):
             "type": "api-create_user",
             "data": {
                 'session_id': self.session_id,
-                'user': self.__dict__
+                'user': self.to_dict()
             }
         }))
         return self
@@ -73,7 +75,8 @@ class User(BaseClass):
             raise ValueError("User is already in a company.")
 
         company: Company = just_db.find_one("companies", 
-                    to_class=Company, secret_code=secret_code)
+                    to_class=Company, 
+                    secret_code=secret_code) # type: ignore
         if not company: 
             raise ValueError("Company with this secret code not found.")
 
@@ -87,7 +90,7 @@ class User(BaseClass):
         asyncio.create_task(websocket_manager.broadcast({
             "type": "api-user_added_to_company",
             "data": {
-                "company_id": self.id,
+                "company_id": self.company_id,
                 "user_id": self.id
             }
         }))
@@ -128,3 +131,11 @@ class User(BaseClass):
             company.delete()
 
         return True
+
+    def to_dict(self):
+        return {
+            "id": self.id,
+            "username": self.username,
+            "company_id": self.company_id,
+            "session_id": self.session_id
+        }

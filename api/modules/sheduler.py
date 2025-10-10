@@ -7,6 +7,9 @@ import json
 
 
 class TaskScheduler:
+
+    __table_name__ = 'time_schedule'
+
     def __init__(self, db=just_db):
         self.db = db
         self.running = False
@@ -14,8 +17,8 @@ class TaskScheduler:
 
     def _init_schedule_table(self):
         tables = self.db.get_tables()
-        if 'time_schedule' not in tables:
-            self.db.create_table('time_schedule')
+        if self.__table_name__ not in tables:
+            self.db.create_table(self.__table_name__)
 
     async def start(self):
         if self.running:
@@ -36,7 +39,7 @@ class TaskScheduler:
 
     async def _check_and_execute_tasks(self):
         current_time = datetime.now()
-        tasks = self.db.find('time_schedule')
+        tasks = self.db.find(self.__table_name__)
 
         for task in tasks:
             task_time = datetime.fromisoformat(task['execute_at'])
@@ -62,10 +65,10 @@ class TaskScheduler:
         if repeat:
             interval = execute_at - add_at
             next_execute_time = datetime.now() + interval
-            self.db.update('time_schedule', {'id': task['id']}, {'execute_at': next_execute_time.isoformat()})
+            self.db.update(self.__table_name__, {'id': task['id']}, {'execute_at': next_execute_time.isoformat()})
 
         else:
-            self.db.delete('time_schedule', id=task['id'])
+            self.db.delete(self.__table_name__, id=task['id'])
 
     def schedule_task(self, function: Callable, 
                       execute_at: datetime, 
@@ -86,7 +89,7 @@ class TaskScheduler:
             'delete_on_shutdown': delete_on_shutdown
         }
 
-        return self.db.insert('time_schedule', task_data)
+        return self.db.insert(self.__table_name__, task_data)
 
     def cleanup_shutdown_tasks(self):
         """
@@ -94,12 +97,18 @@ class TaskScheduler:
         Этот метод следует вызывать при завершении работы приложения.
         """
         try:
-            deleted_count = self.db.delete('time_schedule', delete_on_shutdown=True)
+            deleted_count = self.db.delete(self.__table_name__, delete_on_shutdown=True)
             print(f"Удалено {deleted_count} задач при завершении работы")
             return deleted_count
         except Exception as e:
             print(f"Ошибка при удалении задач завершения: {e}")
             return 0
+    
+    def get_scheduled_tasks(self, _id: int):
+        """
+        Возвращает список всех запланированных задач.
+        """
+        return self.db.find_one(self.__table_name__, id=_id)
 
 
 scheduler = TaskScheduler()

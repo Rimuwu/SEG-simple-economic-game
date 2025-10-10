@@ -1,13 +1,18 @@
 from aiogram import F
-from aiogram.types import Message, CallbackQuery
+from aiogram.types import Message
 from aiogram.filters import Command
 from aiogram.fsm.context import FSMContext
 import os
+import asyncio
 
-from modules.keyboards import *
 from modules.ws_client import *
+from modules.utils import go_to_page, update_page
+from modules.db import db
+from modules.load_scenes import load_scenes_from_db
 from filters.admins import *
-from app.states import *
+from modules.states import *
+
+from oms import scene_manager
 
 from bot_instance import dp, bot
 
@@ -15,72 +20,44 @@ from bot_instance import dp, bot
 # Список ID администраторов
 UPDATE_PASSWORD = os.getenv("UPDATE_PASSWORD", "default_password")
 
-@dp.message(Command("connect"))
-async def connect(message: Message, state: FSMContext):
-    session = await get_sessions()
-    for s in session:
-        s_id = s['session_id']
-        user = await get_user(id=message.from_user.id, session_id=s_id)
-        if user is not None:
-            await message.delete()
-            await message.answer("❌ Вы уже подключены к сессии.")
-            return
-    await state.update_data(msg_id=message.message_id + 1, chat_id=message.chat.id)
-    await message.answer(text="Введите ваш никнейм для подключения к игре: ", reply_markup=cancel_kb)
-    await state.set_state(CreateUserStates.waiting_for_username)
 
+@dp.message(AdminFilter(), Command("sg"))
+async def start_game(message: Message, state: FSMContext):
+    msg = await message.answer("Введите ID сессии для её старта:")
+    await state.update_data(msg_id=msg.message_id)
+    await state.set_state(StartGameStates.waiting_for_session_id)
 
-@dp.message(CreateUserStates.waiting_for_username)
-async def process_username(message: Message, state: FSMContext):
-    username = message.text.strip()
-    data = await state.get_data()
-    msg_id = data.get("msg_id")
-    chat_id = data.get("chat_id")
-    if not username:
-        await message.answer("❌ Никнейм не может быть пустым. Пожалуйста, введите корректный никнейм:")
-        return
-    await message.delete()
-    await message.bot.edit_message_text(f"Теперь введите id сессии для подключения, {username}:", message_id=msg_id, chat_id=chat_id, reply_markup=cancel_kb)
-    await state.update_data(username=username)
-    await state.set_state(CreateUserStates.waiting_for_session_id)
-
-
-@dp.message(CreateUserStates.waiting_for_session_id)
-async def process_session_id(message: Message, state: FSMContext):
+@dp.message(StartGameStates.waiting_for_session_id)
+async def process_start_session_id(message: Message, state: FSMContext):
     session_id = message.text
     data = await state.get_data()
-    username = data.get("username")
     msg_id = data['msg_id']
-    chat_id = data['chat_id']
-    if len(session_id.split()) != 1:
-        await message.bot.edit_message_text("❌ ID сессии должен состоять из одного слова. Пожалуйста, введите корректный ID сессии:", message_id=msg_id, chat_id=chat_id, reply_markup=cancel_kb)
-        return
-    response = await get_sessions(stage='FreeUserConnect')
-    for session in response:
-        if session['session_id'] == session_id:
-            break
-    else:
-        await message.bot.edit_message_text("❌ ID сессии не найден. Пожалуйста, введите корректный ID сессии:", message_id=msg_id, chat_id=chat_id, reply_markup=cancel_kb)
-        return
-
-    await create_user(
-        user_id=message.from_user.id,
-        username=username,
+    response = await update_session_stage(
         session_id=session_id,
-        password=UPDATE_PASSWORD
+        stage='CellSelect',
     )
+    
     await message.delete()
-    await message.bot.edit_message_text(
-        f"✅ Вы успешно подключены к игре с ID сессии: {session_id}\n\n"
-        f"Выберите действие:",
-        reply_markup=create_company_keyboard,
+    if response is not None and "error" in response.keys():
+        await message.bot.edit_message_text(
+        chat_id=message.chat.id,
         message_id=msg_id,
-        chat_id=chat_id
+        text=f"❌ Ошибка при запуске сессии: {response['error']}"
+        )
+        await state.clear()
+        return
+    
+    await message.bot.edit_message_text(
+        chat_id=message.chat.id,
+        message_id=msg_id,
+        text=f"✅ Сессия с ID `{session_id}` успешно запущена!",
+        parse_mode="Markdown"
     )
+    db.drop_all()
     await state.clear()
+    
 
-
-@dp.message(AdminFilter(), Command("create_game"))
+@dp.message(AdminFilter(), Command("cg"))
 async def create_game(message: Message, state: FSMContext):
     msg = await message.answer("Введите ID сессии для новой игры или '-' для генерации ID:")
     await state.update_data(msg_id=msg.message_id)
@@ -96,172 +73,241 @@ async def process_session_id(message: Message, state: FSMContext):
     response = await create_session(
         session_id=session_id_i
     )
-    
+    await message.delete()
     if response is None:
-        await message.answer("❌ Ошибка при создании сессии. Ответа нет.")
+        await message.bot.edit_message_text(
+        chat_id=message.chat.id,
+        message_id=msg_id,
+        text=f"❌ Ошибка при создании сессии. Ответа нет."
+        )
         await state.clear()
         return
     
     elif "error" in response.keys():
-        await message.answer(f"❌ Ошибка при создании сессии: {response['error']}")
+        await message.bot.edit_message_text(
+        chat_id=message.chat.id,
+        message_id=msg_id,
+        text=f"❌ Ошибка при создании сессии: {response['error']}"
+        )
         await state.clear()
         return
     
     await update_session_stage(
-        session_id=response["session"]['session_id'],
+        session_id=response["session"]['id'],
         stage='FreeUserConnect',
     )
-    await message.delete()
     await message.bot.edit_message_text(
         chat_id=message.chat.id,
         message_id=msg_id,
-        text=f"✅ Успешно создана игровая сессия!\n🆔 Код сессии: `{response['session']['session_id']}`",
+        text=f"✅ Успешно создана игровая сессия!\n🆔 Код сессии: `{response['session']['id']}`",
         parse_mode="Markdown"
     )
     await state.clear()
 
-
-# Обработчики для управления компанией
-@dp.callback_query(F.data == "create_company")
-async def create_company_start(callback: CallbackQuery, state: FSMContext):
-    """
-    Начинаем процесс создания компании
-    """
-    # Сохраняем ID исходного сообщения и chat_id в состоянии
-    await state.update_data(
-        original_message_id=callback.message.message_id,
-        chat_id=callback.message.chat.id
-    )
-    
-    await callback.message.edit_text(
-        "🏢 Создание компании\n\nВведите название для вашей компании:",
-        reply_markup=cancel_kb
-    )
-    await state.set_state(CreateCompanyStates.waiting_for_company_name)
-    await callback.answer()
+@dp.message(AdminFilter(), Command("ds"))
+async def delete_session_command(message: Message, state: FSMContext):
+    msg = await message.answer("Введите ID сессии для её удаления:")
+    await state.update_data(msg_id=msg.message_id)
+    await state.set_state(DeleteSessionStates.waiting_for_session_id)
 
 
-@dp.message(CreateCompanyStates.waiting_for_company_name)
-async def process_company_name(message: Message, state: FSMContext):
-    """
-    Обрабатываем название компании и создаем её
-    """
-    company_name = message.text.strip()
-    
-    # Получаем данные из состояния
+@dp.message(DeleteSessionStates.waiting_for_session_id)
+async def process_delete_session_id(message: Message, state: FSMContext):
+    session_id = message.text
     data = await state.get_data()
-    original_message_id = data.get('original_message_id')
-    chat_id = data.get('chat_id')
+    msg_id = data['msg_id']
     
-    # Создаем компанию
-    response = await create_company(
-        name=company_name,
-        who_create=message.from_user.id,
-        password=UPDATE_PASSWORD
+    users = await get_users(session_id=session_id)
+    reposnse2 = await get_session(session_id=session_id)
+    response = await delete_session(
+        session_id=session_id,
+        really=True
     )
+    print("==========================")
+    print(users)
+    print(reposnse2)
+    print(response)
+    print(message.text)
+    print("==========================")
+    for user in users:
+        scene = scene_manager.get_scene(user['id'])
+        if scene:
+            await scene.end()
     
-    # Удаляем сообщение с вводом названия
     await message.delete()
-    
-    # Редактируем исходное сообщение с информацией о компании
-    company_info = (
-        f"🏢 **{company_name}**\n\n"
-        f"👥 Количество участников: 1\n"
-        f"🔑 Секретный код: {response['company']['secret_code']}"
-    )
-    
-    # Используем bot из message для редактирования исходного сообщения
-    await message.bot.edit_message_text(
-        chat_id=chat_id,
-        message_id=original_message_id,
-        text=company_info,
-        parse_mode="Markdown"
-    )
-    
-    await state.clear()
-
-
-@dp.callback_query(F.data == "join_company")
-async def join_company_start(callback: CallbackQuery, state: FSMContext):
-    """
-    Начинаем процесс присоединения к компании
-    """
-    # Сохраняем ID исходного сообщения и chat_id в состоянии
-    await state.update_data(
-        original_message_id=callback.message.message_id,
-        chat_id=callback.message.chat.id
-    )
-    
-    await callback.message.edit_text(
-        "🤝 Присоединение к компании\n\nВведите секретный код компании:",
-        reply_markup=cancel_kb
-    )
-    await state.set_state(JoinCompanyStates.waiting_for_secret_code)
-    await callback.answer()
-
-
-@dp.message(JoinCompanyStates.waiting_for_secret_code)
-async def process_secret_code(message: Message, state: FSMContext):
-    """
-    Обрабатываем секретный код и присоединяем к компании
-    """
-    secret_code = message.text.strip()
-    
-    if not secret_code:
-        await message.answer("❌ Секретный код не может быть пустым. Введите корректный код:")
+    if response is not None and "error" in response.keys():
+        await message.bot.edit_message_text(
+        chat_id=message.chat.id,
+        message_id=msg_id,
+        text=f"❌ Ошибка при удалении сессии: {response['error']}"
+        )
+        await state.clear()
         return
     
-    # Получаем данные из состояния
-    data = await state.get_data()
-    original_message_id = data.get('original_message_id')
-    chat_id = data.get('chat_id')
-    
-    # Присоединяемся к компании
-    response = await update_company_add_user(
-        user_id=message.from_user.id,
-        secret_code=int(secret_code),
-        password=UPDATE_PASSWORD
-    )
-    
-    # Удаляем сообщение с вводом кода
-    await message.delete()
-    
-    # Редактируем исходное сообщение с информацией о компании
-    company_info = (
-        f"🏢 **Название компании**\n\n"
-        f"👥 Количество участников: 5\n"
-        f"🔑 Секретный код: {secret_code}"
-    )
-    
-    # Используем bot из message для редактирования исходного сообщения
     await message.bot.edit_message_text(
-        chat_id=chat_id,
-        message_id=original_message_id,
-        text=company_info,
+        chat_id=message.chat.id,
+        message_id=msg_id,
+        text=f"✅ Сессия с ID `{session_id}` успешно удалена!",
         parse_mode="Markdown"
     )
-    
     await state.clear()
 
-# Добавляем обработчик для отмены создания игры
-@dp.callback_query(F.data == "cancel_ac")
-async def cancel_creation(callback: CallbackQuery, state: FSMContext):
+
+@dp.message(AdminFilter(), Command("step"))
+async def change_session_stage(message: Message):
     """
-    Отменяем создание игры
+    Команда для изменения этапа сессии
+    Формат: /step <код_сессии> <этап>
+    Этапы: FreeUserConnect, CellSelect, Game, End
     """
-    current_state = await state.get_state()
-    if current_state is None:
-        await callback.answer("Нет активного процесса для отмены.", show_alert=True)
+    # Парсим аргументы команды
+    args = message.text.split(maxsplit=2)
+    
+    if len(args) < 3:
+        await message.answer(
+            "❌ Неверный формат команды!\n\n"
+            "Используйте: `/step <код_сессии> <этап>`\n\n"
+            "Доступные этапы:\n"
+            "• `FreeUserConnect` - свободное подключение\n"
+            "• `CellSelect` - выбор клетки\n"
+            "• `Game` - игра\n"
+            "• `End` - конец игры",
+            parse_mode="Markdown"
+        )
         return
     
-    await state.clear()
+    session_id = args[1].strip()
+    stage = args[2].strip()
     
-    # Удаляем сообщение с кнопкой
-    await callback.message.delete()
+    # Проверяем валидность этапа
+    valid_stages = ['FreeUserConnect', 'CellSelect', 'Game', 'End']
+    if stage not in valid_stages:
+        await message.answer(
+            f"❌ Неверный этап: `{stage}`\n\n"
+            f"Доступные этапы: {', '.join([f'`{s}`' for s in valid_stages])}",
+            parse_mode="Markdown"
+        )
+        return
     
-    # Отправляем новое сообщение об отмене
-    await callback.message.answer("❌ Действие отменено.")
-    
-    # Подтверждаем нажатие кнопки
-    await callback.answer()
+    # Выполняем запрос к API
+    try:
+        response = await update_session_stage(
+            session_id=session_id,
+            stage=stage
+        )
+        
+        if response is None:
+            await message.answer(
+                f"⚠️ Запрос отправлен: сессия `{session_id}` → этап `{stage}`",
+                parse_mode="Markdown"
+            )
+        elif isinstance(response, dict) and "error" in response:
+            await message.answer(
+                f"❌ Ошибка: {response['error']}",
+                parse_mode="Markdown"
+            )
+        else:
+            await message.answer(
+                f"✅ Этап сессии `{session_id}` изменён на `{stage}`",
+                parse_mode="Markdown"
+            )
+    except Exception as e:
+        await message.answer(
+            f"❌ Ошибка при выполнении команды: {str(e)}",
+            parse_mode="Markdown"
+        )
 
+
+@dp.message(Command("leave"))
+async def leave_session(message: Message, state: FSMContext):
+    msg = await message.answer("Отправьте 'Да' для подтверждения выхода из сессии или что угодно для отмены.")
+    await state.update_data(msg_id=msg.message_id)
+    await state.set_state(ConfirmLeaveStates.waiting_for_confirmation)
+
+
+@dp.message(ConfirmLeaveStates.waiting_for_confirmation)
+async def confirm_leave(message: Message, state: FSMContext):
+    await message.delete()
+    data = await state.get_data()
+    msg_id = data['msg_id']
+    if message.text.lower() != "да":
+        await message.bot.edit_message_text(
+            chat_id=message.chat.id,
+            message_id=msg_id,
+            text="Выход из сессии отменен."
+        )
+        await state.clear()
+        return
+    user_id = message.from_user.id
+    await delete_user(user_id=user_id)
+    scene = scene_manager.get_scene(user_id)
+    await message.bot.edit_message_text(
+        chat_id=message.chat.id,
+        message_id=msg_id,
+        text="Ваше существование в сессии приравнено к 0, спасибо за игру."
+    )
+    await scene.end()
+    await state.clear()
+
+    
+# http://localhost:8000/ws/status - тут можно посмотреть статус вебсокета и доступные типы для отправки сообщений через send_message
+@dp.message(Command("ping"))
+async def ping_command(message: Message):
+    """Обработчик команды /ping"""
+    try:
+        # Отправляем ping через клиент
+        response = await ws_client.send_message(
+            "ping", {'from': message.from_user.id})
+        print(f"Ответ от сервера: {response}")
+    except Exception as e:
+        await message.answer(f"Ошибка при выполнении ping: {str(e)}")
+
+@ws_client.on_message('pong')
+async def on_pong(message: dict):
+    """Обработчик ответа pong от сервера"""
+    print(f"Получен pong от сервера: {message}")
+
+    from_id = message.get('content', {}).get('from')
+
+    await bot.send_message(from_id, "Pong! 🏓")
+
+@ws_client.on_event("connect")
+async def on_connect():
+    load_scenes_from_db(scene_manager)
+    print("🔗 Подключено к WebSocket серверу")
+
+
+@ws_client.on_message('api-update_session_stage')
+async def on_update_session_stage(message: dict):
+    """Обработчик обновления стадии сессии"""
+    print(message)
+    data = message.get('data', {})
+    session_id = data.get('session_id')
+    new_stage = data.get('new_stage')
+    print("=====================", session_id, new_stage)
+    if new_stage == "CellSelect":
+        await go_to_page(session_id, "wait-start-page", "select-cell-page")
+    elif new_stage == "Game":
+        await go_to_page(session_id, "wait-game-stage-page", "main-page")
+        await go_to_page(session_id, "change-turn-page", "main-page")
+    elif new_stage == "ChangeTurn":
+        await go_to_page(session_id, None, "change-turn-page")
+
+
+@ws_client.on_event("disconnect")
+async def on_disconnect():
+    print("❌ Отключено от WebSocket сервера")
+
+    for _ in range(15, 0, -1):
+        print(f"🔄 Попытка подключения...")
+        await ws_client.connect(max_attempts=10)
+        if ws_client.is_connected():
+            print("✅ Повторное подключение успешно!")
+            return
+
+        print(f"❌ Не удалось подключиться, повтор через 1 секунду...")
+        await asyncio.sleep(1)
+
+    print("❌ Не удалось подключиться после 15 попыток, выход.")
+    
+    

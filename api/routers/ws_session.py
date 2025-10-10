@@ -71,14 +71,15 @@ async def handle_create_session(client_id: str, message: dict):
     except ValueError as e:
         return {"error": str(e)}
 
-    return {"session": session.__dict__}
+    return {"session": session.to_dict()}
 
 @message_handler(
     "update-session-stage", 
-    doc="Обработчик обновления стадии сессии. Требуется пароль для взаимодействия.",
+    doc="Обработчик обновления стадии сессии. Требуется пароль для взаимодействия. add_shedule - Запускать ли таймер после обновления этапа. Например таймер для обновления этапа с выбора клетки на игру автоматически. По умолчанию - True",
     datatypes=[
         "session_id: Optional[str]",
         "stage: Literal['FreeUserConnect', 'CellSelect', 'Game', 'End']",
+        "add_shedule: Optional[bool]"
         "password: str",
     ],
     messages=["api-update_session_stage (broadcast)"]
@@ -89,6 +90,7 @@ async def handle_update_session_stage(client_id: str, message: dict):
     session_id = message.get("session_id", "")
     stage: str = message.get("stage", "")
     password = message.get("password", "")
+    add_shedule = message.get('add_shedule', True)
 
     stages_to_types = {
         "FreeUserConnect": SessionStages.FreeUserConnect,
@@ -106,7 +108,8 @@ async def handle_update_session_stage(client_id: str, message: dict):
         if stage not in stages_to_types:
             raise ValueError("Invalid stage value.")
 
-        session.update_stage(stages_to_types[stage])
+        session.update_stage(stages_to_types[stage], 
+                             not add_shedule)
     except ValueError as e:
         return {"error": str(e)}
 
@@ -165,3 +168,28 @@ async def handle_delete_session(
         session.delete()
     except ValueError as e:
         return {"error": str(e)}
+
+@message_handler(
+    "get-session-time-to-next-stage", 
+    doc="Обработчик получения времени до следующей стадии сессии. Отправляет ответ на request_id",
+    datatypes=[
+        "session_id: str",
+        "request_id: str",
+    ],
+    messages=[]
+)
+async def handle_get_session_time_to_next_stage(
+    client_id: str, message: dict):
+    """Обработчик получения времени до следующей стадии сессии"""
+
+    session_id = message.get("session_id", "")
+
+    session = session_manager.get_session(session_id=session_id)
+    if not session: raise ValueError("Session not found.")
+
+    t = session.get_time_to_next_stage()
+    return {"time_to_next_stage": t, 
+            "stage_now": session.stage, 
+            "max_steps": session.max_steps, 
+            "step": session.step
+    }

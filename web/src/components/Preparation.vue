@@ -71,7 +71,7 @@ onMounted(() => {
 
   if (wsManager) {
     window.addEventListener('companies-updated', handleCompaniesUpdated)
-    wsManager.startCompaniesPolling(5000)
+    wsManager.startPolling(5000)
   }
 
   window.preparationState = prepState;
@@ -84,7 +84,7 @@ onMounted(() => {
  */
 onUnmounted(() => {
   if (wsManager) {
-    wsManager.stopCompaniesPolling()
+    wsManager.stopPolling()
     window.removeEventListener('companies-updated', handleCompaniesUpdated)
   }
 

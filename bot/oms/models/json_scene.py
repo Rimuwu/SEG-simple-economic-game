@@ -13,6 +13,7 @@ class SceneSettings:
     """Настройки сцены"""
     parse_mode: Optional[str] = None
     delete_after_send: bool = False
+    start_page: Optional[str] = None
 
     @classmethod
     def from_dict(cls, data: Dict[str, Any]) -> 'SceneSettings':
@@ -20,40 +21,30 @@ class SceneSettings:
 
         return cls(
             parse_mode=data.get('parse_mode', None),
-            delete_after_send=data.get('delete_after_send', False)
+            delete_after_send=data.get('delete_after_send', False),
+            start_page=data.get('start_page', None)
         )
-
 
 @dataclass
 class ScenePage:
     """Страница сцены"""
-    title: str
     content: str
+    image: Optional[str] = None
     to_pages: Dict[str, str] = field(default_factory=dict)
-    content_worker: Optional[FunctionWorker] = None
-    buttons_worker: Optional[FunctionWorker] = None
-    text_waiter: Optional[str] = None
+    type: Optional[str] = None
+    json_data: Dict[str, Any] = field(default_factory=dict)
 
     @classmethod
     def from_dict(cls, data: Dict[str, Any]) -> 'ScenePage':
         """Создание объекта из словаря"""
-        content_worker = None
-        if 'content-worker' in data:
-            content_worker = FunctionWorker(**data['content-worker'])
-
-        buttons_worker = None
-        if 'buttons-worker' in data:
-            buttons_worker = FunctionWorker(**data['buttons-worker'])
 
         return cls(
-            title=data['title'],
+            image=data.get('image', None),
             content=data['content'],
             to_pages=data.get('to_pages', {}),
-            content_worker=content_worker,
-            buttons_worker=buttons_worker,
-            text_waiter=data.get('text-waiter')
+            type=data.get('type', None),
+            json_data={k: v for k, v in data.items() if k not in cls.__dataclass_fields__}
         )
-
 
 @dataclass
 class SceneModel:
@@ -61,6 +52,7 @@ class SceneModel:
     name: str
     settings: SceneSettings
     pages: Dict[str, ScenePage]
+    standart_data: Dict[str, Any] = field(default_factory=dict)
 
     @classmethod
     def from_dict(cls, name: str, data: Dict[str, Any]) -> 'SceneModel':
@@ -74,6 +66,7 @@ class SceneModel:
         return cls(
             name=name,
             settings=settings,
+            standart_data=data.get('standart_data', {}),
             pages=pages
         )
 

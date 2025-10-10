@@ -25,7 +25,8 @@ async def get_companies(session_id: Optional[int] = None, in_prison: Optional[bo
         session_id=session_id,
         in_prison=in_prison,
         cell_position=cell_position,
-        wait_for_response=True
+        wait_for_response=True,
+        timeout=50
     )
 
 async def get_company(id: Optional[int] = None, name: Optional[str] = None, reputation: Optional[int] = None, 
@@ -120,6 +121,110 @@ async def update_company_improve(company_id: str, improvement_type: str):
         wait_for_response=True
     )
 
+async def company_take_credit(company_id: str, amount: int, period: int):
+    """Получение кредита компанией"""
+    return await ws_client.send_message(
+        "company-take-credit",
+        company_id=company_id,
+        amount=amount,
+        period=period,
+        password=UPDATE_PASSWORD,
+        wait_for_response=True
+    )
+
+async def company_pay_credit(company_id: str, credit_index: int, amount: int):
+    """Погашение кредита компанией"""
+    return await ws_client.send_message(
+        "company-pay-credit",
+        company_id=company_id,
+        credit_index=credit_index,
+        amount=amount,
+        password=UPDATE_PASSWORD,
+        wait_for_response=True
+    )
+
+async def company_pay_taxes(company_id: str, amount: int):
+    """Погашение налогов компанией"""
+    return await ws_client.send_message(
+        "company-pay-taxes",
+        company_id=company_id,
+        amount=amount,
+        password=UPDATE_PASSWORD,
+        wait_for_response=True
+    )
+
+async def company_complete_free_factories(company_id: int, new_resource: str, count: int, 
+                                        find_resource: Optional[str] = None, 
+                                        produce_status: Optional[bool] = None):
+    """Массовая перекомплектация свободных фабрик компании"""
+    return await ws_client.send_message(
+        "company-complete-free-factories",
+        company_id=company_id,
+        find_resource=find_resource,
+        new_resource=new_resource,
+        count=count,
+        produce_status=produce_status,
+        password=UPDATE_PASSWORD,
+        wait_for_response=True
+    )
+
+async def get_company_users(company_id: int):
+    """Получение списка пользователей компании"""
+    return await ws_client.send_message(
+        "get-company-users",
+        company_id=company_id,
+        wait_for_response=True
+    )
+
+# Функции для работы с фабриками
+async def get_factories(company_id: int, complectation: Optional[str] = None, 
+                       produce: Optional[bool] = None, is_auto: Optional[bool] = None):
+    """Получение списка фабрик"""
+    return await ws_client.send_message(
+        "get-factories",
+        company_id=company_id,
+        complectation=complectation,
+        produce=produce,
+        is_auto=is_auto,
+        wait_for_response=True
+    )
+
+async def get_factory(factory_id: int):
+    """Получение информации о фабрике"""
+    return await ws_client.send_message(
+        "get-factory",
+        factory_id=factory_id,
+        wait_for_response=True
+    )
+
+async def factory_recomplectation(factory_id: int, new_complectation: str):
+    """Перекомплектация фабрики"""
+    return await ws_client.send_message(
+        "factory-recomplectation",
+        factory_id=factory_id,
+        new_complectation=new_complectation,
+        password=UPDATE_PASSWORD,
+        wait_for_response=True
+    )
+
+async def factory_set_produce(factory_id: int, produce: bool):
+    """Установка статуса производства фабрики"""
+    return await ws_client.send_message(
+        "factory-set-produce",
+        factory_id=factory_id,
+        produce=produce,
+        wait_for_response=True
+    )
+
+async def factory_set_auto(factory_id: int, is_auto: bool):
+    """Установка статуса автоматического производства фабрики"""
+    return await ws_client.send_message(
+        "factory-set-auto",
+        factory_id=factory_id,
+        is_auto=is_auto,
+        wait_for_response=True
+    )
+
 # Функции для работы с сессиями
 async def get_sessions(stage: Optional[str] = None):
     """Получение списка сессий"""
@@ -177,7 +282,7 @@ async def delete_session(session_id: str, really: bool = False):
     )
 
 # Функции для работы с пользователями
-async def get_users(company_id: Optional[int] = None, session_id: Optional[int] = None):
+async def get_users(company_id: Optional[int] = None, session_id: Optional[str] = None):
     """Получение списка пользователей"""
     return await ws_client.send_message(
         "get-users",

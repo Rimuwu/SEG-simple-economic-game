@@ -23,18 +23,9 @@ onMounted(async () => {
 
     // Load map from WebSocket data if available
     if (wsManager && wsManager.map) {
-        if (typeof window.log === 'function') {
-            window.log('WebSocket map data available on mount: ' + JSON.stringify(wsManager.map));
-        }
         wsManager.loadMapToDOM()
-        if (typeof window.log === 'function') {
-            window.log('Map loaded from session data on mount')
-        }
     } else {
         // Fallback to default static setup if no session data
-        if (typeof window.log === 'function') {
-            window.log('No WebSocket map data available, using default setup');
-        }
         setTile(1, 1, TileTypes.CITY, "ГОРОД А")
         setTile(5, 1, TileTypes.CITY, "ГОРОД В")
         setTile(1, 5, TileTypes.CITY, "ГОРОД Б")

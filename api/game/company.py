@@ -1,14 +1,15 @@
 import asyncio
+from typing import Optional
 from game.stages import leave_from_prison
-from global_modules.models.cells import Cells
+from global_modules.models.cells import CellType, Cells
 from modules.generate import generate_number
 from modules.websocket_manager import websocket_manager
 from global_modules.db.baseclass import BaseClass
 from modules.json_database import just_db
 from game.session import session_manager
 from global_modules.load_config import ALL_CONFIGS, Resources, Improvements, Settings, Capital, Reputation
-from global_modules.models.improvements import ImprovementType, ImprovementLevel
-from global_modules.bank import calc_credit, get_credit_conditions, check_max_credit_steps
+from global_modules.bank import calc_credit, get_credit_conditions, check_max_credit_steps, calc_deposit, get_deposit_conditions, check_max_deposit_steps
+from game.factory import Factory
 
 RESOURCES: Resources = ALL_CONFIGS["resources"]
 CELLS: Cells = ALL_CONFIGS['cells']
@@ -31,6 +32,7 @@ class Company(BaseClass):
         self.balance: int = 0
 
         self.in_prison: bool = False
+        self.prison_end_step: Optional[int] = None
 
         self.credits: list = []
         self.deposits: list = []
@@ -50,6 +52,16 @@ class Company(BaseClass):
         self.this_turn_income: int = 0  # Доход за текущий ход
 
         self.business_type: str = "small"  # Тип бизнеса: "small" или "big"
+        self.owner: int = 0
+
+    def set_owner(self, user_id: int):
+        if self.owner != 0:
+            raise ValueError("Owner is already set.")
+        if user_id in [user.id for user in self.users] is False:
+            raise ValueError("User is not a member of the company.")
+
+        self.owner = user_id
+        self.save_to_base()
 
     def create(self, name: str, session_id: str):
         self.name = name
@@ -57,7 +69,7 @@ class Company(BaseClass):
             self.__tablename__) + 1
 
         with_this_name = just_db.find_one(
-            self.__tablename__, name=name)
+            self.__tablename__, name=name, session_id=session_id)
         if with_this_name:
             raise ValueError(f"Company with name '{name}' already exists.")
 
@@ -72,7 +84,7 @@ class Company(BaseClass):
         not_in_use = True
         while not_in_use:
             self.secret_code = generate_number(6)
-            if not just_db.find_one("companies", 
+            if not just_db.find_one("companies",
                                     secret_code=self.secret_code):
                 not_in_use = False
 
@@ -88,7 +100,7 @@ class Company(BaseClass):
             "type": "api-create_company",
             "data": {
                 'session_id': self.session_id,
-                'company': self.__dict__
+                'company': self.to_dict()
             }
         }))
         return self
@@ -97,14 +109,20 @@ class Company(BaseClass):
         session = session_manager.get_session(self.session_id)
         if not session or session.stage != "FreeUserConnect":
             return False
+
+        if len(self.users) >= SETTINGS.max_players_in_company:
+            return False
         return True
 
     @property
     def users(self) -> list['User']:
         from game.user import User
 
-        return [user for user in just_db.find(
-            "users", to_class=User, company_id=self.id)]
+        users = just_db.find(
+            User.__tablename__, to_class=User, 
+            company_id=self.id
+        )
+        return users
 
     def set_position(self, x: int, y: int):
         if isinstance(x, int) is False or isinstance(y, int) is False:
@@ -127,6 +145,20 @@ class Company(BaseClass):
                 "new_position": self.cell_position
             }
         }))
+
+        col = self.get_improvements()['factory']['tasksPerTurn']
+        col_complect = col // 3
+        cell_type: str = self.get_cell_type() # type: ignore
+
+        for _ in range(col):
+            res = None
+
+            if col_complect > 0:
+                res = SETTINGS.start_complectation.get(cell_type, None)
+
+            Factory().create(self.id, res)
+            col_complect -= 1
+
         return True
 
     def get_position(self):
@@ -142,6 +174,8 @@ class Company(BaseClass):
         just_db.delete(self.__tablename__, **{self.__unique_id__: self.id})
 
         for user in self.users: user.leave_from_company()
+        for factory in self.get_factories(): factory.delete()
+        for exchange in self.exchages: exchange.delete()
 
         asyncio.create_task(websocket_manager.broadcast({
             "type": "api-company_deleted",
@@ -153,8 +187,10 @@ class Company(BaseClass):
 
     def get_max_warehouse_size(self) -> int:
         imps = self.get_improvements()
-        base_size = imps['warehouse']['capacity']
+        if 'warehouse' not in imps:
+            return 0
 
+        base_size = imps['warehouse']['capacity']
         return base_size
 
     def add_resource(self, resource: str, amount: int):
@@ -208,9 +244,6 @@ class Company(BaseClass):
         }))
         return True
 
-    def get_resources(self):
-        return {res_id: RESOURCES.get_resource(res_id) for res_id in self.warehouses.keys()}
-
     def get_resources_amount(self):
         count = 0
         for amount in self.warehouses.values(): 
@@ -253,7 +286,11 @@ class Company(BaseClass):
 
         return data
 
-    def add_balance(self, amount: int):
+    def add_balance(self, amount: int, income_percent: float = 1.0):
+        if not isinstance(income_percent, float):
+            raise ValueError("Income percent must be a float.")
+        if income_percent < 0:
+            raise ValueError("Income percent must be non-negative.")
         if not isinstance(amount, int):
             raise ValueError("Amount must be an integer.")
         if amount <= 0:
@@ -261,7 +298,7 @@ class Company(BaseClass):
 
         old_balance = self.balance
         self.balance += amount
-        self.this_turn_income += amount
+        self.this_turn_income += int(amount * income_percent)
 
         self.save_to_base()
         self.reupdate()
@@ -420,16 +457,24 @@ class Company(BaseClass):
         if len(self.credits) >= SETTINGS.max_credits_per_company:
             raise ValueError("Maximum number of active credits reached for this company.")
 
-        self.credits.append(
-            {
-                "total_to_pay": total,
-                "need_pay": 0,
-                "paid": 0,
+        if c_sum > CAPITAL.bank.credit.max:
+            raise ValueError(f"Credit sum exceeds the maximum limit of {CAPITAL.bank.credit.max}.")
 
-                "steps_total": steps,
-                "steps_now": 0
-            }
-        )
+        elif c_sum < CAPITAL.bank.credit.min:
+            raise ValueError(f"Credit sum is below the minimum limit of {CAPITAL.bank.credit.min}.")
+
+        credit_data = {
+            "total_to_pay": total,
+            "need_pay": 0,
+            "paid": 0,
+
+            "steps_total": steps,
+            "steps_now": 0
+        }
+        self.credits.append(credit_data)
+
+        self.save_to_base()
+        self.add_balance(c_sum, 0.0) # деньги без процентов в доход
 
         asyncio.create_task(websocket_manager.broadcast({
             "type": "api-company_credit_taken",
@@ -439,6 +484,7 @@ class Company(BaseClass):
                 "steps": steps
             }
         }))
+        return credit_data
 
     def credit_paid_step(self):
         """ Вызывается при каждом шаге игры для компании.
@@ -448,7 +494,8 @@ class Company(BaseClass):
         for index, credit in enumerate(self.credits):
 
             if credit["steps_now"] <= credit["steps_total"]:
-                credit["need_pay"] += credit["total_to_pay"] - credit['paid'] // (credit["steps_total"] - credit["steps_now"])
+                steps_left = max(1, credit["steps_total"] - credit["steps_now"])
+                credit["need_pay"] += (credit["total_to_pay"] - credit['need_pay'] - credit ['paid']) // steps_left
 
             elif credit["steps_now"] > credit["steps_total"]:
                 credit["need_pay"] += credit["total_to_pay"] - credit['paid']
@@ -500,27 +547,29 @@ class Company(BaseClass):
             raise ValueError("Not enough balance to pay credit.")
 
         credit = self.credits[credit_index]
-        if credit["need_pay"] < amount:
-            raise ValueError("Payment amount exceeds required payment.")
+
+        # Досрочное закрытие кредита - можно заплатить больше чем need_pay
+        remaining_debt = credit["total_to_pay"] - credit["paid"]
+        if amount > remaining_debt:
+            amount = remaining_debt
 
         # Снимаем деньги с баланса
         self.remove_balance(amount)
 
         # Обновляем информацию по кредиту
-        credit["need_pay"] -= amount
         credit["paid"] += amount
+        credit["need_pay"] = max(0, credit["need_pay"] - amount)
 
         # Если кредит полностью выплачен, удаляем его
         if credit["paid"] >= credit["total_to_pay"]:
             self.remove_credit(credit_index)
-            self.add_reputation(
-                REPUTATION.credit.gained
-            )
+            self.add_reputation(REPUTATION.credit.gained)
         else:
+            self.credits[credit_index] = credit
             self.save_to_base()
             self.reupdate()
 
-        remaining = credit["total_to_pay"] - credit["paid"]
+        remaining = credit["total_to_pay"] - credit["paid"] if credit["paid"] < credit["total_to_pay"] else 0
 
         asyncio.create_task(websocket_manager.broadcast({
             "type": "api-company_credit_paid",
@@ -543,12 +592,15 @@ class Company(BaseClass):
         if not session:
             raise ValueError("Session not found.")
 
+        end_step = session.step + REPUTATION.prison.stages
+
         self.in_prison = True
+        self.prison_end_step = end_step
         self.save_to_base()
         self.reupdate()
 
         session.create_step_schedule(
-            session.step + REPUTATION.prison.stages,
+            end_step,
             leave_from_prison,
             session_id=self.session_id,
             company_id=self.id
@@ -557,7 +609,8 @@ class Company(BaseClass):
         asyncio.create_task(websocket_manager.broadcast({
             "type": "api-company_to_prison",
             "data": {
-                "company_id": self.id
+                "company_id": self.id,
+                "end_step": end_step
             }
         }))
 
@@ -569,6 +622,7 @@ class Company(BaseClass):
             raise ValueError("Company is not in prison.")
 
         self.in_prison = False
+        self.prison_end_step = None
         self.save_to_base()
         self.reupdate()
 
@@ -602,7 +656,7 @@ class Company(BaseClass):
 
         if self.tax_debt > 0:
             self.overdue_steps += 1
-            self.remove_reputation(REPUTATION.tax.late * self.overdue_steps)
+            self.remove_reputation(REPUTATION.tax.late)
 
         if self.overdue_steps > REPUTATION.tax.not_paid_stages:
             self.overdue_steps = 0
@@ -613,7 +667,7 @@ class Company(BaseClass):
             return
 
         percent = self.business_tax()
-        tax_amount = int(self.last_turn_income * percent / 100)
+        tax_amount = int(self.last_turn_income * percent)
 
         self.tax_debt += tax_amount
         self.save_to_base()
@@ -632,10 +686,10 @@ class Company(BaseClass):
             raise ValueError("Amount must be a positive integer.")
         if self.tax_debt <= 0:
             raise ValueError("No tax debt to pay.")
-        if amount > self.tax_debt:
-            raise ValueError("Payment amount exceeds tax debt.")
         if self.balance < amount:
             raise ValueError("Not enough balance to pay taxes.")
+
+        if amount > self.tax_debt: amount = self.tax_debt
 
         # Снимаем деньги с баланса
         self.remove_balance(amount)
@@ -660,50 +714,211 @@ class Company(BaseClass):
         }))
         return True
 
-    def take_deposit(self, d_sum: int):
+    def take_deposit(self, d_sum: int, steps: int):
         """ 
-            Сумма депозита у нас между минимумом и максимумом
+            Создаёт вклад на указанную сумму и срок
+            d_sum - сумма вклада
+            steps - срок вклада в ходах
+        """
+        self.in_prison_check()
+
+        if not isinstance(d_sum, int) or not isinstance(steps, int):
+            raise ValueError("Sum and steps must be integers.")
+        if d_sum <= 0 or steps <= 0:
+            raise ValueError("Sum and steps must be positive integers.")
+
+        deposit_condition = get_deposit_conditions(self.reputation)
+        if not deposit_condition.possible:
+            raise ValueError("Deposit is not possible with the current reputation.")
+
+        income_per_turn, total_income = calc_deposit(
+            d_sum, deposit_condition.percent, steps
+        )
+
+        session = session_manager.get_session(self.session_id)
+        if not session:
+            raise ValueError("Session not found.")
+
+        if not check_max_deposit_steps(steps, 
+                                       session.step, 
+                                       session.max_steps):
+            raise ValueError("Deposit duration exceeds the maximum game steps.")
+
+        if d_sum > CAPITAL.bank.contribution.max:
+            raise ValueError(f"Deposit sum exceeds the maximum limit of {CAPITAL.bank.contribution.max}.")
+
+        elif d_sum < CAPITAL.bank.contribution.min:
+            raise ValueError(f"Deposit sum is below the minimum limit of {CAPITAL.bank.contribution.min}.")
+
+        if self.balance < d_sum:
+            raise ValueError("Insufficient balance to create deposit.")
+
+        deposit_data = {
+            "initial_sum": d_sum,
+            "current_balance": d_sum,  # Баланс вклада (сумма + накопленные проценты)
+            "income_per_turn": income_per_turn,
+            "total_earned": 0,  # Сколько уже заработано процентов
+            
+            "steps_total": steps,
+            "steps_now": 0,
+            
+            "can_withdraw_from": session.step + 3  # Можно забрать через 3 хода
+        }
+        
+        # Снимаем деньги с баланса компании
+        self.remove_balance(d_sum)
+        
+        self.deposits.append(deposit_data)
+        self.save_to_base()
+        self.reupdate()
+
+        asyncio.create_task(websocket_manager.broadcast({
+            "type": "api-company_deposit_taken",
+            "data": {
+                "company_id": self.id,
+                "amount": d_sum,
+                "steps": steps
+            }
+        }))
+        return deposit_data
+
+    def deposit_income_step(self):
+        """ Вызывается при каждом шаге игры для компании.
+            Начисляет доход по вкладам на баланс вклада (не на счёт компании).
         """
 
-        pass
+        for deposit in self.deposits:
+            if deposit["steps_now"] < deposit["steps_total"]:
+                # Начисляем проценты на баланс вклада
+                deposit["current_balance"] += deposit["income_per_turn"]
+                deposit["total_earned"] += deposit["income_per_turn"]
+
+            deposit["steps_now"] += 1
+
+        self.save_to_base()
+        self.reupdate()
 
     def withdraw_deposit(self, deposit_index: int):
         """ Забирает депозит с индексом deposit_index.
+            Возвращает всю сумму (начальная + проценты) на счёт компании.
+        """
+        self.in_prison_check()
+
+        if not isinstance(deposit_index, int):
+            raise ValueError("Deposit index must be an integer.")
+        if deposit_index < 0 or deposit_index >= len(self.deposits):
+            raise ValueError("Invalid deposit index.")
+
+        deposit = self.deposits[deposit_index]
+        
+        session = session_manager.get_session(self.session_id)
+        if not session:
+            raise ValueError("Session not found.")
+        
+        # Проверяем, можно ли забрать деньги (прошло минимум 3 хода)
+        if session.step < deposit["can_withdraw_from"]:
+            raise ValueError(f"Cannot withdraw deposit yet. Available from step {deposit['can_withdraw_from']}.")
+
+        # Возвращаем весь баланс вклада на счёт компании
+        amount_to_return = deposit["current_balance"]
+        self.add_balance(amount_to_return, 0.0)  # Деньги без учёта в доходе
+
+        # Удаляем вклад
+        del self.deposits[deposit_index]
+        self.save_to_base()
+        self.reupdate()
+
+        asyncio.create_task(websocket_manager.broadcast({
+            "type": "api-company_deposit_withdrawn",
+            "data": {
+                "company_id": self.id,
+                "deposit_index": deposit_index,
+                "amount": amount_to_return
+            }
+        }))
+        return True
+
+
+    def raw_in_step(self):
+        """ Вызывается при каждом шаге игры для компании.
+            Определеяет сколько сырья выдать компании в ход.
         """
 
-        pass
+        imps = self.get_improvements()
+        if 'station' not in imps:
+            return 0
+
+        perturn = imps['station']['productsPerTurn']
+        return perturn
 
 
-    def get_factories(self):
+    def get_factories(self) -> list['Factory']:
+        """ Возвращает список фабрик компании.
+        """
+        return [factory for factory in just_db.find(
+            "factories", to_class=Factory, company_id=self.id)] # type: ignore
 
-        pass
-
-    def complect_factory(self, factory_id: str, resource: str):
-    
-        pass
-
-    def auto_manufacturing(self, factory_id: str):
-        """ Запускает автоматическое производство на фабрике с указанным ID.
+    def complect_factory(self, factory_id: int, resource: str):
+        """ Укомплектовать фабрику с указанным ID ресурсом.
+            Запускает этап комплектации.
         """
 
-        pass
+        factory = Factory(factory_id).reupdate()
+        if not factory:
+            raise ValueError("Factory not found.")
+        if factory.company_id != self.id:
+            raise ValueError("Factory does not belong to this company.")
 
-    def sell_on_market(self, 
-                       resource: str, amount: int, price_per_unit: int | str,
-                       type: str  # "sell" | "exchange"
-                       ):
-        """ Выставляет товар на биржу от компании. (Продажа)
+        factory.pere_complete(resource)
+
+    def complete_free_factories(self, 
+                        find_resource: Optional[str],
+                        new_resource: str,
+                        count: int,
+                        produce_status: bool = False
+                        ):
+        """ Переукомплектовать фабрики с типом ресурса (без него) на новый ресурс.
+            Запускает этап комплектации.
         """
 
-        pass
+        free_factories: list[Factory] = []
+        for f in self.get_factories():
+            if f.complectation == find_resource and f.produce == produce_status:
+                free_factories.append(f)
 
-    def buy_from_market(self, 
-                         order_id: int, amount: int
-                         ):
-        """ Покупает товар с биржи от компании.
+        print(f'find_resource: {find_resource}, new_resource: {new_resource}, count: {count}, produce_status: {produce_status}')
+        print(f"Found {len(free_factories)} free factories for re-complectation.")
+
+        limit = 0
+        for factory in free_factories:
+            if limit >= count: break
+
+            limit += 1
+            factory.pere_complete(new_resource)
+
+    def auto_manufacturing(self, factory_id: int, status: bool):
+        """ Включает или выключает авто производство на фабрике с указанным ID.
         """
 
-        pass
+        factory = Factory(factory_id).reupdate()
+        if not factory:
+            raise ValueError("Factory not found.")
+        if factory.company_id != self.id:
+            raise ValueError("Factory does not belong to this company.")
+
+        factory.set_auto(status)
+
+    def factory_set_produce(self, factory_id: int, produce: bool):
+        """ Включает или выключает производство на фабрике с указанным ID.
+        """
+
+        factory = Factory(factory_id).reupdate()
+        if not factory:
+            raise ValueError("Factory not found.")
+        if factory.company_id != self.id:
+            raise ValueError("Factory does not belong to this company.")
+
+        factory.set_produce(produce)
 
     def create_contract(self, 
                         company_id: int | None, 
@@ -756,5 +971,88 @@ class Company(BaseClass):
                 self.save_to_base()
                 self.reupdate()
 
+        self.deposit_income_step()  # Начисляем проценты по вкладам
         self.credit_paid_step()
         self.taxate()
+
+        cell_info = self.get_my_cell_info()
+        if cell_info:
+            resource_id = cell_info.resource_id 
+            raw_col = self.raw_in_step()
+
+            if resource_id and raw_col > 0:
+                try:
+                    self.add_resource(resource_id, raw_col)
+                except Exception as e: 
+                    print(f'stage add comp res. of {self.id} error: {e}')
+
+        factories = self.get_factories()
+        for factory in factories:
+            factory.on_new_game_stage()
+
+    @property
+    def exchages(self) -> list['Exchange']:
+        from game.exchange import Exchange
+
+        exchanges = just_db.find(
+            Exchange.__tablename__, to_class=Exchange,
+            company_id = self.id,
+            session_id=self.session_id
+        )
+
+        return exchanges
+
+    def to_dict(self):
+        """Возвращает полный статус компании со всеми данными"""
+        return {
+            # Основная информация
+            "id": self.id,
+            "name": self.name,
+            "owner": self.owner,
+            "session_id": self.session_id,
+            "secret_code": self.secret_code,
+            
+            # Финансовые данные
+            "balance": self.balance,
+            "last_turn_income": self.last_turn_income,
+            "this_turn_income": self.this_turn_income,
+            "business_type": self.business_type,
+            
+            # Репутация и статус
+            "reputation": self.reputation,
+            "in_prison": self.in_prison,
+            "prison_end_step": self.prison_end_step,
+            
+            # Позиция и местоположение
+            "cell_position": self.cell_position,
+            "position_coords": self.get_position(),
+            "cell_type": self.get_cell_type(),
+            "cell_info": self.get_my_cell_info().__dict__ if self.get_my_cell_info() else None,
+            
+            # Налоги
+            "tax_debt": self.tax_debt,
+            "overdue_steps": self.overdue_steps,
+            "tax_rate": self.business_tax(),
+            
+            # Кредиты и депозиты
+            "credits": self.credits,
+            "deposits": self.deposits,
+            
+            # Улучшения и ресурсы
+            "improvements": self.improvements,
+            "improvements_data": self.get_improvements(),
+            "warehouses": self.warehouses,
+            "warehouse_capacity": self.get_max_warehouse_size(),
+            "resources_amount": self.get_resources_amount(),
+            "raw_per_turn": self.raw_in_step(),
+            
+            # Пользователи и фабрики
+            "users": [user.to_dict() for user in self.users],
+            "factories": [factory.to_dict() for factory in self.get_factories()],
+            "factories_count": len(self.get_factories()),
+            
+            # Дополнительные возможности
+            "can_user_enter": self.can_user_enter(),
+
+            "exchages": self.exchages
+        }

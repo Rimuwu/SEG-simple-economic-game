@@ -41,11 +41,6 @@ function togglePrepState() {
 const wsManager = inject('wsManager', null)
 
 function testLog() {
-  if (typeof window.log === 'function') {
-    window.log('This is a test log message from Admin Panel')
-  } else {
-    console.log('Log function not available yet')
-  }
 }
 
 function testError() {
@@ -59,9 +54,6 @@ function testError() {
 function testWebSocket() {
   if (wsManager) {
     wsManager.ping()
-    if (typeof window.log === 'function') {
-      window.log('WebSocket ping sent from Admin Panel')
-    }
   } else {
     if (typeof window.error === 'function') {
       window.error('WebSocket manager not available')
