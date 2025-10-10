@@ -57,7 +57,7 @@ onMounted(() => {
 }
 
 #column-left {
-  flex: 3;
+  flex: 2;
   height: 100%;
   display: flex;
   flex-direction: column;
