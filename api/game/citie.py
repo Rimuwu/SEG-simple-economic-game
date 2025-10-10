@@ -152,6 +152,13 @@ class Citie(BaseClass):
                 # Базовое количество: massModifier определяет масштаб
                 # Для товаров с massModifier=100 будет ~100 единиц на игрока
                 base_amount = resource.massModifier * users_count
+                
+                mod_price = session.get_event_effects().get(
+                    'increase_price', {}
+                ).get(resource_id, 1.0)
+                mod_count = session.get_event_effects().get(
+                    'increase_demand', {}
+                ).get(resource_id, 1.0)
 
                 # Модификатор для приоритетной ветки (увеличиваем спрос на 50%)
                 branch_modifier = 1.5 if resource.branch == self.branch else 1.0
@@ -164,19 +171,20 @@ class Citie(BaseClass):
                 min_amount = max(1, int(
                     resource.massModifier * 0.5)
                                  )
-                max_amount = int(resource.massModifier * users_count * 3)
+                max_amount = int(resource.massModifier * users_count * 3 * mod_count)
                 amount = max(min_amount, min(amount, max_amount))
 
                 # Цена с рандомизацией ±20%
+                current_item_price = session.get_item_price(resource_id)
                 price_variation = random.uniform(0.8, 1.2)
-                price = int(resource.basePrice * price_variation)
+                price = int(current_item_price * price_variation * mod_price)
 
                 # Бонус к цене для приоритетной ветки (+50%)
                 if resource.branch == self.branch:
                     price = int(price * 1.5)
 
-                # # Округляем цену до целого числа, но сохраняем минимум базовую цену
-                # price = max(resource.basePrice, int(price))
+                # Минимальная цена не может быть меньше базовой
+                # price = max(resource.basePrice, price)
                 
                 self.demands[resource_id] = {
                     'amount': amount,
@@ -217,6 +225,12 @@ class Citie(BaseClass):
             dict с результатом операции
         """
         from game.company import Company
+        from game.session import session_manager
+        
+        # Получаем сессию
+        session = session_manager.get_session(self.session_id)
+        if not session:
+            raise ValueError("Session not found")
         
         # Проверяем наличие спроса
         if resource_id not in self.demands:
@@ -244,13 +258,16 @@ class Citie(BaseClass):
         total_price = demand['price'] * amount
         company.add_balance(total_price)
         
+        # Обновляем цену предмета в системе (продажа влияет на рыночную цену)
+        session.update_item_price(resource_id, demand['price'])
+        
         # Уменьшаем спрос
         self.demands[resource_id]['amount'] -= amount
         if self.demands[resource_id]['amount'] <= 0:
             del self.demands[resource_id]
-        
+
         self.save_to_base()
-        
+
         asyncio.create_task(websocket_manager.broadcast({
             "type": "api-city-trade",
             "data": {
@@ -261,7 +278,7 @@ class Citie(BaseClass):
                 "total_price": total_price
             }
         }))
-        
+
         return {
             "success": True,
             "total_price": total_price,

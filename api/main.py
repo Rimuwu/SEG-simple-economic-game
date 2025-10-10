@@ -34,6 +34,7 @@ async def lifespan(app: FastAPI):
     just_db.create_table('cities') # Таблица с городами
     just_db.create_table('exchanges') # Таблица с биржей
     just_db.create_table('factories') # Таблица с заводами
+    just_db.create_table('item_price') # Таблица с ценами на товары
 
     main_logger.info("Loading sessions from database...")
     session_manager.load_from_base()
@@ -146,13 +147,45 @@ async def test1():
 
     # # print(company.warehouses.keys())
 
-    c_m_k_1 = list(company.warehouses.keys())[1]
-    col_1 = company.warehouses[c_m_k_1]
+    if len(company.warehouses) > 1:
+        c_m_k_1 = list(company.warehouses.keys())[1]
+        col_1 = company.warehouses[c_m_k_1]
+    else:
+        c_m_k_1 = list(company.warehouses.keys())[0]
+        col_1 = company.warehouses[c_m_k_1]
     
-    c_m_k_2 = list(company2.warehouses.keys())[1]
-    col_2 = company2.warehouses[c_m_k_2]
+    # c_m_k_2 = list(company2.warehouses.keys())[1]
+    # col_2 = company2.warehouses[c_m_k_2]
     
     city.sell_resource(company.id, c_m_k_1, col_1 // 4)
+
+    await sleep(3)
+    
+    session.update_stage(SessionStages.Game, True)
+    company.reupdate()
+    company2.reupdate()
+    
+    session.update_item_price('nails', 150)
+    
+    session.update_stage(SessionStages.Game, True)
+    company.reupdate()
+    company2.reupdate()
+    
+    session.update_stage(SessionStages.Game, True)
+    company.reupdate()
+    company2.reupdate()
+
+    if len(company.warehouses) > 1:
+        c_m_k_1 = list(company.warehouses.keys())[1]
+        col_1 = company.warehouses[c_m_k_1]
+    else:
+        c_m_k_1 = list(company.warehouses.keys())[0]
+        col_1 = company.warehouses[c_m_k_1]
+    
+    # c_m_k_2 = list(company2.warehouses.keys())[1]
+    # col_2 = company2.warehouses[c_m_k_2]
+    
+    city.sell_resource(company.id, c_m_k_1, 1)
 
     # print(company.warehouses, company2.warehouses)
     # print(c_m_k_1, c_m_k_2)

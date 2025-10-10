@@ -222,6 +222,7 @@ class Exchange(BaseClass):
             quantity: Количество сделок (по умолчанию 1)
         """
         from game.company import Company
+        from game.session import session_manager
 
         if quantity <= 0:
             raise ValueError("Quantity must be positive.")
@@ -238,15 +239,24 @@ class Exchange(BaseClass):
         if buyer.session_id != self.session_id:
             raise ValueError("Buyer must be in the same session.")
 
+        # Получаем сессию для обновления цен
+        session = session_manager.get_session(self.session_id)
+        if not session:
+            raise ValueError("Session not found.")
+
         # Рассчитываем количество товара
         total_sell_amount = self.sell_amount_per_trade * quantity
 
         if total_sell_amount > self.total_stock:
             raise ValueError(f"Not enough stock. Available: {self.total_stock}, requested: {total_sell_amount}")
 
+        # Переменная для хранения цены за единицу товара (для обновления истории цен)
+        unit_price = 0
+
         # Проверяем возможность сделки
         if self.offer_type == 'money':
             total_price = self.price * quantity
+            unit_price = self.price // self.sell_amount_per_trade  # Цена за единицу товара
 
             if buyer.balance < total_price:
                 raise ValueError(f"Not enough money. Required: {total_price}, available: {buyer.balance}")
@@ -264,6 +274,10 @@ class Exchange(BaseClass):
             if buyer.warehouses.get(self.barter_resource, 0) < total_barter_amount:
                 raise ValueError(f"Not enough '{self.barter_resource}' for barter. Required: {total_barter_amount}")
 
+            # Для бартера вычисляем условную цену на основе текущих цен предметов
+            barter_resource_price = session.get_item_price(self.barter_resource)
+            unit_price = (barter_resource_price * self.barter_amount) // self.sell_amount_per_trade
+
             # Выполняем бартерную сделку
             buyer.remove_resource(self.barter_resource, total_barter_amount)
             try:
@@ -278,6 +292,10 @@ class Exchange(BaseClass):
             buyer.add_resource(self.sell_resource, total_sell_amount)
         except ValueError as e:
             pass
+
+        # Обновляем историю цен в сессии на основе совершенной сделки
+        if unit_price > 0:
+            session.update_item_price(self.sell_resource, unit_price)
 
         # Обновляем запас предложения
         self.total_stock -= total_sell_amount
@@ -302,7 +320,8 @@ class Exchange(BaseClass):
                 "price": self.price * quantity if self.offer_type == 'money' else None,
                 "barter_resource": self.barter_resource if self.offer_type == 'barter' else None,
                 "barter_amount": self.barter_amount * quantity if self.offer_type == 'barter' else None,
-                "remaining_stock": self.total_stock
+                "remaining_stock": self.total_stock,
+                "unit_price": unit_price  # Добавляем цену за единицу в уведомление
             }
         }))
         

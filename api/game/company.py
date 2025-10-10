@@ -497,20 +497,24 @@ class Company(BaseClass):
 
         for index, credit in enumerate(self.credits):
 
-            if credit["steps_now"] <= credit["steps_total"]:
+            if credit["steps_now"] < credit["steps_total"]:
                 steps_left = max(1, credit["steps_total"] - credit["steps_now"])
                 credit["need_pay"] += (credit["total_to_pay"] - credit['need_pay'] - credit ['paid']) // steps_left
+                credit["steps_now"] += 1
+
+            elif credit["steps_now"] == credit["steps_total"]:
+                # Последний день - начисляем всю оставшуюся сумму
+                credit["need_pay"] += credit["total_to_pay"] - credit['paid']
+                credit["steps_now"] += 1
 
             elif credit["steps_now"] > credit["steps_total"]:
-                credit["need_pay"] += credit["total_to_pay"] - credit['paid']
+                # Просрочка - не увеличиваем steps_now больше, но снижаем репутацию
                 self.remove_reputation(REPUTATION.credit.lost)
 
             if credit["steps_now"] - credit["steps_total"] > REPUTATION.credit.max_overdue:
                 self.remove_reputation(self.reputation)
                 self.remove_credit(index)
                 self.to_prison()
-
-            credit["steps_now"] += 1
 
         self.save_to_base()
         self.reupdate()
@@ -652,10 +656,22 @@ class Company(BaseClass):
     def business_tax(self):
         """ Определяет налоговую ставку в зависимости от типа бизнеса.
         """
+        
+        session = session_manager.get_session(self.session_id)
+        if not session:
+            raise ValueError("Session not found.")
+
+        big_mod = session.get_event_effects().get(
+            'tax_rate_large', CAPITAL.bank.tax.big_on
+        )
+
+        small_mod = session.get_event_effects().get(
+            'tax_rate_small', CAPITAL.bank.tax.small_business
+        )
 
         if self.business_type == "big":
-            return CAPITAL.bank.tax.big_on
-        return CAPITAL.bank.tax.small_business
+            return big_mod
+        return small_mod
 
     def taxate(self):
         """ Начисляет налоги в зависимости от типа бизнеса. Вызывается каждый ход.
@@ -792,15 +808,22 @@ class Company(BaseClass):
     def deposit_income_step(self):
         """ Вызывается при каждом шаге игры для компании.
             Начисляет доход по вкладам на баланс вклада (не на счёт компании).
+            Автоматически снимает депозиты по окончании срока.
         """
 
-        for deposit in self.deposits:
+        for index, deposit in enumerate(self.deposits):
             if deposit["steps_now"] < deposit["steps_total"]:
                 # Начисляем проценты на баланс вклада
                 deposit["current_balance"] += deposit["income_per_turn"]
                 deposit["total_earned"] += deposit["income_per_turn"]
 
             deposit["steps_now"] += 1
+
+            # Если срок депозита истек, то снимаем
+            if deposit["steps_now"] >= deposit["steps_total"]:
+
+                if self.in_prison is False:
+                    self.withdraw_deposit(index)
 
         self.save_to_base()
         self.reupdate()
@@ -971,6 +994,10 @@ class Company(BaseClass):
 
         self.last_turn_income = self.this_turn_income
         self.this_turn_income = 0
+        
+        session = session_manager.get_session(self.session_id)
+        if not session:
+            raise ValueError("Session not found.")
 
         if step != 1:
             if self.last_turn_income >= CAPITAL.bank.tax.big_on:
@@ -984,8 +1011,17 @@ class Company(BaseClass):
 
         cell_info = self.get_my_cell_info()
         if cell_info:
-            resource_id = cell_info.resource_id 
-            raw_col = self.raw_in_step()
+            resource_id = cell_info.resource_id
+
+            mod = session.get_event_effects().get(
+                'resource_extraction_speed', 1.0
+            )
+
+            cell_type = self.get_cell_type()
+            if session.get_event().get('cell_type') == cell_type:
+                mod *= session.get_event().get('income_multiplier', 1.0)
+
+            raw_col = int(self.raw_in_step() * mod)
 
             if resource_id and raw_col > 0:
                 try:

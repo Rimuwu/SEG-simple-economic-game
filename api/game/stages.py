@@ -1,7 +1,7 @@
 from modules.sheduler import scheduler
 from datetime import datetime, timedelta
 from global_modules.load_config import ALL_CONFIGS, Settings
-
+from global_modules.logs import main_logger
 
 settings: Settings = ALL_CONFIGS['settings']
 
@@ -52,4 +52,22 @@ async def leave_from_prison(session_id: str, company_id: int):
     if not company: return 0
 
     company.leave_prison()
+    return 1
+
+async def clear_session_event(session_id: str):
+    """ Функция для очистки события сессии (вызывается через шедулер)
+    """
+    from game.session import session_manager
+
+    session = session_manager.get_session(session_id)
+    if not session: 
+        return 0
+
+    session.event_type = None
+    session.event_start = None
+    session.event_end = None
+    session.save_to_base()
+    session.reupdate()
+    
+    main_logger.info(f"Event cleared for session {session_id}")
     return 1
