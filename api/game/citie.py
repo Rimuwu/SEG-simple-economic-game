@@ -152,6 +152,13 @@ class Citie(BaseClass):
                 # Базовое количество: massModifier определяет масштаб
                 # Для товаров с massModifier=100 будет ~100 единиц на игрока
                 base_amount = resource.massModifier * users_count
+                
+                mod_price = session.get_event_effects().get(
+                    'increase_price', {}
+                ).get(resource_id, 1.0)
+                mod_count = session.get_event_effects().get(
+                    'increase_demand', {}
+                ).get(resource_id, 1.0)
 
                 # Модификатор для приоритетной ветки (увеличиваем спрос на 50%)
                 branch_modifier = 1.5 if resource.branch == self.branch else 1.0
@@ -164,13 +171,13 @@ class Citie(BaseClass):
                 min_amount = max(1, int(
                     resource.massModifier * 0.5)
                                  )
-                max_amount = int(resource.massModifier * users_count * 3)
+                max_amount = int(resource.massModifier * users_count * 3 * mod_count)
                 amount = max(min_amount, min(amount, max_amount))
 
                 # Цена с рандомизацией ±20%
                 current_item_price = session.get_item_price(resource_id)
                 price_variation = random.uniform(0.8, 1.2)
-                price = int(current_item_price * price_variation)
+                price = int(current_item_price * price_variation * mod_price)
 
                 # Бонус к цене для приоритетной ветки (+50%)
                 if resource.branch == self.branch:
