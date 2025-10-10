@@ -131,10 +131,7 @@
             },
             "bank-deposit-page": {
                 "title": "",
-                "content": "",
-                "to_pages": {
-                    "bank-menu": "↪️ Назад"
-                }
+                "content": ""
             },
             "factory-menu": {
                 "title": "",
@@ -166,6 +163,10 @@
             "prison-page": {
                 "title": "",
                 "content": "Вы находитесь в тюрьме."
+            },
+            "admin-panel-page": {
+                "title": "",
+                "content": "Админ панель"
             }
     }
     },
@@ -178,6 +179,10 @@
             "game-info-page": {
                 "title": "",
                 "content": ""
+            },
+            "admin-panel-page": {
+                "title": "",
+                "content": "Админ панель"
             }
         }
     }

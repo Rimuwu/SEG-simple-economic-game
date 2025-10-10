@@ -197,6 +197,53 @@ async def get_company_users(company_id: int):
         wait_for_response=True
     )
 
+async def notforgame_update_company_balance(company_id: int, balance_change: int):
+    """Обновление баланса компании. НЕ ИСПОЛЬЗОВАТЬ В ИГРОВОМ ПРОЦЕССЕ!
+    
+    Args:
+        company_id: ID компании
+        balance_change: Изменение баланса (может быть отрицательным)
+    """
+    return await ws_client.send_message(
+        "notforgame-update-company-balance",
+        company_id=company_id,
+        balance_change=balance_change,
+        password=UPDATE_PASSWORD,
+        wait_for_response=True
+    )
+
+async def notforgame_update_company_items(company_id: int, item_id: str, quantity_change: int):
+    """Обновление предметов компании. НЕ ИСПОЛЬЗОВАТЬ В ИГРОВОМ ПРОЦЕССЕ!
+    
+    Args:
+        company_id: ID компании
+        item_id: ID предмета/ресурса
+        quantity_change: Изменение количества (может быть отрицательным)
+    """
+    return await ws_client.send_message(
+        "notforgame-update-company-items",
+        company_id=company_id,
+        item_id=item_id,
+        quantity_change=quantity_change,
+        password=UPDATE_PASSWORD,
+        wait_for_response=True
+    )
+
+async def notforgame_update_company_name(company_id: int, new_name: str):
+    """Обновление названия компании
+    
+    Args:
+        company_id: ID компании
+        new_name: Новое название компании
+    """
+    return await ws_client.send_message(
+        "notforgame-update-company-name",
+        company_id=company_id,
+        new_name=new_name,
+        password=UPDATE_PASSWORD,
+        wait_for_response=True
+    )
+
 # Функции для работы с фабриками
 async def get_factories(company_id: int, complectation: Optional[str] = None, 
                        produce: Optional[bool] = None, is_auto: Optional[bool] = None):
@@ -274,12 +321,20 @@ async def create_session(session_id: Optional[str] = None):
     )
 
 async def update_session_stage(session_id: Optional[str] = None, 
-                              stage: Literal['FreeUserConnect', 'CellSelect', 'Game', 'End'] = 'FreeUserConnect'):
-    """Обновление стадии сессии"""
+                              stage: Literal['FreeUserConnect', 'CellSelect', 'Game', 'End'] = 'FreeUserConnect',
+                              add_shedule: Optional[bool] = None):
+    """Обновление стадии сессии
+    
+    Args:
+        session_id: ID сессии
+        stage: Новая стадия сессии
+        add_shedule: Запускать ли таймер после обновления этапа (по умолчанию True)
+    """
     return await ws_client.send_message(
         "update-session-stage",
         session_id=session_id,
         stage=stage,
+        add_shedule=add_shedule,
         password=UPDATE_PASSWORD,
         wait_for_response=True
     )

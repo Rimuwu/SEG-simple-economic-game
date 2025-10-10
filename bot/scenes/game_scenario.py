@@ -18,11 +18,12 @@ from scenes.factory_rekit_resource import FactoryRekitResource
 from scenes.factory_rekit_produce import FactoryRekitProduce
 from scenes.change_turn_page import ChangeTurnPage
 from scenes.prison_page import PrisonPage
-from oms import Scene
+from scenes.admin_panel_page import AdminPanelPage
+from scenes.base_scene import AdminScene
 from modules.db import db
 
 
-class GameManager(Scene):
+class GameManager(AdminScene):
 
     __scene_name__ = 'scene-manager'
     __pages__ = [
@@ -45,7 +46,8 @@ class GameManager(Scene):
         FactoryRekitResource,
         FactoryRekitProduce,
         ChangeTurnPage,
-        PrisonPage
+        PrisonPage,
+        AdminPanelPage
     ]
     
     @staticmethod
