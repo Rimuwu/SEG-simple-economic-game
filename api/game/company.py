@@ -950,42 +950,29 @@ class Company(BaseClass):
 
         factory.set_produce(produce)
 
-    def create_contract(self, 
-                        company_id: int | None, 
-                        resource: str, amount: int, price_per_unit: int | str,
-                        type: str,  # "sell" | "exchange" 
-                        steps: int
-                        ):
-        """ Создает контракт с другой компанией.
-        """
+    def get_contracts(self) -> list['Contract']:
+        """ Получает все контракты компании """
+        from game.contract import Contract
+        return Contract.get_company_contracts(self.id, self.session_id, active_only=False)
 
-        pass
+    def get_max_contracts(self) -> int:
+        """ Получает максимальное количество активных контрактов """
+        contracts_level = self.get_improvements().get('contracts', 1)
+        contracts_config = IMPROVEMENTS.contracts.levels.get(str(contracts_level))
+        
+        if not contracts_config or contracts_config.max is None:
+            return 5  # По умолчанию 5 контрактов (уровень 1)
+        
+        return contracts_config.max
 
-    def take_contract(self, contract_id: int):
-        """ Принимает контракт от другой компании.
-        """
-
-        pass
-
-    def cancel_contract(self, contract_id: int):
-        """ Отменяет контракт. (Предложенный)
-        """
-
-        pass
-
-    def sell_resource_to_city(self, resource: str, 
-                              amount: int, city_id: int):
-        """ Продает ресурс городу.
-        """
-
-        pass
-
-    def get_logistics_resources(self):
-        """ Возвращает список логистических транспортных средств компании.
-        """
-
-        pass
-
+    def can_create_contract(self) -> bool:
+        """ Проверяет, может ли компания создать новый контракт """
+        from game.contract import Contract
+        
+        active_contracts = Contract.get_company_contracts(self.id, self.session_id, active_only=True)
+        supplier_contracts = [c for c in active_contracts if c.supplier_company_id == self.id]
+        
+        return len(supplier_contracts) < self.get_max_contracts()
 
     def on_new_game_stage(self, step: int):
         """ Вызывается при переходе на новый игровой этап.
