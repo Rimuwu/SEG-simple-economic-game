@@ -56,6 +56,9 @@ class Session(BaseClass):
             self.session_id = generate_code(32, use_letters=True, use_numbers=True, use_uppercase=True)
         self.stage = SessionStages.FreeUserConnect.value
 
+        # Инициализируем цены для всех предметов
+        self.initialize_all_item_prices()
+
         self.save_to_base()
         self.reupdate()
 
@@ -205,6 +208,14 @@ class Session(BaseClass):
             "cities", to_class=Citie, session_id=self.session_id)
                      ]
 
+    @property
+    def item_prices(self) -> list['ItemPrice']:
+        from game.item_price import ItemPrice
+
+        return [item_price for item_price in just_db.find(
+            "item_price", to_class=ItemPrice, session_id=self.session_id)
+                     ]
+
     def get_cell_with_label(self, label: str, 
                             rows: int = 0,
                             cols: int = 0,
@@ -314,8 +325,9 @@ class Session(BaseClass):
         """Создаёт города на клетках типа 'city'"""
         from game.citie import Citie, NAMES
 
-        cities_count = self.cell_counts.get('city', 0)
+        cities_count = self.cell_counts['city']
         city_names = random.sample(NAMES, cities_count)
+        city_index = 0
 
         for index, cell_type in enumerate(self.cells):
             if cell_type == 'city':
@@ -329,11 +341,13 @@ class Session(BaseClass):
                     session_id=self.session_id, 
                     cell_position=f"{x}.{y}"
                 )
-                
+
                 if not existing_city:
                     city = Citie().create(self.session_id, x, y,
-                                          city_names[index]
+                                          city_names[city_index]
                                         )
+                    city_index += 1
+
                     main_logger.info(f"Created city at position {x}.{y} with branch {city.branch}")
 
     def can_select_cell(self, x: int, y: int):
@@ -368,10 +382,62 @@ class Session(BaseClass):
                     free_cells.append((x, y))
         return free_cells
 
+    def get_item_price(self, item_id: str) -> int:
+        """ Получить цену предмета в данной сессии
+        """
+        from game.item_price import ItemPrice
+        
+        item_price_data = just_db.find_one("item_price", id=item_id, session_id=self.session_id)
+        if not item_price_data:
+            item_price_obj = ItemPrice().create(self.session_id, item_id)
+            return item_price_obj.get_effective_price()
+        else:
+            item_price_obj = ItemPrice(item_id)
+            item_price_obj.load_from_base(item_price_data)
+            return item_price_obj.get_effective_price()
+
+    def initialize_all_item_prices(self):
+        """ Инициализировать цены для всех предметов из конфига
+        """
+        from game.item_price import ItemPrice
+        from global_modules.load_config import ALL_CONFIGS
+        
+        resources = ALL_CONFIGS["resources"]
+        for item_id in resources.resources.keys():
+            existing_price = just_db.find_one("item_price", id=item_id, session_id=self.session_id)
+            if not existing_price:
+                ItemPrice().create(self.session_id, item_id)
+
+        return True
+
+    def update_item_price(self, item_id: str, new_price: int):
+        """ Обновить цену предмета
+        """
+        from game.item_price import ItemPrice
+        
+        item_price_data = just_db.find_one("item_price", id=item_id, session_id=self.session_id)
+        if not item_price_data:
+            item_price = ItemPrice().create(self.session_id, item_id)
+        else:
+            item_price = ItemPrice(item_id)
+            item_price.load_from_base(item_price_data)
+            
+        item_price.add_price(new_price)
+        return item_price
+
+    def get_all_item_prices_dict(self) -> dict[str, int]:
+        """ Получить словарь всех цен предметов в сессии
+        """
+        prices_dict = {}
+        for item_price in self.item_prices:
+            prices_dict[item_price.id] = item_price.get_effective_price()
+        return prices_dict
+
     def delete(self):
         for company in self.companies: company.delete()
         for user in self.users: user.delete()
         for city in self.cities: city.delete()
+        for item_price in self.item_prices: item_price.delete()
 
         just_db.delete(self.__tablename__, session_id=self.session_id)
         session_manager.remove_session(self.session_id)
@@ -447,6 +513,7 @@ class Session(BaseClass):
             "companies": [company.to_dict() for company in self.companies],
             "users": [user.to_dict() for user in self.users],
             "cities": [city.to_dict() for city in self.cities],
+            "item_prices": [item_price.to_dict() for item_price in self.item_prices],
             "cells": self.cells,
             "map_size": self.map_size,
             "map_pattern": self.map_pattern,
