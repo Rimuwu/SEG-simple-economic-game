@@ -20,9 +20,10 @@ async def handle_get_cities(client_id: str, message: dict):
 
     # Получаем список городов из базы данных
     cities = just_db.find('cities',
+                          to_class=Citie,
                          **{k: v for k, v in conditions.items() if v is not None})
 
-    return cities
+    return [city.to_dict() for city in cities]
 
 @message_handler(
     "get-city", 

@@ -20,9 +20,10 @@ async def handle_get_sessions(client_id: str, message: dict):
 
     # Получаем список сессий из базы данных
     sessions = just_db.find('sessions',
+                            to_class=Session,
                          **{k: v for k, v in conditions.items() if v is not None})
 
-    return sessions
+    return [s.to_dict() for s in sessions]
 
 @message_handler(
     "get-session", 
@@ -42,9 +43,10 @@ async def handle_get_session(client_id: str, message: dict):
 
     # Получаем сессию из базы данных
     session = just_db.find_one('sessions',
+                               to_class=Session,
                          **{k: v for k, v in conditions.items() if v is not None})
 
-    return session
+    return session.to_dict()
 
 @message_handler(
     "create-session", 

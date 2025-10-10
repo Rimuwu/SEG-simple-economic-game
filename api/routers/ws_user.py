@@ -23,9 +23,10 @@ async def handle_get_users(client_id: str, message: dict):
 
     # Получаем список пользователей из базы данных
     users = just_db.find('users',
+                         to_class=User,
                          **{k: v for k, v in conditions.items() if v is not None})
 
-    return users
+    return [user.to_dict() for user in users]
 
 @message_handler(
     "get-user", 
@@ -49,9 +50,10 @@ async def handle_get_user(client_id: str, message: dict):
 
     # Получаем пользователя из базы данных
     user = just_db.find_one('users',
+                            to_class=User,
                          **{k: v for k, v in conditions.items() if v is not None})
 
-    return user
+    return user.to_dict()
 
 @message_handler(
     "create-user", 

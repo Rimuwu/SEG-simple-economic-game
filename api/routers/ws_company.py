@@ -24,10 +24,10 @@ async def handle_get_companies(client_id: str, message: dict):
     }
 
     # Получаем список компаний из базы данных
-    companies = just_db.find('companies',
+    companies = just_db.find('companies', to_class=Company,
                          **{k: v for k, v in conditions.items() if v is not None})
 
-    return companies
+    return [company.to_dict() for company in companies]
 
 @message_handler(
     "get-company", 
