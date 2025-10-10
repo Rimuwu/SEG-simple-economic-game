@@ -497,20 +497,24 @@ class Company(BaseClass):
 
         for index, credit in enumerate(self.credits):
 
-            if credit["steps_now"] <= credit["steps_total"]:
+            if credit["steps_now"] < credit["steps_total"]:
                 steps_left = max(1, credit["steps_total"] - credit["steps_now"])
                 credit["need_pay"] += (credit["total_to_pay"] - credit['need_pay'] - credit ['paid']) // steps_left
+                credit["steps_now"] += 1
+
+            elif credit["steps_now"] == credit["steps_total"]:
+                # Последний день - начисляем всю оставшуюся сумму
+                credit["need_pay"] += credit["total_to_pay"] - credit['paid']
+                credit["steps_now"] += 1
 
             elif credit["steps_now"] > credit["steps_total"]:
-                credit["need_pay"] += credit["total_to_pay"] - credit['paid']
+                # Просрочка - не увеличиваем steps_now больше, но снижаем репутацию
                 self.remove_reputation(REPUTATION.credit.lost)
 
             if credit["steps_now"] - credit["steps_total"] > REPUTATION.credit.max_overdue:
                 self.remove_reputation(self.reputation)
                 self.remove_credit(index)
                 self.to_prison()
-
-            credit["steps_now"] += 1
 
         self.save_to_base()
         self.reupdate()
@@ -792,15 +796,22 @@ class Company(BaseClass):
     def deposit_income_step(self):
         """ Вызывается при каждом шаге игры для компании.
             Начисляет доход по вкладам на баланс вклада (не на счёт компании).
+            Автоматически снимает депозиты по окончании срока.
         """
 
-        for deposit in self.deposits:
+        for index, deposit in enumerate(self.deposits):
             if deposit["steps_now"] < deposit["steps_total"]:
                 # Начисляем проценты на баланс вклада
                 deposit["current_balance"] += deposit["income_per_turn"]
                 deposit["total_earned"] += deposit["income_per_turn"]
 
             deposit["steps_now"] += 1
+
+            # Если срок депозита истек, то снимаем
+            if deposit["steps_now"] >= deposit["steps_total"]:
+
+                if self.in_prison is False:
+                    self.withdraw_deposit(index)
 
         self.save_to_base()
         self.reupdate()
