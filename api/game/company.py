@@ -193,12 +193,16 @@ class Company(BaseClass):
         base_size = imps['warehouse']['capacity']
         return base_size
 
-    def add_resource(self, resource: str, amount: int):
+    def get_warehouse_free_size(self) -> int:
+        return self.get_max_warehouse_size() - self.get_resources_amount()
+
+    def add_resource(self, resource: str, amount: int, 
+                     ignore_space: bool = False):
         if RESOURCES.get_resource(resource) is None:
             raise ValueError(f"Resource '{resource}' does not exist.")
         if amount <= 0:
             raise ValueError("Amount must be a positive integer.")
-        if self.get_resources_amount() + amount > self.get_max_warehouse_size():
+        if self.get_resources_amount() + amount > self.get_max_warehouse_size() and not ignore_space:
             raise ValueError("Not enough space in the warehouse.")
 
         if resource in self.warehouses:
@@ -547,6 +551,9 @@ class Company(BaseClass):
             raise ValueError("Not enough balance to pay credit.")
 
         credit = self.credits[credit_index]
+
+        if amount < credit["need_pay"]:
+            raise ValueError("The payment amount must be at least the required for this turn.")
 
         # Досрочное закрытие кредита - можно заплатить больше чем need_pay
         remaining_debt = credit["total_to_pay"] - credit["paid"]
@@ -984,7 +991,9 @@ class Company(BaseClass):
                 try:
                     self.add_resource(resource_id, raw_col)
                 except Exception as e: 
-                    print(f'stage add comp res. of {self.id} error: {e}')
+                    max_col = self.get_warehouse_free_size()
+                    if max_col > 0:
+                        self.add_resource(resource_id, max_col)
 
         factories = self.get_factories()
         for factory in factories:
@@ -1043,6 +1052,7 @@ class Company(BaseClass):
             "improvements_data": self.get_improvements(),
             "warehouses": self.warehouses,
             "warehouse_capacity": self.get_max_warehouse_size(),
+            "warehouse_free_size": self.get_warehouse_free_size(),
             "resources_amount": self.get_resources_amount(),
             "raw_per_turn": self.raw_in_step(),
             

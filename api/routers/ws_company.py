@@ -586,6 +586,7 @@ async def handle_notforgame_update_company_balance(
         "company_id: int",
         "item_id: str",
         "quantity_change: int",
+        "ignore_space: Optional[bool]",
         "password: str"
     ],
     messages=[]
@@ -598,6 +599,7 @@ async def handle_notforgame_update_company_items(
     company_id = message.get("company_id", 0)
     item_id = message.get("item_id", "")
     quantity_change = message.get("quantity_change", 0)
+    ignore_space = message.get("ignore_space", False)
 
     for i in [company_id, password, item_id, quantity_change]:
         if i is None: 
@@ -611,7 +613,7 @@ async def handle_notforgame_update_company_items(
         if not company: raise ValueError("Company not found.")
 
         if quantity_change > 0:
-            company.add_resource(item_id, quantity_change)
+            company.add_resource(item_id, quantity_change, ignore_space)
         else:
             company.remove_resource(item_id, 
                                     abs(quantity_change))
