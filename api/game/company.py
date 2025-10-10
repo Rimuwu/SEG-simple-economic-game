@@ -656,10 +656,22 @@ class Company(BaseClass):
     def business_tax(self):
         """ Определяет налоговую ставку в зависимости от типа бизнеса.
         """
+        
+        session = session_manager.get_session(self.session_id)
+        if not session:
+            raise ValueError("Session not found.")
+
+        big_mod = session.get_event_effects().get(
+            'tax_rate_large', CAPITAL.bank.tax.big_on
+        )
+
+        small_mod = session.get_event_effects().get(
+            'tax_rate_small', CAPITAL.bank.tax.small_business
+        )
 
         if self.business_type == "big":
-            return CAPITAL.bank.tax.big_on
-        return CAPITAL.bank.tax.small_business
+            return big_mod
+        return small_mod
 
     def taxate(self):
         """ Начисляет налоги в зависимости от типа бизнеса. Вызывается каждый ход.
@@ -982,6 +994,10 @@ class Company(BaseClass):
 
         self.last_turn_income = self.this_turn_income
         self.this_turn_income = 0
+        
+        session = session_manager.get_session(self.session_id)
+        if not session:
+            raise ValueError("Session not found.")
 
         if step != 1:
             if self.last_turn_income >= CAPITAL.bank.tax.big_on:
@@ -995,8 +1011,17 @@ class Company(BaseClass):
 
         cell_info = self.get_my_cell_info()
         if cell_info:
-            resource_id = cell_info.resource_id 
-            raw_col = self.raw_in_step()
+            resource_id = cell_info.resource_id
+
+            mod = session.get_event_effects().get(
+                'resource_extraction_speed', 1.0
+            )
+
+            cell_type = self.get_cell_type()
+            if session.get_event().get('cell_type') == cell_type:
+                mod *= session.get_event().get('income_multiplier', 1.0)
+
+            raw_col = int(self.raw_in_step() * mod)
 
             if resource_id and raw_col > 0:
                 try:
