@@ -218,7 +218,7 @@ export class GameState {
    */
   stringUsernamesByCompanyIndex(index, sep=" ", empty=" ") {
     const company = this.getCompanyByIndex(index);
-    if (!company) return empty;
+    if (!company || !company.users || company.users.length === 0) return empty;
     return company.users.map(u => u.username).join(sep);
   }
   

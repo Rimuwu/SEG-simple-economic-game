@@ -47,15 +47,25 @@ function stateChange() {
 }
 
 /**
- * Computed function to check if an item should be visible
- * @param {number} index - Company index (0-based)
- * @returns {boolean} - True if item has content, false if empty
+ * Computed array to track visibility of each item reactively
+ * @returns {Array<boolean>} - Array of visibility states for each company
  */
-const isItemVisible = (index) => {
-  const companyName = wsManager?.gameState?.getCompanyNameByIndex(index) || ''
-  const usernames = wsManager?.gameState?.stringUsernamesByCompanyIndex(index) || ''
-  return companyName.trim() !== '' || usernames.trim() !== ''
-}
+const itemVisibility = computed(() => {
+  // If wsManager or gameState is not ready, return all false
+  if (!wsManager || !wsManager.gameState) return Array(10).fill(false);
+  
+  // Access the reactive state to ensure reactivity
+  const companies = wsManager.gameState.state.companies;
+  const users = wsManager.gameState.state.users;
+  
+  return Array.from({ length: 10 }, (_, index) => {
+    const companyName = wsManager.gameState.getCompanyNameByIndex(index) || '';
+    const usernames = wsManager.gameState.stringUsernamesByCompanyIndex(index) || '';
+    const hasContent = companyName.trim() !== '' || usernames.trim() !== '';
+    // console.log(`Item ${index}: company="${companyName}", users="${usernames}", visible=${hasContent}`);
+    return hasContent;
+  });
+});
 
 /**
  * Lifecycle hook: runs on component mount.
@@ -107,9 +117,10 @@ onUnmounted(() => {
     </div>
     <div class="right">
       <div class="grid">
-        <div v-for="n in 10" :key="n" class="item" v-show="isItemVisible(n - 1)">
+        <div v-for="n in 10" :key="n" class="item" v-show="itemVisibility[n - 1]" :data-visible="itemVisibility[n - 1]">
           <p class="title">{{ wsManager.gameState.getCompanyNameByIndex(n - 1) }}</p>  
           <p class="users">{{ wsManager.gameState.stringUsernamesByCompanyIndex(n - 1) }}</p>
+          <!-- <p style="font-size: 10px; color: red;">Debug: visible={{ itemVisibility[n - 1] }}</p> -->
         </div>
       </div>
     </div>
