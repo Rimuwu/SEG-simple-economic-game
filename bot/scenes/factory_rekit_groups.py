@@ -3,7 +3,7 @@ from aiogram.types import Message, CallbackQuery
 from modules.ws_client import get_factories
 from oms.utils import callback_generator
 from global_modules.logs import Logger
-from modules.resources import RESOURCES, get_resource_name, get_resource_emoji
+from modules.resources import get_resource, get_resource_name, get_resource_emoji
 
 bot_logger = Logger.get_logger("bot")
 
@@ -25,13 +25,12 @@ class FactoryRekitGroups(Page):
         
         try:
             # Получаем все заводы
-            factories_response = await get_factories(company_id=company_id)
-            bot_logger.info(f"get_factories response: {factories_response}")
+            factories = await get_factories(company_id=company_id)
+            bot_logger.info(f"get_factories response: {factories}")
             
-            if not factories_response or "factories" not in factories_response:
+            # get_factories возвращает список напрямую
+            if not factories or not isinstance(factories, list):
                 return "❌ Не удалось загрузить список заводов"
-            
-            factories = factories_response["factories"]
             
             # Группируем заводы по ресурсам и считаем простаивающие
             idle_count = 0
@@ -77,11 +76,10 @@ class FactoryRekitGroups(Page):
         
         if company_id:
             # Получаем свежие данные о заводах
-            factories_response = await get_factories(company_id=company_id)
+            factories = await get_factories(company_id=company_id)
             
-            if factories_response and isinstance(factories_response, dict) and "factories" in factories_response:
-                factories = factories_response["factories"]
-                
+            # get_factories возвращает список напрямую
+            if factories and isinstance(factories, list):
                 # Группируем заводы
                 idle_count = 0
                 resource_groups = {}
@@ -109,8 +107,12 @@ class FactoryRekitGroups(Page):
                 
                 # Кнопки для групп заводов по ресурсам
                 for resource_key, count in resource_groups.items():
+                    resource = get_resource(resource_key)
+                    resource_name = resource.label if resource else resource_key
+                    resource_emoji = resource.emoji if resource else '📦'
+                    
                     buttons.append({
-                        'text': f'{get_resource_emoji(resource_key)} {RESOURCES[resource_key]["name"]} ({count})',
+                        'text': f'{resource_emoji} {resource_name} ({count})',
                         'callback_data': callback_generator(
                             self.scene.__scene_name__,
                             'select_group',

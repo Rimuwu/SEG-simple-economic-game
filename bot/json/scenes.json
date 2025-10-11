@@ -66,7 +66,7 @@
                 "content": "Меню управления компанией",
                 "to_pages": {
                     "bank-menu": "🏦 Банк",
-                    "exchange-menu": "📈 Биржа",
+                    "exchange-page": "📈 Биржа",
                     "contract-menu": "📋 Контракты",
                     "factory-menu": "🏭 Управление заводами",
                     "upgrade-cell-menu": "🔧 Улучшение ячейки",
@@ -133,6 +133,10 @@
                 "title": "",
                 "content": ""
             },
+            "exchange-page": {
+                "title": "",
+                "content": ""
+            },
             "factory-menu": {
                 "title": "",
                 "content": "",
@@ -153,6 +157,10 @@
                 "content": ""
             },
             "factory-rekit-produce": {
+                "title": "",
+                "content": ""
+            },
+            "factory-start-groups": {
                 "title": "",
                 "content": ""
             },

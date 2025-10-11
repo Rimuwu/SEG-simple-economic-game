@@ -25,25 +25,33 @@ class FactoryMenu(Page):
         
         try:
             # Получаем все заводы
-            factories_response = await get_factories(company_id=company_id)
-            bot_logger.info(f"get_factories response: {factories_response}")
+            factories = await get_factories(company_id=company_id)
+            bot_logger.info(f"get_factories response: {factories}")
             
-            if not factories_response or "factories" not in factories_response:
+            # get_factories возвращает список напрямую
+            if not factories or not isinstance(factories, list):
                 return "❌ Не удалось загрузить список заводов"
             
-            factories = factories_response["factories"]
             total = len(factories)
             
             # Классификация заводов
             idle_factories = []  # Простаивающие (complectation is None)
             auto_factories = {}  # Автоматические (is_auto = True) по ресурсам
-            manual_factories = {}  # Разовые (is_auto = False, complectation not None) по ресурсам
+            manual_factories = {}  # Не автоматические (is_auto = False, complectation not None) по ресурсам
+            recomplecting_factories = {}  # Заводы в процессе перекомплектации (complectation_stages > 0)
             
             for factory in factories:
                 complectation = factory.get('complectation')
                 is_auto = factory.get('is_auto', False)
+                complectation_stages = factory.get('complectation_stages', 0)
                 
-                if complectation is None:
+                # Сначала проверяем, не в процессе ли перекомплектации
+                if complectation_stages > 0:
+                    # Завод перекомплектуется
+                    if complectation not in recomplecting_factories:
+                        recomplecting_factories[complectation] = []
+                    recomplecting_factories[complectation].append(factory)
+                elif complectation is None:
                     idle_factories.append(factory)
                 elif is_auto:
                     # Автоматический завод
@@ -51,7 +59,7 @@ class FactoryMenu(Page):
                         auto_factories[complectation] = []
                     auto_factories[complectation].append(factory)
                 else:
-                    # Разовый завод
+                    # Не автоматический завод
                     if complectation not in manual_factories:
                         manual_factories[complectation] = []
                     manual_factories[complectation].append(factory)
@@ -59,6 +67,16 @@ class FactoryMenu(Page):
             # Формируем текст
             content = "🏭 **Меню управления заводами**\n\n"
             content += f"📊 **Всего заводов:** {total}\n\n"
+            
+            # Заводы в процессе перекомплектации
+            if recomplecting_factories:
+                content += "⏳ **Перекомплектуются:**\n"
+                for resource_key, factories_list in recomplecting_factories.items():
+                    resource_display = self.get_resource_name(resource_key)
+                    # Показываем максимальное количество оставшихся ходов
+                    max_stages = max(f.get('complectation_stages', 0) for f in factories_list)
+                    content += f"  {resource_display}: **{len(factories_list)}** шт. (осталось {max_stages} ход(-ов))\n"
+                content += "\n"
             
             # Автоматические заводы
             if auto_factories:
@@ -68,9 +86,9 @@ class FactoryMenu(Page):
                     content += f"  {resource_display}: **{len(factories_list)}** шт.\n"
                 content += "\n"
             
-            # Разовые заводы
+            # Не автоматические заводы
             if manual_factories:
-                content += "⚡ **Разовые заводы** (производят один раз):\n"
+                content += "⚡ **Не автоматические заводы** (требуют запуска):\n"
                 for resource_key, factories_list in manual_factories.items():
                     resource_display = self.get_resource_name(resource_key)
                     content += f"  {resource_display}: **{len(factories_list)}** шт.\n"
@@ -83,7 +101,7 @@ class FactoryMenu(Page):
                 content += "⚪️ **Простаивают:** 0 шт.\n\n"
             
             if not auto_factories and not manual_factories and not idle_factories:
-                content += "У вас пока нет заводов. Купите первый завод!"
+                content += "У вас пока нет активных заводов."
             
             return content
             
@@ -94,6 +112,13 @@ class FactoryMenu(Page):
     async def buttons_worker(self):
         """Кнопки управления заводами"""
         buttons = [
+            {
+                'text': '▶️ Запустить заводы',
+                'callback_data': callback_generator(
+                    self.scene.__scene_name__,
+                    'start_factories'
+                )
+            },
             {
                 'text': '🛒 Купить заводы',
                 'callback_data': callback_generator(
@@ -112,6 +137,12 @@ class FactoryMenu(Page):
         
         self.row_width = 2
         return buttons
+    
+    @Page.on_callback('start_factories')
+    async def show_start_menu(self, callback: CallbackQuery, args: list):
+        """Переход на страницу запуска заводов"""
+        await self.scene.update_page('factory-start-groups')
+        await callback.answer()
     
     @Page.on_callback('buy_factories')
     async def show_buy_menu(self, callback: CallbackQuery, args: list):
