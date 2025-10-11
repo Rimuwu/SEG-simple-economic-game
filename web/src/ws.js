@@ -342,6 +342,52 @@ export class WebSocketManager {
     return request_id;
   }
 
+  get_contracts(callback = null) {
+    if (!this.socket || this.socket.readyState !== WebSocket.OPEN) {
+      const error = "WebSocket is not connected";
+      this.gameState.setError(error);
+      if (callback) callback({ success: false, error });
+      return null;
+    }
+    const request_id = `get_contracts_${Date.now()}_${Math.random()
+      .toString(36)
+      .substr(2, 9)}`;
+    if (callback && typeof callback === "function") {
+      this.pendingCallbacks.set(request_id, callback);
+    }
+    this.socket.send(
+      JSON.stringify({
+        type: "get-contracts",
+        session_id: this.gameState.state.session.id || undefined,
+        request_id: request_id,
+      })
+    );
+    return request_id;
+  }
+
+  get_contract(contractId, callback = null) {
+    if (!this.socket || this.socket.readyState !== WebSocket.OPEN) {
+      const error = "WebSocket is not connected";
+      this.gameState.setError(error);
+      if (callback) callback({ success: false, error });
+      return null;
+    }
+    const request_id = `get_contract_${Date.now()}_${Math.random()
+      .toString(36)
+      .substr(2, 9)}`;
+    if (callback && typeof callback === "function") {
+      this.pendingCallbacks.set(request_id, callback);
+    }
+    this.socket.send(
+      JSON.stringify({
+        type: "get-contract",
+        id: contractId,
+        request_id: request_id,
+      })
+    );
+    return request_id;
+  }
+
   get_time_to_next_stage(callback = null) {
     if (!this.socket || this.socket.readyState !== WebSocket.OPEN) {
       const error = "WebSocket is not connected";
@@ -395,7 +441,10 @@ export class WebSocketManager {
     // 4. Cities
     this.get_cities();
     
-    // 5. Exchange data
+    // 5. Contracts
+    this.get_contracts();
+    
+    // 6. Exchange data
     this.get_exchanges();
     
     // Note: Factories are fetched per company when needed
@@ -446,6 +495,10 @@ export class WebSocketManager {
         this.handleCityResponse(message);
       } else if (message.request_id.startsWith("sell_to_city_")) {
         this.handleSellToCityResponse(message);
+      } else if (message.request_id.startsWith("get_contracts_")) {
+        this.handleContractsResponse(message);
+      } else if (message.request_id.startsWith("get_contract_")) {
+        this.handleContractResponse(message);
       } else if (message.request_id.startsWith("get_time_")) {
         this.handleTimeResponse(message);
       } else if (message.request_id.startsWith("get_sessions_")) {
@@ -705,6 +758,55 @@ export class WebSocketManager {
     if (callback) this.pendingCallbacks.delete(requestId);
   }
 
+  handleContractsResponse(message) {
+    const requestId = message.request_id;
+    const callback = this.pendingCallbacks.get(requestId);
+    
+    if (message.data) {
+      let contractsData = [];
+      
+      if (Array.isArray(message.data)) {
+        contractsData = message.data;
+      } else if (Array.isArray(message.data.contracts)) {
+        contractsData = message.data.contracts;
+      }
+      
+      // Update game state
+      this.gameState.updateContracts(contractsData);
+      
+      if (callback) callback({ success: true, data: contractsData });
+    } else {
+      if (callback) callback({ success: false, error: "No contracts data" });
+    }
+    
+    if (callback) this.pendingCallbacks.delete(requestId);
+  }
+
+  handleContractResponse(message) {
+    const requestId = message.request_id;
+    const callback = this.pendingCallbacks.get(requestId);
+    
+    if (message.data) {
+      // Update this specific contract in the contracts array
+      const contractData = message.data;
+      const existingIndex = this.gameState.state.contracts.findIndex(
+        c => c.id === contractData.id
+      );
+      
+      if (existingIndex >= 0) {
+        this.gameState.state.contracts[existingIndex] = contractData;
+      } else {
+        this.gameState.state.contracts.push(contractData);
+      }
+      
+      if (callback) callback({ success: true, data: contractData });
+    } else {
+      if (callback) callback({ success: false, error: message.error || "No contract data" });
+    }
+    
+    if (callback) this.pendingCallbacks.delete(requestId);
+  }
+
   handleTimeResponse(message) {
     const requestId = message.request_id;
     const callback = this.pendingCallbacks.get(requestId);
@@ -887,6 +989,16 @@ export class WebSocketManager {
       case 'api-city-trade':
         // Refresh cities and companies after trade
         this.get_cities();
+        this.get_companies();
+        break;
+        
+      case 'api-contract_created':
+      case 'api-contract_accepted':
+      case 'api-contract_declined':
+      case 'api-contract_cancelled':
+      case 'api-contract_deleted':
+        // Refresh contracts and companies
+        this.get_contracts();
         this.get_companies();
         break;
     }

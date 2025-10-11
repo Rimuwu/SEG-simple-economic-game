@@ -34,6 +34,9 @@ export class GameState {
       // Cities data
       cities: [],
 
+      // Contracts data
+      contracts: [],
+
       // Map data
       map: {
         cells: [],
@@ -371,6 +374,98 @@ export class GameState {
     return demand !== null && demand.amount > 0;
   }
 
+  // ==================== CONTRACT METHODS ====================
+
+  /**
+   * Update contracts list
+   * @param {Array} contracts - Array of contract objects
+   */
+  updateContracts(contracts) {
+    if (!Array.isArray(contracts)) {
+      console.warn('[GameState] Invalid contracts data:', contracts);
+      return;
+    }
+    this.state.contracts = contracts;
+    console.log('[GameState] Contracts updated:', contracts.length);
+  }
+
+  /**
+   * Get contract by ID
+   * @param {number} contractId
+   * @returns {Object|null}
+   */
+  getContractById(contractId) {
+    return this.state.contracts.find(c => c.id === contractId) || null;
+  }
+
+  /**
+   * Get contracts by session
+   * @param {string} sessionId
+   * @returns {Array}
+   */
+  getContractsBySession(sessionId) {
+    return this.state.contracts.filter(c => c.session_id === sessionId);
+  }
+
+  /**
+   * Get contracts by supplier company
+   * @param {number} companyId
+   * @returns {Array}
+   */
+  getContractsBySupplier(companyId) {
+    return this.state.contracts.filter(c => c.supplier_company_id === companyId);
+  }
+
+  /**
+   * Get contracts by customer company
+   * @param {number} companyId
+   * @returns {Array}
+   */
+  getContractsByCustomer(companyId) {
+    return this.state.contracts.filter(c => c.customer_company_id === companyId);
+  }
+
+  /**
+   * Get active contracts (accepted contracts)
+   * @param {string} sessionId
+   * @returns {Array}
+   */
+  getActiveContracts(sessionId = null) {
+    let contracts = this.state.contracts.filter(c => c.accepted === true);
+    if (sessionId) {
+      contracts = contracts.filter(c => c.session_id === sessionId);
+    }
+    return contracts;
+  }
+
+  /**
+   * Get pending contracts (not yet accepted)
+   * @param {string} sessionId
+   * @returns {Array}
+   */
+  getPendingContracts(sessionId = null) {
+    let contracts = this.state.contracts.filter(c => c.accepted === false);
+    if (sessionId) {
+      contracts = contracts.filter(c => c.session_id === sessionId);
+    }
+    return contracts;
+  }
+
+  /**
+   * Get free contracts (supplier_company_id = 0)
+   * @param {string} sessionId
+   * @returns {Array}
+   */
+  getFreeContracts(sessionId = null) {
+    let contracts = this.state.contracts.filter(c => 
+      c.supplier_company_id === 0 && c.accepted === false
+    );
+    if (sessionId) {
+      contracts = contracts.filter(c => c.session_id === sessionId);
+    }
+    return contracts;
+  }
+
   // ==================== MAP METHODS ====================
 
   /**
@@ -555,6 +650,7 @@ export class GameState {
     this.state.factories = [];
     this.state.exchanges = [];
     this.state.cities = [];
+    this.state.contracts = [];
     this.state.map = {
       cells: [],
       size: { rows: 7, cols: 7 },

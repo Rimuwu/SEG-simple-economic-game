@@ -94,6 +94,32 @@ const formatExchangeText = (exchange) => {
   return `${companyName} выставила на продажу ${resourceName}`
 }
 
+// Computed property for contracts (latest 2)
+const latestContracts = computed(() => {
+  const contracts = wsManager?.gameState?.state?.contracts || []
+  const sessionContracts = contracts.filter(c => 
+    c.session_id === wsManager?.gameState?.state?.session?.id
+  )
+  // Show pending contracts first (not yet accepted)
+  const pendingContracts = sessionContracts.filter(c => !c.accepted)
+  return pendingContracts.slice(0, 2)
+})
+
+// Helper function to format contract text (matching the existing format)
+const formatContractText = (contract) => {
+  const customerName = getCompanyName(contract.customer_company_id)
+  const resourceName = getResourceName(contract.resource)
+  
+  if (contract.supplier_company_id === 0) {
+    // Free contract
+    return `${customerName} создала свободный контракт на ${resourceName} на ${contract.duration_turns} ходов`
+  } else {
+    // Direct contract
+    const supplierName = getCompanyName(contract.supplier_company_id)
+    return `${customerName} создала контракт с ${supplierName} на ${resourceName} на ${contract.duration_turns} ходов`
+  }
+}
+
 onMounted(() => {
   // Component mounted
 })
@@ -197,8 +223,14 @@ onMounted(() => {
         <div class="contracts grid-item">
           <p class="title">КОНТРАКТЫ</p>
           <div class="content">
-            <span>Компания А создала свободный контракт на Х продукта Б на С ходов</span>
-            <span>Компания А создала свободный контракт на Х продукта Б на С ходов</span>
+            <template v-if="latestContracts.length > 0">
+              <span v-for="contract in latestContracts" :key="contract.id">
+                {{ formatContractText(contract) }}
+              </span>
+            </template>
+            <template v-else>
+              <span>На данный момент контракты отсутсвуют</span>
+            </template>
           </div>
         </div>
 
