@@ -176,7 +176,7 @@ class Company(BaseClass):
 
         for user in self.users: user.leave_from_company()
         for factory in self.get_factories(): factory.delete()
-        for exchange in self.exchages: exchange.delete()
+        for exchange in self.exchanges: exchange.delete()
         for contract in self.get_contracts(): contract.delete()
 
         asyncio.create_task(websocket_manager.broadcast({
@@ -1059,7 +1059,7 @@ class Company(BaseClass):
             contract.on_new_game_step()
 
     @property
-    def exchages(self) -> list['Exchange']:
+    def exchanges(self) -> list['Exchange']:
         from game.exchange import Exchange
 
         exchanges = just_db.find(
@@ -1124,5 +1124,11 @@ class Company(BaseClass):
             # Дополнительные возможности
             "can_user_enter": self.can_user_enter(),
 
-            "exchages": self.exchages
+            "exchanges": [
+                change.to_dict() for change in self.exchanges
+            ],
+
+            "contracts": [
+                contract.to_dict() for contract in self.get_contracts()
+            ],
         }
