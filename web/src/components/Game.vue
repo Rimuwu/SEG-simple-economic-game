@@ -16,6 +16,55 @@ const turnInfo = computed(() => {
   return `${step}/${maxSteps}`
 })
 
+// Computed properties for cities
+const city1 = computed(() => {
+  return wsManager?.gameState?.getCityById(1) || null
+})
+
+const city2 = computed(() => {
+  return wsManager?.gameState?.getCityById(2) || null
+})
+
+const city3 = computed(() => {
+  return wsManager?.gameState?.getCityById(3) || null
+})
+
+const city4 = computed(() => {
+  return wsManager?.gameState?.getCityById(4) || null
+})
+
+// Helper function to format city demands
+const formatCityDemands = (city) => {
+  if (!city || !city.demands) return []
+  
+  // Filter demands with amount > 0 and get only 2
+  return Object.entries(city.demands)
+    .filter(([_, demand]) => demand.amount > 0)
+    .slice(0, 2)
+    .map(([resourceId, demand]) => ({
+      resourceId,
+      amount: demand.amount,
+      price: demand.price
+    }))
+}
+
+// Helper function to get resource display name (you can customize this)
+const getResourceName = (resourceId) => {
+  const names = {
+    'wood_planks': 'Доски',
+    'fabric': 'Ткань',
+    'metal_parts': 'Металл. детали',
+    'oil_products': 'Нефтепродукты',
+    'generator': 'Генератор',
+    'medicine': 'Медикаменты',
+    'machinery': 'Техника',
+    'furniture': 'Мебель',
+    'clothing': 'Одежда',
+    'electronics': 'Электроника'
+  }
+  return names[resourceId] || resourceId
+}
+
 onMounted(() => {
   // Component mounted
 })
@@ -42,25 +91,55 @@ onMounted(() => {
         <div class="cities grid-item">
           <p class="title">ГОРОДА</p>
           <div class="content">
-          <span>
-Город А (ЛВ)<br/>
-&nbsp;&nbsp;• Генератор<br/>
-&nbsp;&nbsp;• Медикаменты<br/>
-<br/>
-Город Б (НЛ)<br/>
-&nbsp;&nbsp;• Генератор<br/>
-&nbsp;&nbsp;• Медикаменты<br/>
-          </span>
+            <span>
+              <!-- City 1 -->
+              <template v-if="city1">
+                {{ city1.name }}<br/>
+                <template v-for="demand in formatCityDemands(city1)" :key="demand.resourceId">
+                  &nbsp;&nbsp;• {{ getResourceName(demand.resourceId) }}<br/>
+                </template>
+              </template>
+              <template v-else>
+                Город 1<br/>
+              </template>
+              <br/>
+              
+              <!-- City 2 -->
+              <template v-if="city2">
+                {{ city2.name }}<br/>
+                <template v-for="demand in formatCityDemands(city2)" :key="demand.resourceId">
+                  &nbsp;&nbsp;• {{ getResourceName(demand.resourceId) }}<br/>
+                </template>
+              </template>
+              <template v-else>
+                Город 2<br/>
+              </template>
+            </span>
 
-          <span>
-Город В (ПВ)<br/>
-&nbsp;&nbsp;• Генератор<br/>
-&nbsp;&nbsp;• Медикаменты<br/>
-<br/>
-Город Г (НП)<br/>
-&nbsp;&nbsp;• Генератор<br/>
-&nbsp;&nbsp;• Медикаменты<br/>
-          </span>
+            <span>
+              <!-- City 3 -->
+              <template v-if="city3">
+                {{ city3.name }}<br/>
+                <template v-for="demand in formatCityDemands(city3)" :key="demand.resourceId">
+                  &nbsp;&nbsp;• {{ getResourceName(demand.resourceId) }}<br/>
+                </template>
+              </template>
+              <template v-else>
+                Город 3<br/>
+              </template>
+              <br/>
+              
+              <!-- City 4 -->
+              <template v-if="city4">
+                {{ city4.name }}<br/>
+                <template v-for="demand in formatCityDemands(city4)" :key="demand.resourceId">
+                  &nbsp;&nbsp;• {{ getResourceName(demand.resourceId) }}<br/>
+                </template>
+              </template>
+              <template v-else>
+                Город 4<br/>
+              </template>
+            </span>
           </div>
         </div>
 
@@ -151,7 +230,7 @@ onMounted(() => {
 }
 
 .content {
-  font-size: 2.25rem;
+  font-size: 2rem;
   color: white;
   font-weight: 400;
 }
