@@ -56,7 +56,7 @@ async def handle_get_exchange(client_id: str, message: dict):
     if not offer:
         return {"error": "Exchange offer not found."}
 
-    return offer.to_dict()
+    return offer.to_dict() if offer else None
 
 @message_handler(
     "create-exchange-offer", 

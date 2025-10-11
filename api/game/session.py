@@ -585,7 +585,7 @@ class Session(BaseClass):
         """
         event_data = self.get_event()
         if event_data and event_data.get("is_active"):
-            return event_data.get("effects", {})
+            return {k: v for k, v in event_data.get("effects", {}).items() if v is not None}
         return {}
 
     def public_event_data(self) -> dict:

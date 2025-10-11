@@ -9,7 +9,7 @@
 
     "contract": {
         "completed": 10,
-        "failed": 5
+        "failed": 15
     },
 
     "tax": {

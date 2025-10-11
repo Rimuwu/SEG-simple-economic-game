@@ -248,7 +248,8 @@ async def notforgame_update_company_name(company_id: int, new_name: str):
     )
 
 # Функции для работы с фабриками
-async def get_factories(company_id: int, complectation: Optional[str] = None, 
+async def get_factories(company_id: Optional[int] = None, 
+                        complectation: Optional[str] = None, 
                        produce: Optional[bool] = None, is_auto: Optional[bool] = None):
     """Получение списка фабрик"""
     return await ws_client.send_message(

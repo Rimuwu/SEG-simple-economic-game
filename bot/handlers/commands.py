@@ -1,3 +1,4 @@
+from pprint import pprint
 from aiogram import F
 from aiogram.types import Message
 from aiogram.filters import Command
@@ -318,3 +319,17 @@ async def on_company_to_prison(message: dict):
     await go_to_page(company_id, None, "prison-page")
     
     
+@dp.message(Command("docs"), AdminFilter())
+async def docs(message: Message):
+    
+    result = await get_sessions()
+    pprint(result)
+    
+    result = await get_users()
+    pprint(result)
+    
+    result = await get_companies()
+    pprint(result)
+    
+    result = await get_factories()
+    pprint(result)

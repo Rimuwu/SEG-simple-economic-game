@@ -53,7 +53,7 @@ async def handle_get_user(client_id: str, message: dict):
                             to_class=User,
                          **{k: v for k, v in conditions.items() if v is not None})
 
-    return user.to_dict()
+    return user.to_dict() if user else None
 
 @message_handler(
     "create-user", 
