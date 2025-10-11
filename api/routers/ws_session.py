@@ -46,7 +46,7 @@ async def handle_get_session(client_id: str, message: dict):
                                to_class=Session,
                          **{k: v for k, v in conditions.items() if v is not None})
 
-    return session.to_dict()
+    return session.to_dict() if session else None
 
 @message_handler(
     "create-session", 

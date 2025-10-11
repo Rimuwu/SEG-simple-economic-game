@@ -59,7 +59,7 @@ async def handle_get_company(client_id: str, message: dict):
     company = just_db.find_one('companies', to_class=Company,
                          **{k: v for k, v in conditions.items() if v is not None})
 
-    return company.to_dict()
+    return company.to_dict() if company else None
 
 @message_handler(
     "create-company", 

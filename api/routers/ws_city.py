@@ -52,7 +52,7 @@ async def handle_get_city(client_id: str, message: dict):
     if not city:
         return {"error": "City not found"}
 
-    return city.to_dict()
+    return city.to_dict() if city else None
 
 @message_handler(
     "sell-to-city", 
@@ -87,7 +87,10 @@ async def handle_sell_to_city(client_id: str, message: dict):
         if not city:
             raise ValueError("City not found")
 
-        result = city.sell_resource(company_id, resource_id, amount)
+        result = city.sell_resource(company_id, 
+                                    resource_id, 
+                                    amount
+                )
         
         return result
 
