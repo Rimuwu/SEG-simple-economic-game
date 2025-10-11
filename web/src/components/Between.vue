@@ -1,8 +1,20 @@
 <script setup>
 import Map from './Map.vue'
-import { onMounted, ref } from 'vue'
+import { onMounted, ref, inject, computed } from 'vue'
 
 const pageRef = ref(null)
+const wsManager = inject('wsManager', null)
+
+// Computed properties for time and turn display
+const timeToNextStage = computed(() => {
+  return wsManager?.gameState?.getFormattedTimeToNextStage() || '--:--'
+})
+
+const turnInfo = computed(() => {
+  const step = wsManager?.gameState?.state?.session?.step || 0
+  const maxSteps = wsManager?.gameState?.state?.session?.max_steps || 0
+  return `${step}/${maxSteps}`
+})
 
 onMounted(() => {
   // Component mounted
@@ -20,8 +32,8 @@ onMounted(() => {
     <div class="left">
       <Map class="map" />
       <div class="footer">
-        <div>До конца этапа 02:53</div>
-        <div>4/5</div>
+        <div>До конца этапа {{ timeToNextStage }}</div>
+        <div>{{ turnInfo }}</div>
       </div>
     </div>
     <div class="right">
