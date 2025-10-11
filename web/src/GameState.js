@@ -37,6 +37,9 @@ export class GameState {
       // Contracts data
       contracts: [],
 
+      // Achievements data (computed from company data)
+      achievements: [],
+
       // Map data
       map: {
         cells: [],
@@ -466,6 +469,84 @@ export class GameState {
     return contracts;
   }
 
+  // ==================== ACHIEVEMENT METHODS ====================
+
+  /**
+   * Generate achievements based on current company data
+   * This computes achievements dynamically from companies
+   */
+  generateAchievements() {
+    const sessionId = this.state.session.id;
+    if (!sessionId) return;
+
+    const companies = this.getCompaniesBySession(sessionId);
+    if (companies.length === 0) return;
+
+    const achievements = [];
+
+    // Top earner this turn (highest balance)
+    const richest = companies.reduce((prev, current) => 
+      (current.balance > prev.balance) ? current : prev
+    );
+    if (richest.balance > 0) {
+      achievements.push({
+        company_id: richest.id,
+        company_name: richest.name,
+        type: 'richest',
+        title: 'БОГАТЕЙШАЯ КОМПАНИЯ',
+        description: `${richest.balance.toLocaleString()} монет`
+      });
+    }
+
+    // Most reputable company
+    const mostReputable = companies.reduce((prev, current) => 
+      (current.reputation > prev.reputation) ? current : prev
+    );
+    if (mostReputable.reputation > 0) {
+      achievements.push({
+        company_id: mostReputable.id,
+        company_name: mostReputable.name,
+        type: 'reputable',
+        title: 'САМАЯ УВАЖАЕМАЯ',
+        description: `Репутация: ${mostReputable.reputation}`
+      });
+    }
+
+    // Most economically powerful
+    const mostPowerful = companies.reduce((prev, current) => 
+      (current.economic_power > prev.economic_power) ? current : prev
+    );
+    if (mostPowerful.economic_power > 0) {
+      achievements.push({
+        company_id: mostPowerful.id,
+        company_name: mostPowerful.name,
+        type: 'economic',
+        title: 'ЭКОНОМИЧЕСКИЙ ЛИДЕР',
+        description: `Эконом. мощь: ${mostPowerful.economic_power}`
+      });
+    }
+
+    this.state.achievements = achievements;
+    console.log('[GameState] Achievements generated:', achievements.length);
+  }
+
+  /**
+   * Get all achievements
+   * @returns {Array}
+   */
+  getAchievements() {
+    return this.state.achievements;
+  }
+
+  /**
+   * Get achievements for a specific company
+   * @param {number} companyId
+   * @returns {Array}
+   */
+  getAchievementsByCompany(companyId) {
+    return this.state.achievements.filter(a => a.company_id === companyId);
+  }
+
   // ==================== MAP METHODS ====================
 
   /**
@@ -651,6 +732,7 @@ export class GameState {
     this.state.exchanges = [];
     this.state.cities = [];
     this.state.contracts = [];
+    this.state.achievements = [];
     this.state.map = {
       cells: [],
       size: { rows: 7, cols: 7 },

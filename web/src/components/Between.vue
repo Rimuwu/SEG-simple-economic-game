@@ -16,8 +16,42 @@ const turnInfo = computed(() => {
   return `${step}/${maxSteps}`
 })
 
+// Achievements computed property
+const achievements = computed(() => {
+  return wsManager?.gameState?.getAchievements() || []
+})
+
+// Leaders computed property
+const leaders = computed(() => {
+  const sessionId = wsManager?.gameState?.state?.session?.id
+  if (!sessionId) return { capital: null, reputation: null, economic: null }
+  
+  const companies = wsManager?.gameState?.getCompaniesBySession(sessionId) || []
+  if (companies.length === 0) return { capital: null, reputation: null, economic: null }
+  
+  // Find top companies
+  const byCapital = [...companies].sort((a, b) => (b.balance || 0) - (a.balance || 0))[0]
+  const byReputation = [...companies].sort((a, b) => (b.reputation || 0) - (a.reputation || 0))[0]
+  const byEconomic = [...companies].sort((a, b) => (b.economic_power || 0) - (a.economic_power || 0))[0]
+  
+  return {
+    capital: byCapital,
+    reputation: byReputation,
+    economic: byEconomic
+  }
+})
+
+// Helper to format numbers with thousand separators
+const formatNumber = (num) => {
+  return num?.toLocaleString('ru-RU') || '0'
+}
+
 onMounted(() => {
-  // Component mounted
+  // Generate achievements when component mounts
+  const sessionId = wsManager?.gameState?.state?.session?.id
+  if (sessionId) {
+    wsManager?.gameState?.generateAchievements(sessionId)
+  }
 })
 </script>
 
@@ -42,17 +76,12 @@ onMounted(() => {
         <div class="achievements grid-item">
           <p class="title">ДОСТИЖЕНИЯ</p>
           <div class="content">
-            <section>
-              <p class="name">Название крутой компании с длинным названием</p>
-              <p class="desc">Заработано 100.000 монет за этап</p>
+            <section v-for="achievement in achievements" :key="achievement.name">
+              <p class="name">{{ achievement.name }}</p>
+              <p class="desc">{{ achievement.desc }}</p>
             </section>
-            <section>
-              <p class="name">Название крутой компании с длинным названием</p>
-              <p class="desc">Заработано 100.000 монет за этап</p>
-            </section>
-            <section>
-              <p class="name">Название крутой компании с длинным названием</p>
-              <p class="desc">Заработано 100.000 монет за этап</p>
+            <section v-if="achievements.length === 0">
+              <p class="desc">Выдающиеся достижения отсутсвуют</p>
             </section>
           </div>
         </div>
@@ -62,15 +91,18 @@ onMounted(() => {
           <div class="content">
             <section>
               <p class="name">ПО КАПИТАЛУ</p>
-              <p class="desc">супер крутая компания номер 1</p>
+              <p class="desc" v-if="leaders.capital">{{ leaders.capital.name }} ({{ formatNumber(leaders.capital.balance) }} ₽)</p>
+              <p class="desc" v-else>—</p>
             </section>
             <section>
               <p class="name">ПО РЕПУТАЦИИ</p>
-              <p class="desc">супер крутая компания номер 1</p>
+              <p class="desc" v-if="leaders.reputation">{{ leaders.reputation.name }} ({{ leaders.reputation.reputation }})</p>
+              <p class="desc" v-else>—</p>
             </section>
             <section>
               <p class="name">ПО ЭКОНОМИЧЕСКОМУ УРОВНЮ</p>
-              <p class="desc">супер крутая компания номер 1</p>
+              <p class="desc" v-if="leaders.economic">{{ leaders.economic.name }} ({{ leaders.economic.economic_power }})</p>
+              <p class="desc" v-else>—</p>
             </section>
           </div>
         </div>
