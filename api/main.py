@@ -86,6 +86,8 @@ async def test1():
     if session_manager.get_session('AFRIKA'):
         session = session_manager.get_session('AFRIKA')
         session.delete()
+        
+    # return
 
     session = session_manager.create_session('AFRIKA')
     
@@ -124,100 +126,27 @@ async def test1():
     customer.save_to_base()
 
     # Настройка начальных ресурсов для тестирования контракта
-    print("💰 Настраиваем начальные ресурсы...")
+    print("💰 Настраиваем начальные ресурсы.. 343434.")
     
     # Даём поставщику металл для поставки и заказчику деньги для оплаты
     supplier.add_resource("metal", 100)  # Металл для поставки
     customer.add_balance(5000)  # Деньги для оплаты контракта
     
-    print(f"Поставщик {supplier.name}: металл = {supplier.warehouses.get('metal', 0)}, баланс = {supplier.balance}")
-    print(f"Заказчик {customer.name}: баланс = {customer.balance}")
-
-    # СОЗДАНИЕ ТЕСТОВОГО КОНТРАКТА
-    print("\n📋 Создаём тестовый контракт...")
+    contract = Contract().create(
+        supplier.id, customer.id,
+        session.session_id, 'metal', 10,
+        3, 1000
+    )
+    c_id = contract.id
+    # contract.accept_contract()
     
-    try:
-        # Создаём контракт: поставщик будет поставлять 10 единиц металла за 100 монет каждый ход в течение 3 ходов
-        contract = Contract().create(
-            supplier_company_id=supplier.id,
-            customer_company_id=customer.id, 
-            session_id=session.session_id,
-            resource="metal",           # Поставляемый ресурс
-            amount_per_turn=10,        # Количество за ход
-            duration_turns=3,          # Длительность в ходах
-            payment_amount=100         # Оплата за ход
-        )
+    for i in range(4):
         
-        print(f"✅ Контракт создан! ID: {contract.id}")
-        print(f"   Поставляется: {contract.amount_per_turn} {contract.resource} за {contract.payment_amount} монет/ход")
-        print(f"   Длительность: {contract.duration_turns} ходов")
-        print(f"   Общая стоимость: {contract.payment_amount * contract.duration_turns} монет")
+        session.update_stage(SessionStages.Game, True)
+        for company in [supplier, customer]:
+            company.reupdate()
+        contract.reupdate()
         
-        # ПРИНЯТИЕ КОНТРАКТА
-        print("\n🤝 Поставщик принимает контракт...")
-        contract.accept_contract()
-        
-        supplier.reupdate()
-        customer.reupdate()
-        
-        print(f"Поставщик {supplier.name}: баланс = {supplier.balance} (+{contract.payment_amount * contract.duration_turns})")
-        print(f"Заказчик {customer.name}: баланс = {customer.balance} (-{contract.payment_amount * contract.duration_turns})")
-        
-        # ВЫПОЛНЕНИЕ КОНТРАКТА ПО ХОДАМ
-        print("\n🚚 Начинаем выполнение контракта...")
-        
-        for turn in range(1, contract.duration_turns + 1):
-            print(f"\n--- ХОД {turn} ---")
-            
-            # Увеличиваем счётчик ходов в сессии
-            session.step += 1
-            session.save_to_base()
-            
-            # Выполняем поставку
-            try:
-                contract.reupdate()  # Обновляем данные контракта
-                if turn != 2:
-                    contract.execute_turn(session.step)
-                
-                supplier.reupdate()
-                customer.reupdate()
-                
-                print(f"✅ Поставка выполнена!")
-                print(f"   Поставщик {supplier.name}: металл = {supplier.warehouses.get('metal', 0)} (-{contract.amount_per_turn})")
-                print(f"   Заказчик {customer.name}: металл = {customer.warehouses.get('metal', 0)} (+{contract.amount_per_turn})")
-                print(f"   Осталось ходов: {contract.remaining_turns}")
-                
-            except Exception as e:
-                print(f"❌ Ошибка при выполнении поставки: {e}")
-                break
-        
-        print("\n🎉 Тестирование контракта завершено!")
-        
-        # Проверяем итоговое состояние
-        supplier.reupdate()
-        customer.reupdate()
-        
-        print(f"\nИтоговое состояние:")
-        print(f"Поставщик {supplier.name}:")
-        print(f"  - Металл: {supplier.warehouses.get('metal', 0)}")
-        print(f"  - Баланс: {supplier.balance}")
-        print(f"  - Репутация: {supplier.reputation}")
-        
-        print(f"Заказчик {customer.name}:")
-        print(f"  - Металл: {customer.warehouses.get('metal', 0)}")
-        print(f"  - Баланс: {customer.balance}")
-        print(f"  - Репутация: {customer.reputation}")
-        
-        # Проверяем, удалился ли контракт после завершения
-        try:
-            contract.reupdate()
-            print(f"Контракт всё ещё существует: ID {contract.id}, осталось ходов: {contract.remaining_turns}")
-        except:
-            print("✅ Контракт успешно удалён после завершения")
-        
-    except Exception as e:
-        print(f"❌ Ошибка при создании/выполнении контракта: {e}")
-        import traceback
-        traceback.print_exc()
-
+        status = just_db.
+    
     

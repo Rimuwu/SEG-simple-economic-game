@@ -176,6 +176,7 @@ class Company(BaseClass):
         for user in self.users: user.leave_from_company()
         for factory in self.get_factories(): factory.delete()
         for exchange in self.exchages: exchange.delete()
+        for contract in self.get_contracts(): contract.delete()
 
         asyncio.create_task(websocket_manager.broadcast({
             "type": "api-company_deleted",
@@ -953,7 +954,13 @@ class Company(BaseClass):
     def get_contracts(self) -> list['Contract']:
         """ Получает все контракты компании """
         from game.contract import Contract
-        return Contract.get_company_contracts(self.id, self.session_id, active_only=False)
+
+        contracts: list[Contract] = just_db.find(
+            Contract.__tablename__, to_class=Contract,
+            supplier_company_id=self.id
+        ) # type: ignore
+
+        return contracts
 
     def get_max_contracts(self) -> int:
         """ Получает максимальное количество активных контрактов """
@@ -967,17 +974,14 @@ class Company(BaseClass):
 
     def can_create_contract(self) -> bool:
         """ Проверяет, может ли компания создать новый контракт """
-        from game.contract import Contract
-        
-        active_contracts = Contract.get_company_contracts(self.id, self.session_id, active_only=True)
-        supplier_contracts = [c for c in active_contracts if c.supplier_company_id == self.id]
-        
-        return len(supplier_contracts) < self.get_max_contracts()
+
+        return len(self.get_contracts()) < self.get_max_contracts()
 
     def on_new_game_stage(self, step: int):
         """ Вызывается при переходе на новый игровой этап.
             Обновляет доходы, списывает налоги и т.д.
         """
+        from game.contract import Contract
 
         self.last_turn_income = self.this_turn_income
         self.this_turn_income = 0
@@ -1021,6 +1025,11 @@ class Company(BaseClass):
         factories = self.get_factories()
         for factory in factories:
             factory.on_new_game_stage()
+
+        contracts = self.get_contracts()
+        for contract in contracts:
+            contract: Contract
+            contract.on_new_game_step()
 
     @property
     def exchages(self) -> list['Exchange']:

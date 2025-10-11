@@ -33,28 +33,28 @@ class Contract(BaseClass):
 
     def __init__(self, id: int = 0):
         self.id: int = id
-        
+
         self.supplier_company_id: int = 0  # Компания-поставщик
         self.customer_company_id: int = 0  # Компания-заказчик
         self.session_id: str = ""  # Сессия, в которой создан контракт
-        
+
         # Что поставляется
         self.resource: str = ""  # Тип ресурса
         self.amount_per_turn: int = 0  # Количество за ход
-        
+
         # Условия оплаты (только монеты)
-        self.payment_amount: int = 0  # Сумма денег за ход
-        
+        self.payment_amount: int = 0  # Сумма денег
+
         # Параметры контракта
         self.duration_turns: int = 0  # Длительность в ходах
         self.remaining_turns: int = 0  # Оставшиеся ходы
-        self.created_at: int = 0  # Ход создания
+        self.created_at_step: int = 0  # Ход создания
         self.accepted: bool = False  # Принял ли поставщик контракт
-        
+        self.delivered_this_turn: bool = False  # Отправлен ли продукт в текущем ходу
+
         # Статистика выполнения
         self.successful_deliveries: int = 0  # Успешные поставки
         self.failed_deliveries: int = 0  # Проваленные поставки
-        self.last_execution_step: int = -1  # Последний ход выполнения
 
     def create(self, supplier_company_id: int, customer_company_id: int, session_id: str,
                resource: str, amount_per_turn: int, duration_turns: int, payment_amount: int):
@@ -67,7 +67,7 @@ class Contract(BaseClass):
             resource: Тип ресурса для поставки
             amount_per_turn: Количество за ход
             duration_turns: Длительность в ходах
-            payment_amount: Сумма денег за ход
+            payment_amount: Сумма денег за контракт
         """
         from game.company import Company
         from game.session import session_manager
@@ -100,16 +100,20 @@ class Contract(BaseClass):
         self.supplier_company_id = supplier_company_id
         self.customer_company_id = customer_company_id
         self.session_id = session_id
+
         self.resource = resource
         self.amount_per_turn = amount_per_turn
-        self.duration_turns = duration_turns
-        self.remaining_turns = duration_turns
         self.payment_amount = payment_amount
-        self.created_at = session.step
+
+        self.duration_turns = duration_turns
+        self.remaining_turns = duration_turns + 1
+        self.created_at_step = session.step
+    
         self.accepted = False  # По умолчанию контракт не принят
+        self.delivered_this_turn = False  # Продукт не отправлен в текущем ходу
+
         self.successful_deliveries = 0
         self.failed_deliveries = 0
-        self.last_execution_step = -1
 
         self.save_to_base()
         self.reupdate()
@@ -135,9 +139,9 @@ class Contract(BaseClass):
         if not self.accepted:
             raise ValueError("Контракт не принят")
 
-        # Проверяем, не был ли уже выполнен в этом ходе
-        if self.last_execution_step == current_step:
-            raise ValueError("Контракт уже выполнён в этом ходе")
+        # Проверяем, не был ли уже отправлен в этом ходе
+        if self.delivered_this_turn:
+            raise ValueError("Продукт уже отправлен в этом ходе")
         
         supplier = Company(_id=self.supplier_company_id).reupdate()
         customer = Company(_id=self.customer_company_id).reupdate()
@@ -171,11 +175,10 @@ class Contract(BaseClass):
                     customer.add_resource(self.resource, min(free_space, self.amount_per_turn))
 
             self.successful_deliveries += 1
-            self.remaining_turns -= 1
-            self.last_execution_step = current_step
+            self.delivered_this_turn = True  # Отмечаем, что продукт отправлен
             
-            # Если контракт завершён
-            if self.remaining_turns <= 0:
+            # Если это была последняя поставка
+            if self.remaining_turns == 1:
                 # Добавляем репутацию за успешное выполнение
                 supplier.add_reputation(10)
                 # Удаляем контракт
@@ -183,6 +186,7 @@ class Contract(BaseClass):
                 return True
 
             self.save_to_base()
+            self.reupdate()
 
             asyncio.create_task(websocket_manager.broadcast({
                 "type": "api-contract_executed",
@@ -216,15 +220,13 @@ class Contract(BaseClass):
         
         if not supplier or not customer:
             raise ValueError("Одна из компаний не найдена")
-        
-        total_payment = self.payment_amount * self.duration_turns
-        
-        if customer.balance < total_payment:
+
+        if customer.balance < self.payment_amount:
             raise ValueError("У заказчика недостаточно средств для оплаты контракта")
         
         try:
-            customer.remove_balance(total_payment)
-            supplier.add_balance(total_payment)
+            customer.remove_balance(self.payment_amount)
+            supplier.add_balance(self.payment_amount)
         except ValueError as e:
             raise ValueError(f"Ошибка оплаты: {e}")
         
@@ -266,11 +268,11 @@ class Contract(BaseClass):
         
         supplier = Company(_id=self.supplier_company_id).reupdate()
         customer = Company(_id=self.customer_company_id).reupdate()
-        
+
         if supplier and customer:
             # Возвращаем деньги за оставшиеся поставки
-            refund_amount = self.payment_amount * self.remaining_turns
-            
+            refund_amount = self.payment_amount // self.remaining_turns
+
             try:
                 if supplier.balance >= refund_amount:
                     supplier.remove_balance(refund_amount)
@@ -279,8 +281,8 @@ class Contract(BaseClass):
                 supplier.remove_reputation(50)
             except ValueError:
                 # Если не удалось вернуть деньги - больший штраф
-                supplier.remove_reputation(100)
-        
+                supplier.remove_reputation(50)
+
         asyncio.create_task(websocket_manager.broadcast({
             "type": "api-contract_cancelled",
             "data": {
@@ -289,19 +291,23 @@ class Contract(BaseClass):
                 "reason": "Поставщик не смог выполнить поставку"
             }
         }))
-        
+
         self.delete()
         return self
 
     def on_new_game_step(self):
         """ Проверка контракта при новом ходе
         
+        Сбрасывает статус доставки и уменьшает количество оставшихся ходов
         Удаляет непринятые контракты в конце хода
         """
         from game.session import session_manager
         
+        print('========= Вызван обработчик нового хода')
+
         # Если контракт не принят в конце хода - удаляем
         if not self.accepted:
+            print('==== erer')
             asyncio.create_task(websocket_manager.broadcast({
                 "type": "api-contract_expired",
                 "data": {
@@ -315,21 +321,33 @@ class Contract(BaseClass):
             return True  # Контракт удален
 
         else:
-            # Проверяем, был ли контракт выполнен в предыдущем ходе
-            session = session_manager.get_session(self.session_id)
-            if not session: return False
+            print('-2030203023020302 ======')
             
-            current_step = session.step
-            previous_step = current_step - 1
+            # Сбрасываем статус доставки в начале нового хода
+            self.delivered_this_turn = False
             
-            # Если контракт принят, не завершён, создан до предыдущего хода и не выполнен в предыдущем ходе
-            if (self.accepted and self.remaining_turns > 0 and 
-            self.created_at <= previous_step and self.last_execution_step != previous_step):
+            # Уменьшаем количество оставшихся ходов
+            self.remaining_turns -= 1
+            
+            # Если ходы закончились - отменяем контракт
+            if self.remaining_turns <= 0:
                 self.cancel_with_refund()
+                return True
+            
+            self.save_to_base()
             return True
 
-    def needs_execution(self, current_step: int) -> bool:
+    def needs_execution(self) -> bool:
         """ Проверяет, нужно ли выполнять контракт в текущем ходе """
+        from .session import session_manager
+        
+        session = session_manager.get_session(self.session_id)
+        if not session:
+            return False
+
+        if session.step == self.created_at_step:
+            return False
+        
         if self.remaining_turns <= 0:
             return False
         
@@ -337,15 +355,11 @@ class Contract(BaseClass):
         if not self.accepted:
             return False
         
-        # Если уже выполнен в этом ходе - не нужно
-        if self.last_execution_step == current_step:
+        # Если уже отправлен в этом ходе - не нужно
+        if self.delivered_this_turn:
             return False
         
         return True
-
-    def is_executed_this_turn(self, current_step: int) -> bool:
-        """ Проверяет, был ли контракт выполнен в текущем ходе """
-        return self.last_execution_step == current_step
 
     def to_dict(self) -> dict:
         return {
@@ -358,12 +372,13 @@ class Contract(BaseClass):
             "payment_amount": self.payment_amount,
             "duration_turns": self.duration_turns,
             "remaining_turns": self.remaining_turns,
-            "created_at": self.created_at,
+            "created_at_step": self.created_at_step,
             "accepted": self.accepted,
+            "delivered_this_turn": self.delivered_this_turn,
             "successful_deliveries": self.successful_deliveries,
-            "failed_deliveries": self.failed_deliveries,
-            "last_execution_step": self.last_execution_step
+            "failed_deliveries": self.failed_deliveries
         }
 
     def delete(self):
         just_db.delete(self.__tablename__, id=self.id)
+        del self
