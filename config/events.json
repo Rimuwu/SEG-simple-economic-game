@@ -153,7 +153,7 @@
                 "increase_demand": {
                     "medicine": 1.2
                 },
-                "cell_logistics": 2.0
+                "cell_logistics": 0.5
             },
             "duration": {
                 "min": 1,

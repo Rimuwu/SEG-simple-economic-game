@@ -223,6 +223,7 @@ class Exchange(BaseClass):
         """
         from game.company import Company
         from game.session import session_manager
+        from game.logistics import Logistics
 
         if quantity <= 0:
             raise ValueError("Количество должно быть положительным.")
@@ -278,24 +279,42 @@ class Exchange(BaseClass):
             barter_resource_price = session.get_item_price(self.barter_resource)
             unit_price = (barter_resource_price * self.barter_amount) // self.sell_amount_per_trade
 
-            # Выполняем бартерную сделку
-            buyer.remove_resource(self.barter_resource, total_barter_amount)
-            try:
-                seller.add_resource(self.barter_resource, total_barter_amount)
-            except ValueError:
-                # Если у продавца не хватает места, возвращаем покупателю
-                buyer.add_resource(self.barter_resource, total_barter_amount)
-                raise ValueError("У продавца недостаточно места на складе для бартерного ресурса.")
+            # # Выполняем бартерную сделку
+            # buyer.remove_resource(self.barter_resource, total_barter_amount)
+            
+            # try:
+            #     seller.add_resource(self.barter_resource, total_barter_amount)
+            # except ValueError:
+            #     # Если у продавца не хватает места, возвращаем покупателю
+            #     buyer.add_resource(self.barter_resource, total_barter_amount)
+            #     raise ValueError("У продавца недостаточно места на складе для бартерного ресурса.")
+            
+            Logistics().create(
+                from_company_id=buyer.id,
+                to_company_id=seller.id,
+                resource_type=self.barter_resource,
+                amount=total_barter_amount,
+                session_id=self.session_id
+            )
 
-        # Передаём товар покупателю
-        try:
-            buyer.add_resource(self.sell_resource, total_sell_amount)
-        except ValueError as e:
-            free_space = buyer.get_warehouse_free_size()
-            if free_space > 0:
-                buyer.add_resource(self.sell_resource, 
-                    min(free_space, total_sell_amount)
-                    )
+        # # Передаём товар покупателю
+        # try:
+        #     buyer.add_resource(self.sell_resource, total_sell_amount)
+        # except ValueError as e:
+        #     free_space = buyer.get_warehouse_free_size()
+        #     if free_space > 0:
+        #         buyer.add_resource(self.sell_resource, 
+        #             min(free_space, total_sell_amount)
+        #             )
+
+        Logistics().create(
+            sender_no_delete=True, # Потому что товар уже списан с продавца при создании предложения
+            from_company_id=seller.id,
+            to_company_id=buyer.id,
+            resource_type=self.sell_resource,
+            amount=total_sell_amount,
+            session_id=self.session_id
+        )
 
         if unit_price > 0:
             session.update_item_price(self.sell_resource, unit_price)
