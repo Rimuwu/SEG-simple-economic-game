@@ -458,9 +458,9 @@ class Session(BaseClass):
         }))
         return True
 
-    def end_game(self):
+    def leaders(self) -> dict:
         from game.company import Company
-        
+
         capital_winner = None
         reputation_winner = None
         economic_winner = None
@@ -477,27 +477,36 @@ class Session(BaseClass):
             if company.reputation > (reputation_winner.reputation if reputation_winner else 0):
                 reputation_winner = company
 
-        # for company in self.companies:
-        #     company: Company
-        #     if company.economic_power > (economic_winner.economic_power if economic_winner else 0):
-        #         economic_winner = company
+        for company in self.companies:
+            company: Company
+            if company.economic_power > (economic_winner.economic_power if economic_winner else 0):
+                economic_winner = company
+
+        return {
+            "capital": capital_winner,
+            "reputation": reputation_winner,
+            "economic": economic_winner
+        }
+
+    def end_game(self):
+        leaders = self.leaders()
 
         # Объявление победителей
-        if capital_winner:
-            main_logger.info(f"Capital winner: {capital_winner.name} with {capital_winner.balance}")
-        if reputation_winner:
-            main_logger.info(f"Reputation winner: {reputation_winner.name} with {reputation_winner.reputation}")
-        if economic_winner:
-            main_logger.info(f"Economic winner: {economic_winner.name} with {economic_winner.economic_power}")
+        if leaders["capital"]:
+            main_logger.info(f"Capital winner: {leaders['capital'].name} with {leaders['capital'].balance}")
+        if leaders["reputation"]:
+            main_logger.info(f"Reputation winner: {leaders['reputation'].name} with {leaders['reputation'].reputation}")
+        if leaders["economic"]:
+            main_logger.info(f"Economic winner: {leaders['economic'].name} with {leaders['economic'].economic_power}")
 
         asyncio.create_task(websocket_manager.broadcast({
             "type": "api-game_ended",
             "data": {
                 "session_id": self.session_id,
                 "winners": {
-                    "capital": capital_winner,
-                    "reputation": reputation_winner,
-                    "economic": economic_winner
+                    "capital": leaders["capital"].to_dict() if leaders["capital"] else None,
+                    "reputation": leaders["reputation"].to_dict() if leaders["reputation"] else None,
+                    "economic": leaders["economic"].to_dict() if leaders["economic"] else None
                 }
             }
         }))

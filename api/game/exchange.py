@@ -267,7 +267,7 @@ class Exchange(BaseClass):
 
             buyer.save_to_base()
             seller.save_to_base()
-            
+
         elif self.offer_type == 'barter':
             total_barter_amount = self.barter_amount * quantity
 
@@ -291,11 +291,18 @@ class Exchange(BaseClass):
         try:
             buyer.add_resource(self.sell_resource, total_sell_amount)
         except ValueError as e:
-            pass
+            free_space = buyer.get_warehouse_free_size()
+            if free_space > 0:
+                buyer.add_resource(self.sell_resource, 
+                    min(free_space, total_sell_amount)
+                    )
 
-        # Обновляем историю цен в сессии на основе совершенной сделки
         if unit_price > 0:
             session.update_item_price(self.sell_resource, unit_price)
+
+        seller.set_economic_power(
+            total_sell_amount, self.sell_resource, 'exchange'
+        )
 
         # Обновляем запас предложения
         self.total_stock -= total_sell_amount

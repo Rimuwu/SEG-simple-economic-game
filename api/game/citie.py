@@ -4,7 +4,6 @@ import random
 from typing import Optional
 from global_modules.models.cells import Cells
 from global_modules.db.baseclass import BaseClass
-from global_modules.models.resources import Production, Resource
 from modules.json_database import just_db
 from global_modules.load_config import ALL_CONFIGS, Resources, Improvements, Settings, Capital, Reputation
 from modules.function_way import determine_city_branch
@@ -253,11 +252,14 @@ class Citie(BaseClass):
         
         # Проводим транзакцию
         company.remove_resource(resource_id, amount)
-        
+
         # Начисляем деньги компании
         total_price = demand['price'] * amount
         company.add_balance(total_price)
-        
+        company.set_economic_power(
+            amount, resource_id, 'city_sell'
+        )
+
         # Обновляем цену предмета в системе (продажа влияет на рыночную цену)
         session.update_item_price(resource_id, demand['price'])
         
