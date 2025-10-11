@@ -212,56 +212,64 @@ class Citie(BaseClass):
             }
         }))
 
-    def sell_resource(self, company_id: int, resource_id: str, amount: int) -> dict:
+    def sell_resource(self, company_id: int, 
+                      resource_id: str, amount: int):
         """Продает ресурс городу
         
         Args:
             company_id: ID компании
             resource_id: ID ресурса
             amount: количество для продажи
-            
+
         Returns:
             dict с результатом операции
         """
-        from game.company import Company
-        from game.session import session_manager
+        from game.logistics import Logistics
         
         # Получаем сессию
-        session = session_manager.get_session(self.session_id)
-        if not session:
-            raise ValueError("Сессия не найдена")
+        # session = session_manager.get_session(self.session_id)
+        # if not session:
+        #     raise ValueError("Сессия не найдена")
         
         # Проверяем наличие спроса
-        if resource_id not in self.demands:
-            raise ValueError("Город не нуждается в этом ресурсе")
+        # if resource_id not in self.demands:
+        #     raise ValueError("Город не нуждается в этом ресурсе")
         
-        demand = self.demands[resource_id]
+        # demand = self.demands[resource_id]
         
-        # Проверяем количество
-        if amount > demand['amount']:
-            raise ValueError(f"Городу нужно только {demand['amount']} единиц")
+        # # Проверяем количество
+        # if amount > demand['amount']:
+        #     raise ValueError(f"Городу нужно только {demand['amount']} единиц")
         
         # Получаем компанию
-        company = Company(company_id).reupdate()
-        if not company or company.session_id != self.session_id:
-            raise ValueError("Недействительная компания")
+        # company = Company(company_id).reupdate()
+        # if not company or company.session_id != self.session_id:
+        #     raise ValueError("Недействительная компания")
         
         # Проверяем наличие ресурса у компании
-        if resource_id not in company.warehouses or company.warehouses[resource_id] < amount:
-            raise ValueError("Недостаточно ресурсов")
+        # if resource_id not in company.warehouses or company.warehouses[resource_id] < amount:
+        #     raise ValueError("Недостаточно ресурсов")
         
         # Проводим транзакцию
-        company.remove_resource(resource_id, amount)
+        # company.remove_resource(resource_id, amount)
 
         # Начисляем деньги компании
-        total_price = demand['price'] * amount
-        company.add_balance(total_price)
-        company.set_economic_power(
-            amount, resource_id, 'city_sell'
-        )
+        # total_price = demand['price'] * amount
+        # company.add_balance(total_price)
+        # company.set_economic_power(
+        #     amount, resource_id, 'city_sell'
+        # )
 
-        # Обновляем цену предмета в системе (продажа влияет на рыночную цену)
-        session.update_item_price(resource_id, demand['price'])
+        # # Обновляем цену предмета в системе (продажа влияет на рыночную цену)
+        # session.update_item_price(resource_id, demand['price'])
+
+        Logistics().create(
+            session_id=self.session_id,
+            resource_type=resource_id,
+            amount=amount,
+            from_company_id=company_id,
+            to_city_id=self.id
+        )
         
         # Уменьшаем спрос
         self.demands[resource_id]['amount'] -= amount
@@ -276,16 +284,11 @@ class Citie(BaseClass):
                 "city_id": self.id,
                 "company_id": company_id,
                 "resource_id": resource_id,
-                "amount": amount,
-                "total_price": total_price
+                "amount": amount
             }
         }))
 
-        return {
-            "success": True,
-            "total_price": total_price,
-            "remaining_demand": self.demands.get(resource_id, {}).get('amount', 0)
-        }
+        return True
 
     def get_position(self) -> tuple[int, int]:
         """Возвращает координаты города"""
