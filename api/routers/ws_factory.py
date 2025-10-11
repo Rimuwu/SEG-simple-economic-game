@@ -49,7 +49,7 @@ async def handle_get_factory(client_id: str, message: dict):
 
     factory = Factory(factory_id).reupdate()
     if not factory:
-        raise ValueError("Factory not found.")
+        raise ValueError("Завод не найден.")
     
     return factory.to_dict() if factory else None
 
@@ -82,7 +82,7 @@ async def handle_factory_recomplectation(client_id: str, message: dict):
         
         factory = Factory(factory_id).reupdate()
         if not factory:
-            raise ValueError("Factory not found.")
+            raise ValueError("Завод не найден.")
         
         result = factory.pere_complete(new_complectation)
         
@@ -113,7 +113,7 @@ async def handle_factory_set_produce(client_id: str, message: dict):
     try:
         factory = Factory(factory_id).reupdate()
         if not factory:
-            raise ValueError("Factory not found.")
+            raise ValueError("Завод не найден.")
         
         factory.set_produce(produce)
 
@@ -144,7 +144,7 @@ async def handle_factory_set_auto(client_id: str, message: dict):
     try:
         factory = Factory(factory_id).reupdate()
         if not factory:
-            raise ValueError("Factory not found.")
+            raise ValueError("Завод не найден.")
         
         factory.set_auto(is_auto)
 

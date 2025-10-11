@@ -47,18 +47,18 @@ class StepSchedule(BaseClass):
         """ Добавляет функцию в расписание шага
         """
         if not function or not callable(function):
-            raise ValueError("Function must be a callable.")
+            raise ValueError("Функция должна быть вызываемой.")
 
         if not self.id:
-            raise ValueError("Schedule must be saved before adding functions.")
+            raise ValueError("Расписание должно быть сохранено перед добавлением функций.")
 
         session = session_manager.get_session(self.session_id)
         if not session:
             just_db.delete(self.__tablename__, id=self.id)
-            raise ValueError("Invalid session for adding function.")
+            raise ValueError("Неверная сессия для добавления функции.")
 
         if not session.step <= self.in_step:
-            raise ValueError("Invalid step for adding function.")
+            raise ValueError("Неверный шаг для добавления функции.")
 
         self.functions.append({
             "function": func_to_str(function),

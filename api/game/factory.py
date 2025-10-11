@@ -89,12 +89,12 @@ class Factory(BaseClass):
         """ Перекомплектация фабрики
         """
         if new_complectation not in RESOURCES.resources:
-            raise ValueError("Invalid complectation type.")
+            raise ValueError("Неверный тип комплектации.")
 
         # Проверяем, что ресурс не является сырьем
         new_resource = RESOURCES.get_resource(new_complectation)
         if new_resource.raw:
-            raise ValueError("Cannot produce raw resources.")
+            raise ValueError("Невозможно производить сырьевые ресурсы.")
 
         # Получаем уровни старой и новой комплектации
         old_level = 0
@@ -212,7 +212,7 @@ class Factory(BaseClass):
             self.produce = produce
             self.save_to_base()
         else:
-            raise ValueError("Can't change produce status during production.")
+            raise ValueError("Нельзя изменить статус производства во время производства.")
 
     def set_auto(self, is_auto: bool):
         """ Установка статуса автоматического производства фабрики
@@ -226,7 +226,7 @@ class Factory(BaseClass):
         from game.company import Company
 
         if self.complectation is None:
-            raise ValueError("Complectation not set.")
+            raise ValueError("Комплектация не установлена.")
 
         resource: Resource = RESOURCES.get_resource(self.complectation) # type: ignore
         if not resource.production: return False

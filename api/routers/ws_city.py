@@ -85,7 +85,7 @@ async def handle_sell_to_city(client_id: str, message: dict):
         
         city = Citie(city_id).reupdate()
         if not city:
-            raise ValueError("City not found")
+            raise ValueError("Город не найден.")
 
         result = city.sell_resource(company_id, 
                                     resource_id, 
