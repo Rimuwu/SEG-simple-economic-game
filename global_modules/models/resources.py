@@ -20,6 +20,7 @@ class Resource:
     raw: bool = field(default=False)  # Является ли сырьём
     production: Production | None = field(default=None)  # Производственная цепочка
     lvl: int = field(default=1)  # Уровень ресурса
+    branch: str | None = field(default=None)  # Ветка ресурса (oil, metal, wood, cotton)
 
     @classmethod
     def load_from_json(cls, data: dict):
@@ -34,7 +35,8 @@ class Resource:
             massModifier=data["massModifier"],
             raw=data.get("raw", False),
             production=production,
-            lvl=data.get("lvl", 1)
+            lvl=data.get("lvl", 1),
+            branch=data.get("branch")
         )
 
 

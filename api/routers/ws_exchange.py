@@ -56,7 +56,7 @@ async def handle_get_exchange(client_id: str, message: dict):
     if not offer:
         return {"error": "Exchange offer not found."}
 
-    return offer.to_dict()
+    return offer.to_dict() if offer else None
 
 @message_handler(
     "create-exchange-offer", 
@@ -152,7 +152,7 @@ async def handle_update_exchange_offer(
 
         exchange = Exchange(id=offer_id).reupdate()
         if not exchange:
-            raise ValueError("Exchange offer not found.")
+            raise ValueError("Обменное предложение не найдено.")
 
         old_offer = exchange.to_dict()
 
@@ -198,7 +198,7 @@ async def handle_cancel_exchange_offer(
 
         exchange = Exchange(id=offer_id).reupdate()
         if not exchange:
-            raise ValueError("Exchange offer not found.")
+            raise ValueError("Обменное предложение не найдено.")
 
         session_id = exchange.session_id
         company_id = exchange.company_id
@@ -245,7 +245,7 @@ async def handle_buy_exchange_offer(
 
         exchange = Exchange(id=offer_id).reupdate()
         if not exchange:
-            raise ValueError("Exchange offer not found.")
+            raise ValueError("Обменное предложение не найдено.")
 
         old_stock = exchange.total_stock
         

@@ -100,11 +100,12 @@ class WebSocketManager:
             await self.disconnect(client_id)
             return False
         except Exception as e:
-            main_logger.error(f"Ошибка при отправке сообщения клиенту {client_id}: {e}")
-            await self.disconnect(client_id)
+            main_logger.error(f"Ошибка при отправке сообщения клиенту {client_id}: {e}\nmessage: {message}")
+            # await self.disconnect(client_id)
             return False
 
-    async def broadcast(self, message: Any, exclude: List[str] = None) -> int:
+    async def broadcast(self, message: Any, 
+                        exclude: List[str] = None) -> int:
         """
         Отправить сообщение всем подключенным клиентам
 

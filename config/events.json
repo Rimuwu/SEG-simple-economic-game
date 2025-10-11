@@ -1,0 +1,219 @@
+{
+    "events": {
+        "miners_strike": {
+            "name": "Забастовка шахтёров",
+            "description": "Рабочие шахт объявили забастовку, требуя улучшения условий труда. Добыча полезных ископаемых значительно снижена",
+            "type": "cell_type_event",
+            "category": "negative",
+            "cell_type": "mine",
+            "predictability": true,
+            "effects": {
+                "income_multiplier": 0.5
+            },
+            "duration": {
+                "min": 1,
+                "max": 3
+            }
+        },
+        "rare_metals_found": {
+            "name": "Редкие металлы",
+            "description": "В шахте обнаружены залежи редких металлов. Это значительно увеличивает ценность добываемых ресурсов и прибыль",
+            "type": "cell_type_event",
+            "category": "positive",
+            "cell_type": "mine",
+            "predictability": false,
+            "effects": {
+                "income_multiplier": 1.5
+            },
+            "duration": {
+                "min": 1,
+                "max": 3
+            }
+        },
+        "oil_equipment_wear": {
+            "name": "Износ оборудования",
+            "description": "Нефтедобывающее оборудование находится в критическом состоянии. Требуется время на ремонт и замену, что снижает объёмы добычи",
+            "type": "cell_type_event",
+            "category": "negative",
+            "cell_type": "oil",
+            "predictability": true,
+            "effects": {
+                "income_multiplier": 0.5
+            },
+            "duration": {
+                "min": 1,
+                "max": 3
+            }
+        },
+        "new_oil_well": {
+            "name": "Новая скважина",
+            "description": "Открылась новая продуктивная нефтяная скважина, что существенно увеличивает объёмы добычи и прибыль",
+            "type": "cell_type_event",
+            "category": "positive",
+            "cell_type": "oil",
+            "predictability": false,
+            "effects": {
+                "income_multiplier": 1.5
+            },
+            "duration": {
+                "min": 1,
+                "max": 3
+            }
+        },
+        "plant_disease": {
+            "name": "Болезнь растений",
+            "description": "Посевы поражены опасным заболеванием. Урожайность значительно снижена, необходимы меры по лечению и профилактике",
+            "type": "cell_type_event",
+            "category": "negative",
+            "cell_type": "field",
+            "predictability": false,
+            "effects": {
+                "income_multiplier": 0.5
+            },
+            "duration": {
+                "min": 1,
+                "max": 3
+            }
+        },
+        "new_fertilizer": {
+            "name": "Новые удобрения",
+            "description": "Внедрены инновационные удобрения нового поколения, которые значительно повышают урожайность и качество продукции",
+            "type": "cell_type_event",
+            "category": "positive",
+            "cell_type": "field",
+            "predictability": true,
+            "effects": {
+                "income_multiplier": 1.5
+            },
+            "duration": {
+                "min": 1,
+                "max": 3
+            }
+        },
+        "beavers": {
+            "name": "Бобры",
+            "description": "Колония бобров обосновалась в лесу и помогает с лесозаготовками, создавая естественные каналы для сплава древесины",
+            "type": "cell_type_event",
+            "category": "positive",
+            "cell_type": "forest",
+            "predictability": false,
+            "effects": {
+                "income_multiplier": 1.5
+            },
+            "duration": {
+                "min": 1,
+                "max": 3
+            }
+        },
+        "forest_permit": {
+            "name": "Разрешение на рубку",
+            "description": "Получено новое разрешение на расширенную рубку леса, что позволяет увеличить объёмы заготовки древесины",
+            "type": "cell_type_event",
+            "category": "positive",
+            "cell_type": "forest",
+            "predictability": true,
+            "effects": {
+                "income_multiplier": 1.5
+            },
+            "duration": {
+                "min": 1,
+                "max": 3
+            }
+        },
+        "worker_strike": {
+            "name": "Забастовка рабочих",
+            "description": "По всей стране началась всеобщая забастовка рабочих. Спрос на станки повышен, заводы работают в 2 раза медленнее",
+            "type": "global_event",
+            "category": "negative",
+            "predictability": true,
+            "effects": {
+                "increase_demand": {
+                    "machine": 1.5
+                },
+                "increase_price": {
+                    "machine": 1.2
+                },
+                "tasks_speed": 0.5
+            },
+            "duration": {
+                "min": 1,
+                "max": 4
+            }
+        },
+        "epidemic": {
+            "name": "Эпидемия",
+            "description": "В стране началась эпидемия. Резко возрос спрос на лекарства и их цена. Логистика усложнена - теперь 1 клетка может обслуживать только 2 клетки вместо обычных",
+            "type": "global_event",
+            "category": "negative",
+            "predictability": false,
+            "effects": {
+                "increase_price": {
+                    "medicine": 1.5
+                },
+                "increase_demand": {
+                    "medicine": 1.2
+                },
+                "cell_logistics": 2.0
+            },
+            "duration": {
+                "min": 1,
+                "max": 4
+            }
+        },
+        "resort_season": {
+            "name": "Курортный сезон",
+            "description": "Начался активный курортный сезон. Спрос на палатки вырос, но скорость добычи всех ресурсов снижена на 50% из-за массовых отпусков",
+            "type": "global_event",
+            "category": "positive",
+            "predictability": true,
+            "effects": {
+                "increase_demand": {
+                    "tent": 1.5
+                },
+                "increase_price": {
+                    "tent": 1.2
+                },
+                "resource_extraction_speed": 0.5
+            },
+            "duration": {
+                "min": 1,
+                "max": 4
+            }
+        },
+        "benefits_for_young_families": {
+            "name": "Льготы молодым семьям",
+            "description": "Государство запустило программу поддержки молодых семей. Спрос на мебель значительно вырос, но доступно на 5 меньше контрактов",
+            "type": "global_event",
+            "category": "positive",
+            "predictability": true,
+            "effects": {
+                "increase_demand": {
+                    "furniture": 1.5
+                },
+                "increase_price": {
+                    "furniture": 1.2
+                },
+                "contracts_limit_decrease": 5
+            },
+            "duration": {
+                "min": 1,
+                "max": 4
+            }
+        },
+        "tax_rate_change": {
+            "name": "Налоговая реформа",
+            "description": "Правительство провело налоговую реформу. Новые ставки: 2% для малого бизнеса и 15% для крупного бизнеса. Изменения временные",
+            "type": "global_event",
+            "category": "positive",
+            "predictability": true,
+            "effects": {
+                "tax_rate_small": 0.02,
+                "tax_rate_large": 0.15
+            },
+            "duration": {
+                "min": 1,
+                "max": 4
+            }
+        }
+    }
+}

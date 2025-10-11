@@ -27,7 +27,7 @@ class Factory(BaseClass):
         self.company_id: int = 0
 
         self.complectation: Optional[str] = None  # Какая комплектация производится
-        self.progress: list[int] = [0, 0]  # [текущий прогресс, прогресс для завершения]
+        self.progress: list[float] = [0.0, 0.0]  # [текущий прогресс, прогресс для завершения]
 
         self.produce: bool = False  # Должна ли фабрика производить продукцию
         self.is_auto: bool = False  # Автоматическое производство
@@ -89,12 +89,12 @@ class Factory(BaseClass):
         """ Перекомплектация фабрики
         """
         if new_complectation not in RESOURCES.resources:
-            raise ValueError("Invalid complectation type.")
+            raise ValueError("Неверный тип комплектации.")
 
         # Проверяем, что ресурс не является сырьем
         new_resource = RESOURCES.get_resource(new_complectation)
         if new_resource.raw:
-            raise ValueError("Cannot produce raw resources.")
+            raise ValueError("Невозможно производить сырьевые ресурсы.")
 
         # Получаем уровни старой и новой комплектации
         old_level = 0
@@ -126,8 +126,15 @@ class Factory(BaseClass):
 
     def on_new_game_stage(self):
         from game.company import Company
+        from game.session import Session
 
         company = Company(self.company_id).reupdate()
+        if not company:
+            return False
+        
+        session = Session(company.session_id).reupdate()
+        if not session:
+            return False
 
         # Этап комплектации
         if self.complectation_stages > 0:
@@ -146,14 +153,21 @@ class Factory(BaseClass):
         # Этап производства
         elif self.is_working:
             resource = RESOURCES.get_resource(self.complectation) # type: ignore
-            self.progress[0] += 1
 
             # Снимаем материалы со склада компании при первом ходе производства
-            if self.progress[0] == 1:
+            if self.progress[0] == 0:
                 materials = resource.production.materials # type: ignore
 
                 for mat, qty in materials.items():
-                    company.remove_resource(mat, qty)
+                    try:
+                        company.remove_resource(mat, qty)
+                    except Exception as e:
+                        return False
+
+            tasks_speed = session.get_event_effects().get(
+                'tasks_speed', 1.0
+            )
+            self.progress[0] += tasks_speed
 
             # Если производство завершено - добавляем ресурсы на склад компании
             if self.progress[0] >= self.progress[1]:
@@ -161,9 +175,16 @@ class Factory(BaseClass):
 
                 # Добавляем продукцию на склад компании
                 if self.complectation:
-                    company.add_resource(
-                        self.complectation, output)
-                    self.produced += output
+                    try:
+                        company.add_resource(
+                            self.complectation, output)
+                        self.produced += output
+                    except Exception as e:
+                        max_col = company.get_warehouse_free_size()
+                        if max_col > 0:
+                            company.add_resource(
+                                self.complectation, max_col)
+                            self.produced += max_col
 
                 self.progress[0] = 0
 
@@ -182,6 +203,7 @@ class Factory(BaseClass):
                 }))
 
             self.save_to_base()
+        return True
 
     def set_produce(self, produce: bool):
         """ Установка статуса производства фабрики
@@ -190,7 +212,7 @@ class Factory(BaseClass):
             self.produce = produce
             self.save_to_base()
         else:
-            raise ValueError("Can't change produce status during production.")
+            raise ValueError("Нельзя изменить статус производства во время производства.")
 
     def set_auto(self, is_auto: bool):
         """ Установка статуса автоматического производства фабрики
@@ -204,7 +226,7 @@ class Factory(BaseClass):
         from game.company import Company
 
         if self.complectation is None:
-            raise ValueError("Complectation not set.")
+            raise ValueError("Комплектация не установлена.")
 
         resource: Resource = RESOURCES.get_resource(self.complectation) # type: ignore
         if not resource.production: return False

@@ -1,5 +1,6 @@
 from asyncio import sleep
 import asyncio
+from pprint import pprint
 import random
 from fastapi import FastAPI, Request
 from contextlib import asynccontextmanager
@@ -11,6 +12,7 @@ from modules.json_database import just_db
 from modules.sheduler import scheduler
 from game.session import session_manager
 from game.exchange import Exchange
+from game.citie import Citie
 
 # Импортируем роуты
 from routers import connect_ws
@@ -32,6 +34,7 @@ async def lifespan(app: FastAPI):
     just_db.create_table('cities') # Таблица с городами
     just_db.create_table('exchanges') # Таблица с биржей
     just_db.create_table('factories') # Таблица с заводами
+    just_db.create_table('item_price') # Таблица с ценами на товары
 
     main_logger.info("Loading sessions from database...")
     session_manager.load_from_base()
@@ -70,104 +73,92 @@ async def root(request: Request):
 
 async def test1():
     
-    
     from game.user import User
     from game.session import Session, session_manager, SessionStages
     from game.company import Company
+    from game.contract import Contract
 
     await asyncio.sleep(2)
 
-    print("Performing initial setup...")
+    print("🚀 Тестирование бартерного контракта с полным отслеживанием...")
 
-    # try:
+    # Очистка и создание сессии
     if session_manager.get_session('AFRIKA'):
         session = session_manager.get_session('AFRIKA')
         session.delete()
+        
+    # return
 
     session = session_manager.create_session('AFRIKA')
-    # return
     
-    # just_db.update(
-    #     'sessions', {'session_id': 'AFRIKA'}, 
-    #     {'stage': 'CellSelect'}
-    # )
-
     session.update_stage(SessionStages.FreeUserConnect, True)
-    user: User = User().create(_id=1, 
-                         username="TestUser", 
-                         session_id=session.session_id)
-    user2: User = User().create(_id=2, 
-                         username="TestUser2", 
-                         session_id=session.session_id)
+    
+    # Создание пользователей и компаний
+    print("👥 Создаём поставщика и заказчика...")
+    user1: User = User().create(_id=1, username="MetalSupplier", session_id=session.session_id)
+    user2: User = User().create(_id=2, username="WoodCustomer", session_id=session.session_id)
 
-    company = user.create_company("TestCompany")
-    company.set_owner(1)
+    supplier = user1.create_company("MetalCorp")  # Поставщик металла
+    supplier.set_owner(1)
 
-    company2 = user2.create_company("TestCompany2")
-    company2.set_owner(2)
-
-    # user2.add_to_company(company.secret_code)
+    customer = user2.create_company("WoodCorp")   # Заказчик металла, поставщик дерева
+    customer.set_owner(2)
 
     session.update_stage(SessionStages.CellSelect, True)
-    company.reupdate()
-    company2.reupdate()
-
-    # free_cells = session.get_free_cells()
-    # print(free_cells)
-
-    company.set_position(0, 0)
-    company2.set_position(2, 3)
-    session.reupdate()
-
-    # free_cells = session.get_free_cells()
-    # print(free_cells)
-
+    for company in [supplier, customer]:
+        company.reupdate()
+    
+    # Размещение компаний на карте
+    supplier.set_position(0, 0)
+    customer.set_position(2, 3)
+    
     session.update_stage(SessionStages.Game, True)
-    company.reupdate()
-    company2.reupdate()
+    for company in [supplier, customer]:
+        company.reupdate()
+    
+    # ПОЛНАЯ ОЧИСТКА ИНВЕНТАРЯ
+    print("🧹 Полностью очищаем инвентарь...")
+    supplier.warehouses = {}
+    customer.warehouses = {}
+    supplier.balance = 0
+    customer.balance = 0
+    
+    supplier.reputation = 0
+    customer.reputation = 0
+    supplier.save_to_base()
+    customer.save_to_base()
 
-    # print(company.warehouses.keys())
-
-    c_m_k_1 = list(company.warehouses.keys())[0]
-    col_1 = company.warehouses[c_m_k_1]
+    # Настройка начальных ресурсов для тестирования контракта
+    print("💰 Настраиваем начальные ресурсы.. 343434.")
     
-    c_m_k_2 = list(company2.warehouses.keys())[0]
-    col_2 = company2.warehouses[c_m_k_2]
+    # Даём поставщику металл для поставки и заказчику деньги для оплаты
+    supplier.add_resource("metal", 100)  # Металл для поставки
+    customer.add_balance(5000)  # Деньги для оплаты контракта
     
-    print(company.warehouses, company2.warehouses)
-    print(c_m_k_1, c_m_k_2)
-    
-    exchange = Exchange(0).create(
-        company.id, session.session_id, 
-        c_m_k_1, col_1 // 2, 2, 'barter', 0,
-        c_m_k_2, col_2 // 2
+    contract = Contract().create(
+        supplier.id, customer.id,
+        session.session_id, 'metal', 10,
+        3, 1000
     )
+    c_id = contract.id
+    contract.accept_contract()
     
-
-    # exchange = Exchange(0).create(
-    #     company.id, session.session_id, 
-    #     c_m_k_1, col_1 // 2, 2, 'money', 1000
-    # )
-    
-
-    company.reupdate()
-    company2.reupdate()
-    print(company.warehouses, company2.warehouses)
-
-    exchange.buy(company2.id)
-    
-    company.reupdate()
-    company2.reupdate()
-    print(company.warehouses, company2.warehouses)
-    
-    exchange.reupdate()
-    exchange.cancel_offer()
-    
-    
-    company.reupdate()
-    company2.reupdate()
-    print(company.warehouses, company2.warehouses)
-
-    # session.update_stage(SessionStages.Game)
-    # company.reupdate()
-    # company2.reupdate()
+    for i in range(4):
+        
+        await sleep(3)
+        session.update_stage(SessionStages.Game, True)
+        for company in [supplier, customer]:
+            company.reupdate()
+        contract.reupdate()
+        
+        status = just_db.find_one("contracts", **{"id": c_id})
+        print(f"🔄 Шаг {i+1} | 1 Статус контракта: {status}")
+        
+        if i != 3:
+            print(f"➡️  Ход {i+1} | Поставляем металл...")
+            res = contract.execute_turn()
+            if not res:
+                print("❌ Ошибка поставки!")
+        
+        status = just_db.find_one("contracts", **{"id": c_id})
+        print(f"🔄 Шаг {i+1} | Статус контракта: {status}")

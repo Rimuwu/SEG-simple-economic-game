@@ -24,10 +24,10 @@ async def handle_get_companies(client_id: str, message: dict):
     }
 
     # Получаем список компаний из базы данных
-    companies = just_db.find('companies',
+    companies = just_db.find('companies', to_class=Company,
                          **{k: v for k, v in conditions.items() if v is not None})
 
-    return companies
+    return [company.to_dict() for company in companies]
 
 @message_handler(
     "get-company", 
@@ -59,7 +59,7 @@ async def handle_get_company(client_id: str, message: dict):
     company = just_db.find_one('companies', to_class=Company,
                          **{k: v for k, v in conditions.items() if v is not None})
 
-    return company.to_dict()
+    return company.to_dict() if company else None
 
 @message_handler(
     "create-company", 
@@ -312,7 +312,7 @@ async def handle_update_company_improve(client_id: str, message: dict):
         check_password(password)
 
         company = Company(_id=company_id).reupdate()
-        if not company: raise ValueError("Company not found.")
+        if not company: raise ValueError("Компания не найдена.")
 
         company.improve(improvement_type)
 
@@ -347,7 +347,7 @@ async def handle_company_take_credit(client_id: str, message: dict):
         check_password(password)
 
         company = Company(_id=company_id).reupdate()
-        if not company: raise ValueError("Company not found.")
+        if not company: raise ValueError("Компания не найдена.")
 
         credit_data = company.take_credit(amount, period)
 
@@ -383,7 +383,7 @@ async def handle_company_pay_credit(client_id: str, message: dict):
         check_password(password)
 
         company = Company(_id=company_id).reupdate()
-        if not company: raise ValueError("Company not found.")
+        if not company: raise ValueError("Компания не найдена.")
 
         company.pay_credit(credit_index, amount)
 
@@ -418,7 +418,7 @@ async def handle_company_take_deposit(client_id: str, message: dict):
         check_password(password)
 
         company = Company(_id=company_id).reupdate()
-        if not company: raise ValueError("Company not found.")
+        if not company: raise ValueError("Компания не найдена.")
 
         deposit_data = company.take_deposit(amount, period)
 
@@ -452,7 +452,7 @@ async def handle_company_withdraw_deposit(client_id: str, message: dict):
         check_password(password)
 
         company = Company(_id=company_id).reupdate()
-        if not company: raise ValueError("Company not found.")
+        if not company: raise ValueError("Компания не найдена.")
 
         company.withdraw_deposit(deposit_index)
 
@@ -486,7 +486,7 @@ async def handle_company_pay_taxes(client_id: str, message: dict):
         check_password(password)
 
         company = Company(_id=company_id).reupdate()
-        if not company: raise ValueError("Company not found.")
+        if not company: raise ValueError("Компания не найдена.")
 
         company.pay_taxes(amount)
 
@@ -526,7 +526,7 @@ async def handle_company_complete_free_factories(client_id: str, message: dict):
         check_password(password)
 
         company = Company(_id=company_id).reupdate()
-        if not company: raise ValueError("Company not found.")
+        if not company: raise ValueError("Компания не найдена.")
 
         # Вызываем метод массовой перекомплектации
         company.complete_free_factories(
@@ -569,7 +569,7 @@ async def handle_notforgame_update_company_balance(
         check_password(password)
 
         company = Company(_id=company_id).reupdate()
-        if not company: raise ValueError("Company not found.")
+        if not company: raise ValueError("Компания не найдена.")
 
         if balance_change > 0:
             company.add_balance(balance_change)
@@ -586,6 +586,7 @@ async def handle_notforgame_update_company_balance(
         "company_id: int",
         "item_id: str",
         "quantity_change: int",
+        "ignore_space: Optional[bool]",
         "password: str"
     ],
     messages=[]
@@ -598,6 +599,7 @@ async def handle_notforgame_update_company_items(
     company_id = message.get("company_id", 0)
     item_id = message.get("item_id", "")
     quantity_change = message.get("quantity_change", 0)
+    ignore_space = message.get("ignore_space", False)
 
     for i in [company_id, password, item_id, quantity_change]:
         if i is None: 
@@ -608,10 +610,10 @@ async def handle_notforgame_update_company_items(
         check_password(password)
 
         company = Company(_id=company_id).reupdate()
-        if not company: raise ValueError("Company not found.")
+        if not company: raise ValueError("Компания не найдена.")
 
         if quantity_change > 0:
-            company.add_resource(item_id, quantity_change)
+            company.add_resource(item_id, quantity_change, ignore_space)
         else:
             company.remove_resource(item_id, 
                                     abs(quantity_change))
@@ -646,7 +648,7 @@ async def handle_notforgame_update_company_name(
         check_password(password)
 
         company = Company(_id=company_id).reupdate()
-        if not company: raise ValueError("Company not found.")
+        if not company: raise ValueError("Компания не найдена.")
 
         company.name = new_name
         company.save_to_base()

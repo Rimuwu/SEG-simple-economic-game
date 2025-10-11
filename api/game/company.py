@@ -30,6 +30,7 @@ class Company(BaseClass):
 
         self.reputation: int = 0
         self.balance: int = 0
+        self.economic_power: int = 0
 
         self.in_prison: bool = False
         self.prison_end_step: Optional[int] = None
@@ -56,9 +57,9 @@ class Company(BaseClass):
 
     def set_owner(self, user_id: int):
         if self.owner != 0:
-            raise ValueError("Owner is already set.")
+            raise ValueError("Владелец уже установлен.")
         if user_id in [user.id for user in self.users] is False:
-            raise ValueError("User is not a member of the company.")
+            raise ValueError("Пользователь не является членом компании.")
 
         self.owner = user_id
         self.save_to_base()
@@ -71,11 +72,11 @@ class Company(BaseClass):
         with_this_name = just_db.find_one(
             self.__tablename__, name=name, session_id=session_id)
         if with_this_name:
-            raise ValueError(f"Company with name '{name}' already exists.")
+            raise ValueError(f"Компания с именем '{name}' уже существует.")
 
         session = session_manager.get_session(session_id)
         if not session or not session.can_add_company():
-            raise ValueError("Invalid or inactive session for adding a company.")
+            raise ValueError("Недействительная или неактивная сессия для добавления компании.")
         self.session_id = session_id
 
         self.name = name
@@ -126,7 +127,7 @@ class Company(BaseClass):
 
     def set_position(self, x: int, y: int):
         if isinstance(x, int) is False or isinstance(y, int) is False:
-            raise ValueError("Coordinates must be integers.")
+            raise ValueError("Координаты должны быть целыми числами.")
 
         session = session_manager.get_session(self.session_id)
         if not session or not session.can_select_cell(x, y):
@@ -175,7 +176,8 @@ class Company(BaseClass):
 
         for user in self.users: user.leave_from_company()
         for factory in self.get_factories(): factory.delete()
-        for exchange in self.exchages: exchange.delete()
+        for exchange in self.exchanges: exchange.delete()
+        for contract in self.get_contracts(): contract.delete()
 
         asyncio.create_task(websocket_manager.broadcast({
             "type": "api-company_deleted",
@@ -193,13 +195,17 @@ class Company(BaseClass):
         base_size = imps['warehouse']['capacity']
         return base_size
 
-    def add_resource(self, resource: str, amount: int):
+    def get_warehouse_free_size(self) -> int:
+        return self.get_max_warehouse_size() - self.get_resources_amount()
+
+    def add_resource(self, resource: str, amount: int, 
+                     ignore_space: bool = False):
         if RESOURCES.get_resource(resource) is None:
-            raise ValueError(f"Resource '{resource}' does not exist.")
+            raise ValueError(f"Ресурс '{resource}' не существует.")
         if amount <= 0:
-            raise ValueError("Amount must be a positive integer.")
-        if self.get_resources_amount() + amount > self.get_max_warehouse_size():
-            raise ValueError("Not enough space in the warehouse.")
+            raise ValueError("Количество должно быть положительным целым числом.")
+        if self.get_resources_amount() + amount > self.get_max_warehouse_size() and not ignore_space:
+            raise ValueError("Недостаточно места на складе.")
 
         if resource in self.warehouses:
             self.warehouses[resource] += amount
@@ -221,11 +227,11 @@ class Company(BaseClass):
 
     def remove_resource(self, resource: str, amount: int):
         if RESOURCES.get_resource(resource) is None:
-            raise ValueError(f"Resource '{resource}' does not exist.")
+            raise ValueError(f"Ресурс '{resource}' не существует.")
         if amount <= 0:
-            raise ValueError("Amount must be a positive integer.")
+            raise ValueError("Количество должно быть положительным целым числом.")
         if resource not in self.warehouses or self.warehouses[resource] < amount:
-            raise ValueError(f"Not enough of resource '{resource}' to remove.")
+            raise ValueError(f"Недостаточно ресурса '{resource}' для удаления.")
 
         self.warehouses[resource] -= amount
         if self.warehouses[resource] == 0:
@@ -249,6 +255,27 @@ class Company(BaseClass):
         for amount in self.warehouses.values(): 
             count += amount
         return count
+
+    def set_economic_power(self, count: int, item: str, e_type: str):
+        mod = 1
+
+        if e_type == "production":
+            mod = 1
+        elif e_type == "exchange":
+            mod = 2
+        elif e_type == "city_sell":
+            mod = 3
+        elif e_type == "contract":
+            mod = 2
+
+        resource = RESOURCES.get_resource(item)  # type: ignore
+        if not resource:
+            dif = 0
+        else:
+            dif = resource.basePrice
+
+        self.economic_power += int(count * dif * mod)
+        self.save_to_base()
 
     def get_my_cell_info(self):
         cell_type_key = self.get_cell_type()
@@ -288,13 +315,13 @@ class Company(BaseClass):
 
     def add_balance(self, amount: int, income_percent: float = 1.0):
         if not isinstance(income_percent, float):
-            raise ValueError("Income percent must be a float.")
+            raise ValueError("Процент дохода должен быть числом с плавающей точкой.")
         if income_percent < 0:
-            raise ValueError("Income percent must be non-negative.")
+            raise ValueError("Процент дохода должен быть неотрицательным.")
         if not isinstance(amount, int):
-            raise ValueError("Amount must be an integer.")
+            raise ValueError("Сумма должна быть целым числом.")
         if amount <= 0:
-            raise ValueError("Amount must be a positive integer.")
+            raise ValueError("Сумма должна быть положительным целым числом.")
 
         old_balance = self.balance
         self.balance += amount
@@ -315,11 +342,11 @@ class Company(BaseClass):
 
     def remove_balance(self, amount: int):
         if not isinstance(amount, int):
-            raise ValueError("Amount must be an integer.")
+            raise ValueError("Сумма должна быть целым числом.")
         if amount <= 0:
-            raise ValueError("Amount must be a positive integer.")
+            raise ValueError("Сумма должна быть положительным целым числом.")
         if self.balance < amount:
-            raise ValueError("Not enough balance to remove.")
+            raise ValueError("Недостаточно средств для списания.")
 
         old_balance = self.balance
         self.balance -= amount
@@ -348,10 +375,10 @@ class Company(BaseClass):
         cell_type = self.get_cell_type()
 
         if cell_type is None:
-            raise ValueError("Cannot determine cell type for improvements.")
+            raise ValueError("Невозможно определить тип клетки для улучшений.")
 
         if imp_lvl_now is None:
-            raise ValueError(f"Improvement type '{improvement_type}' not found.")
+            raise ValueError(f"Тип улучшения '{improvement_type}' не найден.")
 
         imp_next_lvl = IMPROVEMENTS.get_improvement(
                 cell_type, improvement_type, 
@@ -359,7 +386,7 @@ class Company(BaseClass):
             )
 
         if imp_next_lvl is None:
-            raise ValueError(f"No next level for improvement '{improvement_type}'.")
+            raise ValueError(f"Нет следующего уровня для улучшения '{improvement_type}'.")
 
         cost = imp_next_lvl.cost
         self.remove_balance(cost)
@@ -380,9 +407,9 @@ class Company(BaseClass):
 
     def add_reputation(self, amount: int):
         if not isinstance(amount, int):
-            raise ValueError("Amount must be an integer.")
+            raise ValueError("Сумма должна быть целым числом.")
         if amount <= 0:
-            raise ValueError("Amount must be a positive integer.")
+            raise ValueError("Сумма должна быть положительным целым числом.")
 
         old_reputation = self.reputation
         self.reputation += amount
@@ -401,9 +428,9 @@ class Company(BaseClass):
 
     def remove_reputation(self, amount: int):
         if not isinstance(amount, int):
-            raise ValueError("Amount must be an integer.")
+            raise ValueError("Сумма должна быть целым числом.")
         if amount <= 0:
-            raise ValueError("Amount must be a positive integer.")
+            raise ValueError("Сумма должна быть положительным целым числом.")
 
         old_reputation = self.reputation
         self.reputation = max(0, self.reputation - amount)
@@ -433,13 +460,13 @@ class Company(BaseClass):
         self.in_prison_check()
 
         if not isinstance(c_sum, int) or not isinstance(steps, int):
-            raise ValueError("Sum and steps must be integers.")
+            raise ValueError("Сумма и шаги должны быть целыми числами.")
         if c_sum <= 0 or steps <= 0:
-            raise ValueError("Sum and steps must be positive integers.")
+            raise ValueError("Сумма и шаги должны быть положительными целыми числами.")
 
         credit_condition = get_credit_conditions(self.reputation)
         if not credit_condition.possible:
-            raise ValueError("Credit is not possible with the current reputation.")
+            raise ValueError("Кредит невозможен с текущей репутацией.")
 
         total, pay_per_turn, extra = calc_credit(
             c_sum, credit_condition.without_interest, credit_condition.percent, steps
@@ -447,21 +474,21 @@ class Company(BaseClass):
 
         session = session_manager.get_session(self.session_id)
         if not session:
-            raise ValueError("Session not found.")
+            raise ValueError("Сессия не найдена.")
 
         if not check_max_credit_steps(steps, 
                                       session.step, 
                                       session.max_steps):
-            raise ValueError("Credit duration exceeds the maximum game steps.")
+            raise ValueError("Срок кредита превышает максимальное количество шагов игры.")
 
         if len(self.credits) >= SETTINGS.max_credits_per_company:
-            raise ValueError("Maximum number of active credits reached for this company.")
+            raise ValueError("Достигнуто максимальное количество активных кредитов для этой компании.")
 
         if c_sum > CAPITAL.bank.credit.max:
-            raise ValueError(f"Credit sum exceeds the maximum limit of {CAPITAL.bank.credit.max}.")
+            raise ValueError(f"Сумма кредита превышает максимальный лимит {CAPITAL.bank.credit.max}.")
 
         elif c_sum < CAPITAL.bank.credit.min:
-            raise ValueError(f"Credit sum is below the minimum limit of {CAPITAL.bank.credit.min}.")
+            raise ValueError(f"Сумма кредита ниже минимального лимита {CAPITAL.bank.credit.min}.")
 
         credit_data = {
             "total_to_pay": total,
@@ -493,20 +520,24 @@ class Company(BaseClass):
 
         for index, credit in enumerate(self.credits):
 
-            if credit["steps_now"] <= credit["steps_total"]:
+            if credit["steps_now"] < credit["steps_total"]:
                 steps_left = max(1, credit["steps_total"] - credit["steps_now"])
                 credit["need_pay"] += (credit["total_to_pay"] - credit['need_pay'] - credit ['paid']) // steps_left
+                credit["steps_now"] += 1
+
+            elif credit["steps_now"] == credit["steps_total"]:
+                # Последний день - начисляем всю оставшуюся сумму
+                credit["need_pay"] += credit["total_to_pay"] - credit['paid']
+                credit["steps_now"] += 1
 
             elif credit["steps_now"] > credit["steps_total"]:
-                credit["need_pay"] += credit["total_to_pay"] - credit['paid']
+                # Просрочка - не увеличиваем steps_now больше, но снижаем репутацию
                 self.remove_reputation(REPUTATION.credit.lost)
 
             if credit["steps_now"] - credit["steps_total"] > REPUTATION.credit.max_overdue:
                 self.remove_reputation(self.reputation)
                 self.remove_credit(index)
                 self.to_prison()
-
-            credit["steps_now"] += 1
 
         self.save_to_base()
         self.reupdate()
@@ -516,7 +547,7 @@ class Company(BaseClass):
         """
 
         if credit_index < 0 or credit_index >= len(self.credits):
-            raise ValueError("Invalid credit index.")
+            raise ValueError("Недействительный индекс кредита.")
 
         del self.credits[credit_index]
         self.save_to_base()
@@ -538,15 +569,18 @@ class Company(BaseClass):
         self.in_prison_check()
 
         if not isinstance(credit_index, int) or not isinstance(amount, int):
-            raise ValueError("Credit index and amount must be integers.")
+            raise ValueError("Индекс кредита и сумма должны быть целыми числами.")
         if credit_index < 0 or credit_index >= len(self.credits):
-            raise ValueError("Invalid credit index.")
+            raise ValueError("Недействительный индекс кредита.")
         if amount <= 0:
-            raise ValueError("Amount must be a positive integer.")
+            raise ValueError("Сумма должна быть положительным целым числом.")
         if self.balance < amount:
-            raise ValueError("Not enough balance to pay credit.")
+            raise ValueError("Недостаточно средств для оплаты кредита.")
 
         credit = self.credits[credit_index]
+
+        if amount < credit["need_pay"]:
+            raise ValueError("Сумма платежа должна быть не менее требуемой для этого хода.")
 
         # Досрочное закрытие кредита - можно заплатить больше чем need_pay
         remaining_debt = credit["total_to_pay"] - credit["paid"]
@@ -590,7 +624,7 @@ class Company(BaseClass):
 
         session = session_manager.get_session(self.session_id)
         if not session:
-            raise ValueError("Session not found.")
+            raise ValueError("Сессия не найдена.")
 
         end_step = session.step + REPUTATION.prison.stages
 
@@ -619,7 +653,7 @@ class Company(BaseClass):
         """
 
         if not self.in_prison:
-            raise ValueError("Company is not in prison.")
+            raise ValueError("Компания не находится в тюрьме.")
 
         self.in_prison = False
         self.prison_end_step = None
@@ -638,17 +672,29 @@ class Company(BaseClass):
         """ Находится ли компания в тюрьме (Вызов ошибки для удобства)
         """
         if self.in_prison:
-            raise ValueError("Company is already in prison.")
+            raise ValueError("Компания уже находится в тюрьме.")
 
         return self.in_prison
 
     def business_tax(self):
         """ Определяет налоговую ставку в зависимости от типа бизнеса.
         """
+        
+        session = session_manager.get_session(self.session_id)
+        if not session:
+            raise ValueError("Сессия не найдена.")
+
+        big_mod = session.get_event_effects().get(
+            'tax_rate_large', CAPITAL.bank.tax.big_on
+        )
+
+        small_mod = session.get_event_effects().get(
+            'tax_rate_small', CAPITAL.bank.tax.small_business
+        )
 
         if self.business_type == "big":
-            return CAPITAL.bank.tax.big_on
-        return CAPITAL.bank.tax.small_business
+            return big_mod
+        return small_mod
 
     def taxate(self):
         """ Начисляет налоги в зависимости от типа бизнеса. Вызывается каждый ход.
@@ -681,13 +727,13 @@ class Company(BaseClass):
         self.in_prison_check()
 
         if not isinstance(amount, int):
-            raise ValueError("Amount must be an integer.")
+            raise ValueError("Сумма должна быть целым числом.")
         if amount <= 0:
-            raise ValueError("Amount must be a positive integer.")
+            raise ValueError("Сумма должна быть положительным целым числом.")
         if self.tax_debt <= 0:
-            raise ValueError("No tax debt to pay.")
+            raise ValueError("Нет налогового долга для оплаты.")
         if self.balance < amount:
-            raise ValueError("Not enough balance to pay taxes.")
+            raise ValueError("Недостаточно средств для оплаты налогов.")
 
         if amount > self.tax_debt: amount = self.tax_debt
 
@@ -723,13 +769,13 @@ class Company(BaseClass):
         self.in_prison_check()
 
         if not isinstance(d_sum, int) or not isinstance(steps, int):
-            raise ValueError("Sum and steps must be integers.")
+            raise ValueError("Сумма и шаги должны быть целыми числами.")
         if d_sum <= 0 or steps <= 0:
-            raise ValueError("Sum and steps must be positive integers.")
+            raise ValueError("Сумма и шаги должны быть положительными целыми числами.")
 
         deposit_condition = get_deposit_conditions(self.reputation)
         if not deposit_condition.possible:
-            raise ValueError("Deposit is not possible with the current reputation.")
+            raise ValueError("Депозит невозможен с текущей репутацией.")
 
         income_per_turn, total_income = calc_deposit(
             d_sum, deposit_condition.percent, steps
@@ -737,21 +783,21 @@ class Company(BaseClass):
 
         session = session_manager.get_session(self.session_id)
         if not session:
-            raise ValueError("Session not found.")
+            raise ValueError("Сессия не найдена.")
 
         if not check_max_deposit_steps(steps, 
                                        session.step, 
                                        session.max_steps):
-            raise ValueError("Deposit duration exceeds the maximum game steps.")
+            raise ValueError("Срок депозита превышает максимальное количество шагов игры.")
 
         if d_sum > CAPITAL.bank.contribution.max:
-            raise ValueError(f"Deposit sum exceeds the maximum limit of {CAPITAL.bank.contribution.max}.")
+            raise ValueError(f"Сумма депозита превышает максимальный лимит {CAPITAL.bank.contribution.max}.")
 
         elif d_sum < CAPITAL.bank.contribution.min:
-            raise ValueError(f"Deposit sum is below the minimum limit of {CAPITAL.bank.contribution.min}.")
+            raise ValueError(f"Сумма депозита ниже минимального лимита {CAPITAL.bank.contribution.min}.")
 
         if self.balance < d_sum:
-            raise ValueError("Insufficient balance to create deposit.")
+            raise ValueError("Недостаточно средств для создания депозита.")
 
         deposit_data = {
             "initial_sum": d_sum,
@@ -785,15 +831,22 @@ class Company(BaseClass):
     def deposit_income_step(self):
         """ Вызывается при каждом шаге игры для компании.
             Начисляет доход по вкладам на баланс вклада (не на счёт компании).
+            Автоматически снимает депозиты по окончании срока.
         """
 
-        for deposit in self.deposits:
+        for index, deposit in enumerate(self.deposits):
             if deposit["steps_now"] < deposit["steps_total"]:
                 # Начисляем проценты на баланс вклада
                 deposit["current_balance"] += deposit["income_per_turn"]
                 deposit["total_earned"] += deposit["income_per_turn"]
 
             deposit["steps_now"] += 1
+
+            # Если срок депозита истек, то снимаем
+            if deposit["steps_now"] >= deposit["steps_total"]:
+
+                if self.in_prison is False:
+                    self.withdraw_deposit(index)
 
         self.save_to_base()
         self.reupdate()
@@ -805,19 +858,19 @@ class Company(BaseClass):
         self.in_prison_check()
 
         if not isinstance(deposit_index, int):
-            raise ValueError("Deposit index must be an integer.")
+            raise ValueError("Индекс депозита должен быть целым числом.")
         if deposit_index < 0 or deposit_index >= len(self.deposits):
-            raise ValueError("Invalid deposit index.")
+            raise ValueError("Недействительный индекс депозита.")
 
         deposit = self.deposits[deposit_index]
         
         session = session_manager.get_session(self.session_id)
         if not session:
-            raise ValueError("Session not found.")
+            raise ValueError("Сессия не найдена.")
         
         # Проверяем, можно ли забрать деньги (прошло минимум 3 хода)
         if session.step < deposit["can_withdraw_from"]:
-            raise ValueError(f"Cannot withdraw deposit yet. Available from step {deposit['can_withdraw_from']}.")
+            raise ValueError(f"Нельзя забрать депозит пока. Доступно с шага {deposit['can_withdraw_from']}.")
 
         # Возвращаем весь баланс вклада на счёт компании
         amount_to_return = deposit["current_balance"]
@@ -865,9 +918,9 @@ class Company(BaseClass):
 
         factory = Factory(factory_id).reupdate()
         if not factory:
-            raise ValueError("Factory not found.")
+            raise ValueError("Фабрика не найдена.")
         if factory.company_id != self.id:
-            raise ValueError("Factory does not belong to this company.")
+            raise ValueError("Фабрика не принадлежит этой компании.")
 
         factory.pere_complete(resource)
 
@@ -902,9 +955,9 @@ class Company(BaseClass):
 
         factory = Factory(factory_id).reupdate()
         if not factory:
-            raise ValueError("Factory not found.")
+            raise ValueError("Фабрика не найдена.")
         if factory.company_id != self.id:
-            raise ValueError("Factory does not belong to this company.")
+            raise ValueError("Фабрика не принадлежит этой компании.")
 
         factory.set_auto(status)
 
@@ -914,56 +967,55 @@ class Company(BaseClass):
 
         factory = Factory(factory_id).reupdate()
         if not factory:
-            raise ValueError("Factory not found.")
+            raise ValueError("Фабрика не найдена.")
         if factory.company_id != self.id:
-            raise ValueError("Factory does not belong to this company.")
+            raise ValueError("Фабрика не принадлежит этой компании.")
 
         factory.set_produce(produce)
 
-    def create_contract(self, 
-                        company_id: int | None, 
-                        resource: str, amount: int, price_per_unit: int | str,
-                        type: str,  # "sell" | "exchange" 
-                        steps: int
-                        ):
-        """ Создает контракт с другой компанией.
-        """
+    def get_contracts(self) -> list['Contract']:
+        """ Получает все контракты компании """
+        from game.contract import Contract
 
-        pass
+        contracts: list[Contract] = just_db.find(
+            Contract.__tablename__, to_class=Contract,
+            supplier_company_id=self.id
+        ) # type: ignore
 
-    def take_contract(self, contract_id: int):
-        """ Принимает контракт от другой компании.
-        """
+        contracts += just_db.find(
+            Contract.__tablename__, to_class=Contract,
+            customer_company_id=self.id
+        ) # type: ignore
 
-        pass
+        return contracts
 
-    def cancel_contract(self, contract_id: int):
-        """ Отменяет контракт. (Предложенный)
-        """
+    def get_max_contracts(self) -> int:
+        """ Получает максимальное количество активных контрактов """
+        contracts_level = self.get_improvements().get('contracts', 1)
+        contracts_config = IMPROVEMENTS.contracts.levels.get(str(contracts_level))
+        
+        if not contracts_config or contracts_config.max is None:
+            return 5  # По умолчанию 5 контрактов (уровень 1)
+        
+        return contracts_config.max
 
-        pass
+    def can_create_contract(self) -> bool:
+        """ Проверяет, может ли компания создать новый контракт """
 
-    def sell_resource_to_city(self, resource: str, 
-                              amount: int, city_id: int):
-        """ Продает ресурс городу.
-        """
-
-        pass
-
-    def get_logistics_resources(self):
-        """ Возвращает список логистических транспортных средств компании.
-        """
-
-        pass
-
+        return len(self.get_contracts()) < self.get_max_contracts()
 
     def on_new_game_stage(self, step: int):
         """ Вызывается при переходе на новый игровой этап.
             Обновляет доходы, списывает налоги и т.д.
         """
+        from game.contract import Contract
 
         self.last_turn_income = self.this_turn_income
         self.this_turn_income = 0
+
+        session = session_manager.get_session(self.session_id)
+        if not session:
+            raise ValueError("Сессия не найдена.")
 
         if step != 1:
             if self.last_turn_income >= CAPITAL.bank.tax.big_on:
@@ -977,21 +1029,37 @@ class Company(BaseClass):
 
         cell_info = self.get_my_cell_info()
         if cell_info:
-            resource_id = cell_info.resource_id 
-            raw_col = self.raw_in_step()
+            resource_id = cell_info.resource_id
+
+            mod = session.get_event_effects().get(
+                'resource_extraction_speed', 1.0
+            )
+
+            cell_type = self.get_cell_type()
+            if session.get_event().get('cell_type') == cell_type:
+                mod *= session.get_event().get('income_multiplier', 1.0)
+
+            raw_col = int(self.raw_in_step() * mod)
 
             if resource_id and raw_col > 0:
                 try:
                     self.add_resource(resource_id, raw_col)
                 except Exception as e: 
-                    print(f'stage add comp res. of {self.id} error: {e}')
+                    max_col = self.get_warehouse_free_size()
+                    if max_col > 0:
+                        self.add_resource(resource_id, max_col)
 
         factories = self.get_factories()
         for factory in factories:
             factory.on_new_game_stage()
 
+        contracts = self.get_contracts()
+        for contract in contracts:
+            contract: Contract
+            contract.on_new_game_step()
+
     @property
-    def exchages(self) -> list['Exchange']:
+    def exchanges(self) -> list['Exchange']:
         from game.exchange import Exchange
 
         exchanges = just_db.find(
@@ -1017,6 +1085,7 @@ class Company(BaseClass):
             "last_turn_income": self.last_turn_income,
             "this_turn_income": self.this_turn_income,
             "business_type": self.business_type,
+            "economic_power": self.economic_power,
             
             # Репутация и статус
             "reputation": self.reputation,
@@ -1043,6 +1112,7 @@ class Company(BaseClass):
             "improvements_data": self.get_improvements(),
             "warehouses": self.warehouses,
             "warehouse_capacity": self.get_max_warehouse_size(),
+            "warehouse_free_size": self.get_warehouse_free_size(),
             "resources_amount": self.get_resources_amount(),
             "raw_per_turn": self.raw_in_step(),
             
@@ -1054,5 +1124,11 @@ class Company(BaseClass):
             # Дополнительные возможности
             "can_user_enter": self.can_user_enter(),
 
-            "exchages": self.exchages
+            "exchanges": [
+                change.to_dict() for change in self.exchanges
+            ],
+
+            "contracts": [
+                contract.to_dict() for contract in self.get_contracts()
+            ],
         }

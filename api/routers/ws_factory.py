@@ -8,7 +8,7 @@ from modules.check_password import check_password
     "get-factories", 
     doc="Обработчик получения списка всех фабрик. Отправляет ответ на request_id", 
     datatypes=[
-        "company_id: int",
+        "company_id: Optional[int]",
         "complectation: Optional[str]",
         "produce: Optional[bool]",
         "is_auto: Optional[bool]",
@@ -27,9 +27,10 @@ async def handle_get_factories(client_id: str, message: dict):
 
     # Получаем список фабрик из базы данных
     factories = just_db.find('factories',
+                             to_class=Factory,
                          **{k: v for k, v in conditions.items() if v is not None})
 
-    return {"factories": factories}
+    return [factory.to_dict() for factory in factories]
 
 @message_handler(
     "get-factory", 
@@ -46,14 +47,12 @@ async def handle_get_factory(client_id: str, message: dict):
     if factory_id is None:
         return {"error": "factory_id is required"}
 
-    try:
-        factory = Factory(factory_id).reupdate()
-        if not factory:
-            raise ValueError("Factory not found.")
-        
-        return {"factory": factory.to_dict()}
-    except ValueError as e:
-        return {"error": str(e)}
+    factory = Factory(factory_id).reupdate()
+    if not factory:
+        raise ValueError("Завод не найден.")
+    
+    return factory.to_dict() if factory else None
+
 
 @message_handler(
     "factory-recomplectation", 
@@ -83,7 +82,7 @@ async def handle_factory_recomplectation(client_id: str, message: dict):
         
         factory = Factory(factory_id).reupdate()
         if not factory:
-            raise ValueError("Factory not found.")
+            raise ValueError("Завод не найден.")
         
         result = factory.pere_complete(new_complectation)
         
@@ -114,7 +113,7 @@ async def handle_factory_set_produce(client_id: str, message: dict):
     try:
         factory = Factory(factory_id).reupdate()
         if not factory:
-            raise ValueError("Factory not found.")
+            raise ValueError("Завод не найден.")
         
         factory.set_produce(produce)
 
@@ -145,7 +144,7 @@ async def handle_factory_set_auto(client_id: str, message: dict):
     try:
         factory = Factory(factory_id).reupdate()
         if not factory:
-            raise ValueError("Factory not found.")
+            raise ValueError("Завод не найден.")
         
         factory.set_auto(is_auto)
 
