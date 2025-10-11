@@ -122,6 +122,9 @@ async def test1():
     customer.warehouses = {}
     supplier.balance = 0
     customer.balance = 0
+    
+    supplier.reputation = 0
+    customer.reputation = 0
     supplier.save_to_base()
     customer.save_to_base()
 
@@ -138,15 +141,24 @@ async def test1():
         3, 1000
     )
     c_id = contract.id
-    # contract.accept_contract()
+    contract.accept_contract()
     
     for i in range(4):
         
+        await sleep(3)
         session.update_stage(SessionStages.Game, True)
         for company in [supplier, customer]:
             company.reupdate()
         contract.reupdate()
         
-        status = just_db.
-    
-    
+        status = just_db.find_one("contracts", **{"id": c_id})
+        print(f"🔄 Шаг {i+1} | 1 Статус контракта: {status}")
+        
+        if i != 3:
+            print(f"➡️  Ход {i+1} | Поставляем металл...")
+            res = contract.execute_turn()
+            if not res:
+                print("❌ Ошибка поставки!")
+        
+        status = just_db.find_one("contracts", **{"id": c_id})
+        print(f"🔄 Шаг {i+1} | Статус контракта: {status}")
