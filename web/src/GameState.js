@@ -40,6 +40,19 @@ export class GameState {
       // Achievements data (computed from company data)
       achievements: [],
 
+      // Event data
+      event: {
+        id: null,
+        name: null,
+        description: null,
+        category: null,
+        start_step: null,
+        end_step: null,
+        is_active: false,
+        starts_next_turn: false,
+        predictable: false
+      },
+
       // Map data
       map: {
         cells: [],
@@ -547,6 +560,68 @@ export class GameState {
     return this.state.achievements.filter(a => a.company_id === companyId);
   }
 
+  // ==================== EVENT METHODS ====================
+
+  /**
+   * Update event data
+   * @param {Object} eventData - Event data from server
+   */
+  updateEvent(eventData) {
+    if (!eventData || Object.keys(eventData).length === 0) {
+      // Clear event if no data
+      this.clearEvent();
+      return;
+    }
+
+    this.state.event = {
+      id: eventData.id || null,
+      name: eventData.name || null,
+      description: eventData.description || null,
+      category: eventData.category || null,
+      start_step: eventData.start_step ?? null,
+      end_step: eventData.end_step ?? null,
+      is_active: eventData.is_active || false,
+      starts_next_turn: eventData.starts_next_turn || false,
+      predictable: eventData.predictable || false
+    };
+
+    console.log('[GameState] Event updated:', this.state.event);
+  }
+
+  /**
+   * Clear event data
+   */
+  clearEvent() {
+    this.state.event = {
+      id: null,
+      name: null,
+      description: null,
+      category: null,
+      start_step: null,
+      end_step: null,
+      is_active: false,
+      starts_next_turn: false,
+      predictable: false
+    };
+    console.log('[GameState] Event cleared');
+  }
+
+  /**
+   * Get current event
+   * @returns {Object}
+   */
+  getEvent() {
+    return this.state.event;
+  }
+
+  /**
+   * Check if there is an active or upcoming event
+   * @returns {boolean}
+   */
+  hasEvent() {
+    return this.state.event.id !== null;
+  }
+
   // ==================== MAP METHODS ====================
 
   /**
@@ -733,6 +808,7 @@ export class GameState {
     this.state.cities = [];
     this.state.contracts = [];
     this.state.achievements = [];
+    this.clearEvent();
     this.state.map = {
       cells: [],
       size: { rows: 7, cols: 7 },

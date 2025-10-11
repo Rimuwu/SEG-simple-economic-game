@@ -158,6 +158,30 @@ export class WebSocketManager {
     return request_id;
   }
 
+  get_session_event(callback = null) {
+    if (!this.socket || this.socket.readyState !== WebSocket.OPEN) {
+      const error = "WebSocket is not connected";
+      this.gameState.setError(error);
+      if (callback) callback({ success: false, error });
+      return null;
+    }
+
+    const request_id = `get_session_event_${Date.now()}_${Math.random()
+      .toString(36)
+      .substr(2, 9)}`;
+    if (callback && typeof callback === "function") {
+      this.pendingCallbacks.set(request_id, callback);
+    }
+    this.socket.send(
+      JSON.stringify({
+        type: "get-session-event",
+        session_id: this.gameState.state.session.id,
+        request_id: request_id,
+      })
+    );
+    return request_id;
+  }
+
   get_companies(callback = null) {
     if (!this.socket || this.socket.readyState !== WebSocket.OPEN) {
       const error = "WebSocket is not connected";
@@ -438,17 +462,20 @@ export class WebSocketManager {
     // 2. Time to next stage
     this.get_time_to_next_stage();
     
-    // 3. Companies and their users
+    // 3. Event data
+    this.get_session_event();
+    
+    // 4. Companies and their users
     this.get_companies();
     this.get_users();
     
-    // 4. Cities
+    // 5. Cities
     this.get_cities();
     
-    // 5. Contracts
+    // 6. Contracts
     this.get_contracts();
     
-    // 6. Exchange data
+    // 7. Exchange data
     this.get_exchanges();
     
     // Note: Factories are fetched per company when needed
@@ -481,6 +508,8 @@ export class WebSocketManager {
         message.request_id.startsWith("get_session_")
       ) {
         this.handleSessionResponse(message);
+      } else if (message.request_id.startsWith("get_session_event_")) {
+        this.handleEventResponse(message);
       } else if (message.request_id.startsWith("get_companies_")) {
         this.handleCompaniesResponse(message);
       } else if (message.request_id.startsWith("get_company_")) {
@@ -565,6 +594,31 @@ export class WebSocketManager {
       } else {
         callback({ success: false, error: "No sessions data" });
       }
+      this.pendingCallbacks.delete(requestId);
+    }
+  }
+
+  handleEventResponse(message) {
+    const requestId = message.request_id;
+    const callback = this.pendingCallbacks.get(requestId);
+    
+    if (message.success && message.data && message.data.event) {
+      // Update event in game state
+      this.gameState.updateEvent(message.data.event);
+      
+      if (callback) {
+        callback({ success: true, data: message.data.event });
+      }
+    } else {
+      // No event or empty event data - clear it
+      this.gameState.clearEvent();
+      
+      if (callback) {
+        callback({ success: true, data: null });
+      }
+    }
+
+    if (callback) {
       this.pendingCallbacks.delete(requestId);
     }
   }

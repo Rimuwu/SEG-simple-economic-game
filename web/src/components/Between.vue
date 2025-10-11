@@ -95,6 +95,27 @@ const formatNumber = (num) => {
   return num?.toLocaleString('ru-RU') || '0'
 }
 
+// Event computed property
+const currentEvent = computed(() => {
+  return wsManager?.gameState?.getEvent() || null
+})
+
+// Helper to get event status text
+const eventStatusText = computed(() => {
+  const event = currentEvent.value
+  if (!event || !event.id) return null
+  
+  if (event.is_active) {
+    return 'Действует сейчас'
+  } else if (event.starts_next_turn) {
+    return 'Начнётся на следующем ходу'
+  } else if (event.predictable) {
+    const stepsUntil = event.start_step - wsManager?.gameState?.state?.session?.step
+    return `Начнётся через ${stepsUntil} ход${stepsUntil === 1 ? '' : stepsUntil < 5 ? 'а' : 'ов'}`
+  }
+  return null
+})
+
 onMounted(() => {
   // Generate achievements when component mounts
   let sessionId = wsManager?.gameState?.state?.session?.id
@@ -165,7 +186,12 @@ onMounted(() => {
       </div>
 
       <div class="events">
-        <span>Нет события</span>
+        <div v-if="currentEvent && currentEvent.id" class="event-content">
+          <div class="event-name">{{ currentEvent.name }}</div>
+          <div class="event-status" v-if="eventStatusText">{{ eventStatusText }}</div>
+          <div class="event-description">{{ currentEvent.description }}</div>
+        </div>
+        <span v-else>Нет событий</span>
       </div>
 
     </div>
@@ -286,7 +312,29 @@ onMounted(() => {
 
   color: white;
   font-family: "Ubuntu Mono", monospace;
+}
 
+.event-content {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.event-name {
+  font-size: 5rem;
+  font-weight: bold;
+}
+
+.event-status {
+  font-size: 2.5rem;
+  opacity: 0.8;
+  font-style: italic;
+}
+
+.event-description {
+  font-size: 3rem;
+  opacity: 0.9;
+  margin-top: 10px;
 }
 
 .footer {
