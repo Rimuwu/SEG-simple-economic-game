@@ -1,5 +1,5 @@
 <script setup>
-import { ref, reactive, provide } from 'vue'
+import { ref, reactive, provide, watch, computed } from 'vue'
 
 /**
  * Shared map state for singleton Map component.
@@ -65,6 +65,27 @@ function handleShow(view) {
 }
 
 /**
+ * Map session stage to view component name
+ * @param {string} stage - Session stage from API
+ * @returns {string} - Component name
+ */
+function stageToView(stage) {
+  switch (stage) {
+    case 'FreeUserConnect':
+    case 'CellSelect':
+      return 'Preparation'
+    case 'Game':
+      return 'Game'
+    case 'ChangeTurn':
+      return 'Between'
+    case 'End':
+      return 'Endgame'
+    default:
+      return currentView.value // Keep current view if unknown stage
+  }
+}
+
+/**
  * Shows the admin panel when mouse is in the top-left corner.
  * @param {MouseEvent} e
  */
@@ -90,6 +111,23 @@ let wsManager = null
 wsManager = new WebSocketManager('ws://localhost:8000/ws/connect', globalThis.console)
 wsManager.connect()
 globalThis.wsManager = wsManager
+
+/**
+ * Watch for session stage changes and automatically navigate to appropriate view
+ */
+watch(
+  () => wsManager.gameState?.state?.session?.stage,
+  (newStage, oldStage) => {
+    if (newStage && newStage !== oldStage) {
+      const targetView = stageToView(newStage)
+      if (targetView !== currentView.value && targetView !== 'Introduction') {
+        console.log(`🎮 Stage changed: ${oldStage} → ${newStage}, navigating to ${targetView}`)
+        handleShow(targetView)
+      }
+    }
+  },
+  { immediate: false }
+)
 
 /**
  * Globally available function to refresh the map from session data.
