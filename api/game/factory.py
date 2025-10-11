@@ -27,7 +27,7 @@ class Factory(BaseClass):
         self.company_id: int = 0
 
         self.complectation: Optional[str] = None  # Какая комплектация производится
-        self.progress: list[int] = [0, 0]  # [текущий прогресс, прогресс для завершения]
+        self.progress: list[float] = [0.0, 0.0]  # [текущий прогресс, прогресс для завершения]
 
         self.produce: bool = False  # Должна ли фабрика производить продукцию
         self.is_auto: bool = False  # Автоматическое производство
@@ -126,8 +126,15 @@ class Factory(BaseClass):
 
     def on_new_game_stage(self):
         from game.company import Company
+        from game.session import Session
 
         company = Company(self.company_id).reupdate()
+        if not company:
+            return False
+        
+        session = Session(company.session_id).reupdate()
+        if not session:
+            return False
 
         # Этап комплектации
         if self.complectation_stages > 0:
@@ -146,14 +153,21 @@ class Factory(BaseClass):
         # Этап производства
         elif self.is_working:
             resource = RESOURCES.get_resource(self.complectation) # type: ignore
-            self.progress[0] += 1
 
             # Снимаем материалы со склада компании при первом ходе производства
-            if self.progress[0] == 1:
+            if self.progress[0] == 0:
                 materials = resource.production.materials # type: ignore
 
                 for mat, qty in materials.items():
-                    company.remove_resource(mat, qty)
+                    try:
+                        company.remove_resource(mat, qty)
+                    except Exception as e:
+                        return False
+
+            tasks_speed = session.get_event_effects().get(
+                'tasks_speed', 1.0
+            )
+            self.progress[0] += tasks_speed
 
             # Если производство завершено - добавляем ресурсы на склад компании
             if self.progress[0] >= self.progress[1]:
@@ -189,6 +203,7 @@ class Factory(BaseClass):
                 }))
 
             self.save_to_base()
+        return True
 
     def set_produce(self, produce: bool):
         """ Установка статуса производства фабрики
