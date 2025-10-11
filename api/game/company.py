@@ -30,6 +30,7 @@ class Company(BaseClass):
 
         self.reputation: int = 0
         self.balance: int = 0
+        self.economic_power: int = 0
 
         self.in_prison: bool = False
         self.prison_end_step: Optional[int] = None
@@ -254,6 +255,27 @@ class Company(BaseClass):
         for amount in self.warehouses.values(): 
             count += amount
         return count
+
+    def set_economic_power(self, count: int, item: str, e_type: str):
+        mod = 1
+
+        if e_type == "production":
+            mod = 1
+        elif e_type == "exchange":
+            mod = 2
+        elif e_type == "city_sell":
+            mod = 3
+        elif e_type == "contract":
+            mod = 2
+
+        resource = RESOURCES.get_resource(item)  # type: ignore
+        if not resource:
+            dif = 0
+        else:
+            dif = resource.basePrice
+
+        self.economic_power += int(count * dif * mod)
+        self.save_to_base()
 
     def get_my_cell_info(self):
         cell_type_key = self.get_cell_type()
@@ -990,7 +1012,7 @@ class Company(BaseClass):
 
         self.last_turn_income = self.this_turn_income
         self.this_turn_income = 0
-        
+
         session = session_manager.get_session(self.session_id)
         if not session:
             raise ValueError("Session not found.")
@@ -1063,6 +1085,7 @@ class Company(BaseClass):
             "last_turn_income": self.last_turn_income,
             "this_turn_income": self.this_turn_income,
             "business_type": self.business_type,
+            "economic_power": self.economic_power,
             
             # Репутация и статус
             "reputation": self.reputation,
