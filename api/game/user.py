@@ -22,7 +22,7 @@ class User(BaseClass):
         session = session_manager.get_session(session_id)
 
         if not session or not session.can_user_connect():
-            raise ValueError("Invalid or inactive session for user connection.")
+            raise ValueError("Неверная сессия или регистрация запрещена на данном этапе.")
 
         self.id = _id
 
@@ -30,7 +30,7 @@ class User(BaseClass):
                                           username=username, 
                                           session_id=session_id)
         if with_this_name:
-            raise ValueError(f"Username '{username}' is already taken in this session.")
+            raise ValueError(f"Имя пользователя '{username}' уже занято в этой сессии.")
         self.username = username
 
         self.session_id = session_id
@@ -53,15 +53,15 @@ class User(BaseClass):
         session = session_manager.get_session(self.session_id)
 
         if self.company_id != 0:
-            raise ValueError("User is already in a company.")
+            raise ValueError("Пользователь уже находится в компании.")
 
         if not session: 
-            raise ValueError("User is not in a valid session.")
+            raise ValueError("Пользователь не в действительной сессии.")
 
         company = Company().create(name=name, 
                                    session_id=self.session_id)
         if not session.can_add_company():
-            raise ValueError("Cannot add company at this stage.")
+            raise ValueError("Невозможно добавить компанию на данном этапе.")
 
         self.company_id = company.id
 
@@ -72,16 +72,16 @@ class User(BaseClass):
     def add_to_company(self, secret_code: int):
         from game.company import Company
         if self.company_id != 0:
-            raise ValueError("User is already in a company.")
+            raise ValueError("Пользователь уже находится в компании.")
 
         company: Company = just_db.find_one("companies", 
                     to_class=Company, 
                     secret_code=secret_code) # type: ignore
         if not company: 
-            raise ValueError("Company with this secret code not found.")
+            raise ValueError("Компания с этим секретным кодом не найдена.")
 
         if company.can_user_enter() is False:
-            raise ValueError("Company is not accepting new users at the moment.")
+            raise ValueError("Компания в данный момент не принимает новых пользователей.")
 
         self.company_id = company.id
         self.save_to_base()
@@ -110,7 +110,7 @@ class User(BaseClass):
     def leave_from_company(self):
         from game.company import Company
         if self.company_id == 0:
-            raise ValueError("User is not in a company.")
+            raise ValueError("Пользователь не находится в компании.")
 
         old_company_id = self.company_id
         self.company_id = 0

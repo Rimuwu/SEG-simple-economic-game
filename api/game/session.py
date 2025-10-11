@@ -71,10 +71,10 @@ class Session(BaseClass):
     def update_stage(self, new_stage: SessionStages, 
                      whitout_shedule: bool = False):
         if not isinstance(new_stage, SessionStages):
-            raise ValueError("new_stage must be an instance of SessionStages Enum")
+            raise ValueError("new_stage должен быть экземпляром SessionStages Enum")
 
         if self.stage == SessionStages.End.value:
-            raise ValueError("Cannot change stage from End stage.")
+            raise ValueError("Нельзя изменить стадию из завершающей стадии.")
 
         elif self.step >= self.max_steps:
             new_stage = SessionStages.End
@@ -169,7 +169,7 @@ class Session(BaseClass):
         from game.step_shedule import StepSchedule
 
         if in_step < 0:
-            raise ValueError("in_step must be a non-negative integer.")
+            raise ValueError("in_step должен быть неотрицательным целым числом.")
 
         schedule = StepSchedule().create(
             session_id=self.session_id, in_step=in_step)
@@ -277,7 +277,7 @@ class Session(BaseClass):
 
     def generate_cells(self):
         if self.cells:
-            raise ValueError("Cells have already been generated for this session.")
+            raise ValueError("Клетки уже были сгенерированы для этой сессии.")
 
         # Ограничения на размер карты
         for r in range(self.map_size["rows"]):
@@ -360,7 +360,7 @@ class Session(BaseClass):
         """ Проверяет, можно ли выбрать клетку с координатами (x, y) для компании.
         """
         if not self.can_select_cells():
-            raise ValueError("Current session stage does not allow cell selection.")
+            raise ValueError("Текущая стадия сессии не позволяет выбирать клетки.")
 
         index = x * self.map_size["cols"] + y
         cell_type_key = self.cells[index]
@@ -536,7 +536,7 @@ class Session(BaseClass):
         
         # Проверяем, что событие существует в конфиге
         if not EVENTS or event_id not in EVENTS.events:
-            raise ValueError(f"Event '{event_id}' not found in config")
+            raise ValueError(f"Событие '{event_id}' не найдено в конфигурации")
             
         self.event_type = event_id
         self.event_start = start_step
@@ -732,7 +732,7 @@ class SessionsManager():
     def create_session(self, session_id: str = ""):
         session = Session(session_id=session_id).start()
         if session.session_id in self.sessions:
-            raise ValueError("Session with this ID already exists in memory.")
+            raise ValueError("Сессия с этим ID уже существует в памяти.")
         self.sessions[session.session_id] = session
         return session
 

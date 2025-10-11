@@ -105,10 +105,10 @@ async def handle_update_session_stage(client_id: str, message: dict):
         check_password(password)
 
         session = session_manager.get_session(session_id=session_id)
-        if not session: raise ValueError("Session not found.")
+        if not session: raise ValueError("Сессия не найдена.")
 
         if stage not in stages_to_types:
-            raise ValueError("Invalid stage value.")
+            raise ValueError("Неверное значение стадии.")
 
         session.update_stage(stages_to_types[stage], 
                              not add_shedule)
@@ -132,7 +132,7 @@ async def handle_get_sessions_free_cells(
 
     try:
         session = session_manager.get_session(session_id=session_id)
-        if not session: raise ValueError("Session not found.")
+        if not session: raise ValueError("Сессия не найдена.")
 
         free_cells = session.get_free_cells()
         return {"free_cells": free_cells}
@@ -162,10 +162,10 @@ async def handle_delete_session(
         check_password(password)
 
         session = session_manager.get_session(session_id=session_id)
-        if not session: raise ValueError("Session not found.")
+        if not session: raise ValueError("Сессия не найдена.")
 
         if not really:
-            raise ValueError("Confirmation required to delete session.")
+            raise ValueError("Требуется подтверждение для удаления сессии.")
 
         session.delete()
     except ValueError as e:
@@ -187,7 +187,7 @@ async def handle_get_session_time_to_next_stage(
     session_id = message.get("session_id", "")
 
     session = session_manager.get_session(session_id=session_id)
-    if not session: raise ValueError("Session not found.")
+    if not session: raise ValueError("Сессия не найдена.")
 
     t = session.get_time_to_next_stage()
     return {
@@ -215,7 +215,7 @@ async def handle_get_item_price(client_id: str, message: dict):
     try:
         session = session_manager.get_session(session_id=session_id)
         if not session: 
-            raise ValueError("Session not found.")
+            raise ValueError("Сессия не найдена.")
 
         price = session.get_item_price(item_id)
         return {
@@ -242,7 +242,7 @@ async def handle_get_all_item_prices(client_id: str, message: dict):
     try:
         session = session_manager.get_session(session_id=session_id)
         if not session: 
-            raise ValueError("Session not found.")
+            raise ValueError("Сессия не найдена.")
 
         all_prices = session.get_all_item_prices_dict()
         return {
@@ -268,7 +268,7 @@ async def handle_get_session_event(client_id: str, message: dict):
     try:
         session = session_manager.get_session(session_id=session_id)
         if not session: 
-            raise ValueError("Session not found.")
+            raise ValueError("Сессия не найдена.")
 
         event = session.public_event_data()
         return {
@@ -294,7 +294,7 @@ async def handle_get_session_leaders(client_id: str, message: dict):
     try:
         session = session_manager.get_session(session_id=session_id)
         if not session: 
-            raise ValueError("Session not found.")
+            raise ValueError("Сессия не найдена.")
 
         leaders = session.leaders()
         return {

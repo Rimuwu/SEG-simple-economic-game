@@ -99,7 +99,7 @@ class Citie(BaseClass):
 
         session = session_manager.get_session(session_id)
         if not session:
-            raise ValueError("Session not found")
+            raise ValueError("Сессия не найдена")
         
         self.id = self.__db_object__.max_id_in_table(self.__tablename__) + 1
         self.session_id = session_id
@@ -229,26 +229,26 @@ class Citie(BaseClass):
         # Получаем сессию
         session = session_manager.get_session(self.session_id)
         if not session:
-            raise ValueError("Session not found")
+            raise ValueError("Сессия не найдена")
         
         # Проверяем наличие спроса
         if resource_id not in self.demands:
-            raise ValueError("City doesn't need this resource")
+            raise ValueError("Город не нуждается в этом ресурсе")
         
         demand = self.demands[resource_id]
         
         # Проверяем количество
         if amount > demand['amount']:
-            raise ValueError(f"City needs only {demand['amount']} units")
+            raise ValueError(f"Городу нужно только {demand['amount']} единиц")
         
         # Получаем компанию
         company = Company(company_id).reupdate()
         if not company or company.session_id != self.session_id:
-            raise ValueError("Invalid company")
+            raise ValueError("Недействительная компания")
         
         # Проверяем наличие ресурса у компании
         if resource_id not in company.warehouses or company.warehouses[resource_id] < amount:
-            raise ValueError("Not enough resources")
+            raise ValueError("Недостаточно ресурсов")
         
         # Проводим транзакцию
         company.remove_resource(resource_id, amount)

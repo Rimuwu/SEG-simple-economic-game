@@ -111,7 +111,7 @@ async def handle_create_contract(client_id: str, message: dict):
     
     for field in required_fields:
         if field is None: 
-            return {"error": "Missing required fields."}
+            return {"error": "Упущены обязательные поля."}
 
     try:
         # Проверка типов
@@ -175,18 +175,18 @@ async def handle_accept_contract(client_id: str, message: dict):
     who_accepter = message.get("who_accepter", 0)
 
     for i in [contract_id, password, who_accepter]:
-        if i is None: return {"error": "Missing required fields."}
+        if i is None: return {"error": "Упущены обязательные поля."}
 
     try:
         if not isinstance(password, str):
-            return {"error": "Password must be a string"}
+            return {"error": "Пароль должен быть строкой"}
         if not isinstance(contract_id, int):
-            return {"error": "Contract ID must be an integer"}
+            return {"error": "ID контракта должен быть целым числом"}
 
         check_password(password)
 
         contract = Contract(id=contract_id).reupdate()
-        if not contract: raise ValueError("Contract not found.")
+        if not contract: raise ValueError("Контракт не найден.")
 
         contract.accept_contract(who_accepter)
 
@@ -214,18 +214,18 @@ async def handle_decline_contract(client_id: str, message: dict):
     who_decliner = message.get("who_decliner", 0)
 
     for i in [contract_id, password, who_decliner]:
-        if i is None: return {"error": "Missing required fields."}
+        if i is None: return {"error": "Упущены обязательные поля."}
 
     try:
         if not isinstance(password, str):
-            return {"error": "Password must be a string"}
+            return {"error": "Пароль должен быть строкой"}
         if not isinstance(contract_id, int):
-            return {"error": "Contract ID must be an integer"}
+            return {"error": "ID контракта должен быть целым числом"}
 
         check_password(password)
 
         contract = Contract(id=contract_id).reupdate()
-        if not contract: raise ValueError("Contract not found.")
+        if not contract: raise ValueError("Контракт не найден.")
 
         contract.decline_contract(who_decliner)
 
@@ -252,18 +252,18 @@ async def handle_execute_contract(client_id: str, message: dict):
     contract_id = message.get("contract_id")
 
     for i in [contract_id, password]:
-        if i is None: return {"error": "Missing required fields."}
+        if i is None: return {"error": "Упущены обязательные поля."}
 
     try:
         if not isinstance(password, str):
-            return {"error": "Password must be a string"}
+            return {"error": "Пароль должен быть строкой"}
         if not isinstance(contract_id, int):
-            return {"error": "Contract ID must be an integer"}
+            return {"error": "ID контракта должен быть целым числом"}
 
         check_password(password)
 
         contract = Contract(id=contract_id).reupdate()
-        if not contract: raise ValueError("Contract not found.")
+        if not contract: raise ValueError("Контракт не найден.")
 
         success = contract.execute_turn()
 
@@ -294,7 +294,7 @@ async def handle_cancel_contract(client_id: str, message: dict):
     who_canceller = message.get("who_canceller", 0)
 
     for i in [contract_id, password, who_canceller]:
-        if i is None: return {"error": "Missing required fields."}
+        if i is None: return {"error": "Упущены обязательные поля."}
 
     try:
         if not isinstance(password, str):
@@ -305,7 +305,7 @@ async def handle_cancel_contract(client_id: str, message: dict):
         check_password(password)
 
         contract = Contract(id=contract_id).reupdate()
-        if not contract: raise ValueError("Contract not found.")
+        if not contract: raise ValueError("Контракт не найден.")
 
         contract.cancel_with_refund(who_canceller)
 
