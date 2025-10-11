@@ -212,19 +212,22 @@ async def notforgame_update_company_balance(company_id: int, balance_change: int
         wait_for_response=True
     )
 
-async def notforgame_update_company_items(company_id: int, item_id: str, quantity_change: int):
+async def notforgame_update_company_items(company_id: int, item_id: str, quantity_change: int, 
+                                          ignore_space: Optional[bool] = None):
     """Обновление предметов компании. НЕ ИСПОЛЬЗОВАТЬ В ИГРОВОМ ПРОЦЕССЕ!
     
     Args:
         company_id: ID компании
         item_id: ID предмета/ресурса
         quantity_change: Изменение количества (может быть отрицательным)
+        ignore_space: Игнорировать ограничения на место в складе
     """
     return await ws_client.send_message(
         "notforgame-update-company-items",
         company_id=company_id,
         item_id=item_id,
         quantity_change=quantity_change,
+        ignore_space=ignore_space,
         password=UPDATE_PASSWORD,
         wait_for_response=True
     )
@@ -362,6 +365,86 @@ async def get_session_time_to_next_stage(session_id: str):
     return await ws_client.send_message(
         "get-session-time-to-next-stage",
         session_id=session_id,
+        wait_for_response=True
+    )
+
+async def get_item_price(session_id: str, item_id: str):
+    """Получение цены конкретного товара в сессии"""
+    return await ws_client.send_message(
+        "get-item-price",
+        session_id=session_id,
+        item_id=item_id,
+        wait_for_response=True
+    )
+
+async def get_all_item_prices(session_id: str):
+    """Получение всех цен товаров в сессии"""
+    return await ws_client.send_message(
+        "get-all-item-prices",
+        session_id=session_id,
+        wait_for_response=True
+    )
+
+async def get_session_event(session_id: str):
+    """Получение события сессии"""
+    return await ws_client.send_message(
+        "get-session-event",
+        session_id=session_id,
+        wait_for_response=True
+    )
+
+# Функции для работы с городами
+async def get_cities(session_id: Optional[str] = None):
+    """Получение списка городов"""
+    return await ws_client.send_message(
+        "get-cities",
+        session_id=session_id,
+        wait_for_response=True
+    )
+
+async def get_city(id: Optional[int] = None, session_id: Optional[str] = None, 
+                   cell_position: Optional[str] = None, branch: Optional[str] = None):
+    """Получение города
+    
+    Args:
+        id: ID города
+        session_id: ID сессии
+        cell_position: Позиция ячейки
+        branch: Отрасль города
+    """
+    return await ws_client.send_message(
+        "get-city",
+        id=id,
+        session_id=session_id,
+        cell_position=cell_position,
+        branch=branch,
+        wait_for_response=True
+    )
+
+async def sell_to_city(city_id: int, company_id: int, resource_id: str, amount: int):
+    """Продажа ресурса городу
+    
+    Args:
+        city_id: ID города
+        company_id: ID компании
+        resource_id: ID ресурса
+        amount: Количество ресурса
+    """
+    return await ws_client.send_message(
+        "sell-to-city",
+        city_id=city_id,
+        company_id=company_id,
+        resource_id=resource_id,
+        amount=amount,
+        password=UPDATE_PASSWORD,
+        wait_for_response=True
+    )
+
+async def get_city_demands(city_id: int):
+    """Получение спроса города на товары"""
+    return await ws_client.send_message(
+        "get-city-demands",
+        city_id=city_id,
         wait_for_response=True
     )
 
