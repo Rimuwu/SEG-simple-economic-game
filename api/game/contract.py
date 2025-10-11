@@ -37,6 +37,8 @@ class Contract(BaseClass):
         self.supplier_company_id: int = 0  # Компания-поставщик
         self.customer_company_id: int = 0  # Компания-заказчик
         self.session_id: str = ""  # Сессия, в которой создан контракт
+        
+        self.who_creator: int = 0  # Кто создал контракт (ID компании)
 
         # Что поставляется
         self.resource: str = ""  # Тип ресурса
@@ -53,8 +55,10 @@ class Contract(BaseClass):
         
         self.successful_deliveries: int = 0  # Количество успешных поставок
 
-    def create(self, supplier_company_id: int, customer_company_id: int, session_id: str,
-               resource: str, amount_per_turn: int, duration_turns: int, payment_amount: int):
+    def create(self, supplier_company_id: int, customer_company_id: int, 
+               session_id: str, who_creator: int,
+               resource: str, amount_per_turn: int, duration_turns: int, payment_amount: int
+               ):
         """ Создание нового контракта
 
         Args:
@@ -65,6 +69,7 @@ class Contract(BaseClass):
             amount_per_turn: Количество за ход
             duration_turns: Длительность в ходах
             payment_amount: Сумма денег за контракт
+            who_creator: Кто создал контракт (ID компании)
         """
         from game.company import Company
         from game.session import session_manager
@@ -78,16 +83,20 @@ class Contract(BaseClass):
 
         if RESOURCES.get_resource(resource) is None:
             raise ValueError(f"Ресурс {resource} не существует")
-        
+
         if supplier_company_id == customer_company_id:
             raise ValueError("Компания не может заключить контракт с самой собой")
-        
+
         supplier = Company(_id=supplier_company_id).reupdate()
         customer = Company(_id=customer_company_id).reupdate()
-        
+
+        creator = Company(_id=who_creator).reupdate()
+        if creator is not None and not creator.can_create_contract():
+            raise ValueError("У вас максимальное количество контрактов.")
+
         if not supplier or not customer:
             raise ValueError("Одна из компаний не найдена")
-        
+
         session = session_manager.get_session(session_id)
         if not session:
             raise ValueError("Сессия не найдена")
@@ -107,6 +116,8 @@ class Contract(BaseClass):
     
         self.accepted = False  # По умолчанию контракт не принят
         self.delivered_this_turn = False  # Продукт не отправлен в текущем ходу
+
+        self.who_creator = who_creator
 
         self.save_to_base()
         self.reupdate()
@@ -207,14 +218,17 @@ class Contract(BaseClass):
             # При ошибке отменяем контракт
             raise ValueError("Ошибка при выполнении контракта")
 
-    def accept_contract(self):
+    def accept_contract(self, who_accepter: int):
         """ Принятие контракта поставщиком """
         if self.accepted:
             raise ValueError("Контракт уже принят")
-        
+
         if self.successful_deliveries > 0:
             raise ValueError("Контракт уже начал выполняться")
-        
+
+        if self.who_creator == who_accepter:
+            raise ValueError("Нельзя принять контракт, который вы создали")
+
         # Проверяем и снимаем полную оплату с заказчика
         from game.company import Company
         
@@ -248,13 +262,16 @@ class Contract(BaseClass):
         
         return self
 
-    def decline_contract(self):
+    def decline_contract(self, who_decliner: int):
         """ Отклонение контракта поставщиком """
         if self.accepted:
             raise ValueError("Нельзя отклонить уже принятый контракт")
         
         if self.successful_deliveries > 0:
             raise ValueError("Контракт уже начал выполняться")
+        
+        if self.who_creator == who_decliner:
+            raise ValueError("Нельзя отклонить контракт, который вы создали")
         
         asyncio.create_task(websocket_manager.broadcast({
             "type": "api-contract_declined",
@@ -267,9 +284,15 @@ class Contract(BaseClass):
         self.delete()
         return self
 
-    def cancel_with_refund(self):
+    def cancel_with_refund(self, who_canceller: int):
         """ Отмена контракта с возвратом части денег и штрафом репутации """
         from game.company import Company
+        
+        if not self.accepted:
+            raise ValueError("Контракт не принят, чтобы его отменить")
+        
+        if self.who_creator != who_canceller:
+            raise ValueError("Нельзя отменить контракт, если вы его не создавали")
         
         supplier = Company(_id=self.supplier_company_id).reupdate()
         customer = Company(_id=self.customer_company_id).reupdate()
@@ -315,8 +338,6 @@ class Contract(BaseClass):
             Сбрасывает статус доставки
             Удаляет непринятые контракты в конце хода
         """
-        from game.session import session_manager
-
         # Если контракт не принят в конце хода - удаляем
         if not self.accepted:
             asyncio.create_task(websocket_manager.broadcast({
@@ -334,7 +355,7 @@ class Contract(BaseClass):
         else:
             if not self.delivered_this_turn:
                 # Отменяем контракт с возвратом части денег и штрафом репутации
-                self.cancel_with_refund()
+                self.cancel_with_refund(self.who_creator)
                 return True
 
             self.delivered_this_turn = False
@@ -346,6 +367,7 @@ class Contract(BaseClass):
             "id": self.id,
             "supplier_company_id": self.supplier_company_id,
             "customer_company_id": self.customer_company_id,
+            "who_creator": self.who_creator,
             "session_id": self.session_id,
             "resource": self.resource,
             "amount_per_turn": self.amount_per_turn,
@@ -358,4 +380,3 @@ class Contract(BaseClass):
 
     def delete(self):
         just_db.delete(self.__tablename__, id=self.id)
-        del self

@@ -960,6 +960,11 @@ class Company(BaseClass):
             supplier_company_id=self.id
         ) # type: ignore
 
+        contracts += just_db.find(
+            Contract.__tablename__, to_class=Contract,
+            customer_company_id=self.id
+        ) # type: ignore
+
         return contracts
 
     def get_max_contracts(self) -> int:
