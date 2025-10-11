@@ -84,6 +84,10 @@ export class WebSocketManager {
     if (callback && typeof callback === "function") {
       this.pendingCallbacks.set(request_id, callback);
     }
+
+    this.state.session.id = session_id;
+    console.log(`[WS] Joining session ${session_id}`);
+
     this.socket.send(
       JSON.stringify({
         type: "get-session",

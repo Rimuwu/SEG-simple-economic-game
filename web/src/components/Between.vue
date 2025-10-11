@@ -23,22 +23,71 @@ const achievements = computed(() => {
 
 // Leaders computed property
 const leaders = computed(() => {
-  const sessionId = wsManager?.gameState?.state?.session?.id
-  if (!sessionId) return { capital: null, reputation: null, economic: null }
+  // Try to get session ID from session object
+  let sessionId = wsManager?.gameState?.state?.session?.id
+  
+  // If no session ID, try to get all companies and use the first company's session_id
+  const allCompanies = wsManager?.gameState?.state?.companies || []
+  
+  console.log('[Between.vue] Leaders - Session ID from session:', sessionId)
+  console.log('[Between.vue] Leaders - All companies:', allCompanies)
+  console.log('[Between.vue] Leaders - All companies count:', allCompanies.length)
+  
+  // If sessionId is null but we have companies, use the first company's session_id
+  if (!sessionId && allCompanies.length > 0) {
+    sessionId = allCompanies[0].session_id
+    console.log('[Between.vue] Leaders - Using session_id from first company:', sessionId)
+  }
+  
+  if (!sessionId) {
+    console.log('[Between.vue] Leaders - No sessionId found anywhere')
+    return { capital: null, reputation: null, economic: null }
+  }
   
   const companies = wsManager?.gameState?.getCompaniesBySession(sessionId) || []
-  if (companies.length === 0) return { capital: null, reputation: null, economic: null }
+  console.log('[Between.vue] Leaders - Filtered companies:', companies)
+  console.log('[Between.vue] Leaders - Filtered companies count:', companies.length)
+  
+  if (companies.length === 0) {
+    console.log('[Between.vue] Leaders - No companies found for session:', sessionId)
+    // Try using all companies as fallback
+    if (allCompanies.length > 0) {
+      console.log('[Between.vue] Leaders - Using all companies as fallback')
+      const byCapital = [...allCompanies].sort((a, b) => (b.balance || 0) - (a.balance || 0))[0]
+      const byReputation = [...allCompanies].sort((a, b) => (b.reputation || 0) - (a.reputation || 0))[0]
+      const byEconomic = [...allCompanies].sort((a, b) => (b.economic_power || 0) - (a.economic_power || 0))[0]
+      
+      console.log('[Between.vue] Leaders - byCapital (fallback):', byCapital)
+      console.log('[Between.vue] Leaders - byReputation (fallback):', byReputation)
+      console.log('[Between.vue] Leaders - byEconomic (fallback):', byEconomic)
+      
+      return {
+        capital: byCapital,
+        reputation: byReputation,
+        economic: byEconomic
+      }
+    }
+    return { capital: null, reputation: null, economic: null }
+  }
   
   // Find top companies
   const byCapital = [...companies].sort((a, b) => (b.balance || 0) - (a.balance || 0))[0]
   const byReputation = [...companies].sort((a, b) => (b.reputation || 0) - (a.reputation || 0))[0]
   const byEconomic = [...companies].sort((a, b) => (b.economic_power || 0) - (a.economic_power || 0))[0]
   
-  return {
+  console.log('[Between.vue] Leaders - byCapital:', byCapital)
+  console.log('[Between.vue] Leaders - byReputation:', byReputation)
+  console.log('[Between.vue] Leaders - byEconomic:', byEconomic)
+  
+  const result = {
     capital: byCapital,
     reputation: byReputation,
     economic: byEconomic
   }
+  
+  console.log('[Between.vue] Leaders - result:', result)
+  
+  return result
 })
 
 // Helper to format numbers with thousand separators
@@ -48,7 +97,14 @@ const formatNumber = (num) => {
 
 onMounted(() => {
   // Generate achievements when component mounts
-  const sessionId = wsManager?.gameState?.state?.session?.id
+  let sessionId = wsManager?.gameState?.state?.session?.id
+  // Try to get session ID from companies if not in session object
+  const companies = wsManager?.gameState?.state?.companies || []
+  
+  if (!sessionId && companies.length > 0) {
+    sessionId = companies[0].session_id
+  }
+  
   if (sessionId) {
     wsManager?.gameState?.generateAchievements(sessionId)
   }
