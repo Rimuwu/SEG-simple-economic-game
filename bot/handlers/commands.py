@@ -1,3 +1,4 @@
+from pprint import pprint
 from aiogram import F
 from aiogram.types import Message
 from aiogram.filters import Command
@@ -311,3 +312,17 @@ async def on_disconnect():
     print("❌ Не удалось подключиться после 15 попыток, выход.")
     
     
+@dp.message(Command("docs"), AdminFilter())
+async def docs(message: Message):
+    
+    result = await get_sessions()
+    pprint(result)
+    
+    result = await get_users()
+    pprint(result)
+    
+    result = await get_companies()
+    pprint(result)
+    
+    result = await get_factories()
+    pprint(result)
