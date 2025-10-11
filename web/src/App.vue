@@ -20,7 +20,6 @@ import Game from './components/Game.vue'
 import Between from './components/Between.vue'
 import Endgame from './components/Endgame.vue'
 import AdminPanel from './components/AdminPanel.vue'
-import OutputConsole from './components/OutputConsole.vue'
 
 import { WebSocketManager } from './ws'
 
@@ -34,11 +33,6 @@ const currentView = ref('Introduction')
  * @type {import('vue').Ref<boolean>}
  */
 const showAdmin = ref(false)
-/**
- * Ref to the OutputConsole component instance.
- * @type {import('vue').Ref<InstanceType<typeof OutputConsole>>}
- */
-const outputConsole = ref(null)
 
 /**
  * Controls the transition animation state
@@ -340,7 +334,6 @@ globalThis.debugHelp = () => {
 console.log('🎮 Game loaded! Type debugHelp() for available commands.')
 
 provide('wsManager', wsManager)
-provide('outputConsole', outputConsole)
 </script>
 
 <template>
@@ -352,8 +345,7 @@ provide('outputConsole', outputConsole)
     <!-- Admin panel overlay, shown when mouse is in top-left corner -->
     <AdminPanel v-if="showAdmin" @show="handleShow" @mouseleave="handleAdminLeave"
       style="position: fixed; left: 0; top: 0; width: 320px; z-index: 1000;" />
-    <!-- Floating output console for logs and errors -->
-    <OutputConsole ref="outputConsole" />
+
 
       <component :is="currentView === 'Introduction' ? Introduction :
           currentView === 'Preparation' ? Preparation :
