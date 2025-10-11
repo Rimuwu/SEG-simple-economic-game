@@ -4,6 +4,8 @@ from scenes.company_create_page import CompanyCreate
 from scenes.company_join_page import CompanyJoin
 from scenes.main_page import MainPage
 from scenes.wait_game_page import WaitStart
+from scenes.wait_game_stage_page import WaitGameStagePage
+from scenes.wait_select_cell_page import WaitSelectCellPage
 from scenes.select_cell_page import SelectCell
 from scenes.about_info_page import AboutInfo
 from scenes.cells_info_page import CellsInfo
@@ -11,6 +13,20 @@ from scenes.inventory_page import InventoryPage
 from scenes.bank_page import BankPage
 from scenes.bank_credit_page import BankCreditPage
 from scenes.bank_deposit_page import BankDepositPage
+from scenes.contract_menu_page import ContractMenuPage
+from scenes.contract_incoming_list_page import ContractIncomingListPage
+from scenes.contract_incoming_details_page import ContractIncomingDetailsPage
+from scenes.contract_outgoing_list_page import ContractOutgoingListPage
+from scenes.contract_outgoing_details_page import ContractOutgoingDetailsPage
+from scenes.contract_active_list_page import ContractActiveListPage
+from scenes.contract_active_details_page import ContractActiveDetailsPage
+from scenes.contract_create_select_company_page import ContractCreateSelectCompanyPage
+from scenes.contract_create_select_role_page import ContractCreateSelectRolePage
+from scenes.contract_create_select_resource_page import ContractCreateSelectResourcePage
+from scenes.contract_create_enter_amount_page import ContractCreateEnterAmountPage
+from scenes.contract_create_enter_duration_page import ContractCreateEnterDurationPage
+from scenes.contract_create_enter_payment_page import ContractCreateEnterPaymentPage
+from scenes.contract_create_confirm_page import ContractCreateConfirmPage
 from scenes.factory_menu_page import FactoryMenu
 from scenes.factory_rekit_groups import FactoryRekitGroups
 from scenes.factory_rekit_count import FactoryRekitCount
@@ -20,6 +36,7 @@ from scenes.factory_start_groups import FactoryStartGroups
 from scenes.exchange_page import ExchangePage
 from scenes.change_turn_page import ChangeTurnPage
 from scenes.prison_page import PrisonPage
+from scenes.end_game_page import EndGamePage
 from scenes.admin_panel_page import AdminPanelPage
 from scenes.base_scene import AdminScene
 from modules.db import db
@@ -35,6 +52,8 @@ class GameManager(AdminScene):
         CompanyJoin,
         MainPage,
         WaitStart,
+        WaitGameStagePage,
+        WaitSelectCellPage,
         SelectCell,
         AboutInfo,
         CellsInfo,
@@ -42,6 +61,20 @@ class GameManager(AdminScene):
         BankPage,
         BankCreditPage,
         BankDepositPage,
+        ContractMenuPage,
+        ContractIncomingListPage,
+        ContractIncomingDetailsPage,
+        ContractOutgoingListPage,
+        ContractOutgoingDetailsPage,
+        ContractActiveListPage,
+        ContractActiveDetailsPage,
+        ContractCreateSelectCompanyPage,
+        ContractCreateSelectRolePage,
+        ContractCreateSelectResourcePage,
+        ContractCreateEnterAmountPage,
+        ContractCreateEnterDurationPage,
+        ContractCreateEnterPaymentPage,
+        ContractCreateConfirmPage,
         FactoryMenu,
         FactoryRekitGroups,
         FactoryRekitCount,
@@ -50,6 +83,7 @@ class GameManager(AdminScene):
         FactoryStartGroups,
         ChangeTurnPage,
         PrisonPage,
+        EndGamePage,
         AdminPanelPage,
         ExchangePage
     ]

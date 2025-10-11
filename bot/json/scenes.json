@@ -137,6 +137,104 @@
                 "title": "",
                 "content": ""
             },
+            "contract-menu": {
+                "title": "",
+                "content": "",
+                "to_pages": {
+                    "main-page": "↪️ Назад"
+                }
+            },
+            "contract-incoming-list": {
+                "title": "",
+                "content": "",
+                "to_pages": {
+                    "contract-menu": "↪️ Назад"
+                }
+            },
+            "contract-incoming-details": {
+                "title": "",
+                "content": "",
+                "to_pages": {
+                    "contract-incoming-list": "↪️ Назад"
+                }
+            },
+            "contract-outgoing-list": {
+                "title": "",
+                "content": "",
+                "to_pages": {
+                    "contract-menu": "↪️ Назад"
+                }
+            },
+            "contract-outgoing-details": {
+                "title": "",
+                "content": "",
+                "to_pages": {
+                    "contract-outgoing-list": "↪️ Назад"
+                }
+            },
+            "contract-active-list": {
+                "title": "",
+                "content": "",
+                "to_pages": {
+                    "contract-menu": "↪️ Назад"
+                }
+            },
+            "contract-active-details": {
+                "title": "",
+                "content": "",
+                "to_pages": {
+                    "contract-active-list": "↪️ Назад"
+                }
+            },
+            "contract-create-select-company": {
+                "title": "",
+                "content": "",
+                "to_pages": {
+                    "contract-menu": "↪️ Отмена"
+                }
+            },
+            "contract-create-select-role": {
+                "title": "",
+                "content": "",
+                "to_pages": {
+                    "contract-create-select-company": "↪️ Назад"
+                }
+            },
+            "contract-create-select-resource": {
+                "title": "",
+                "content": "",
+                "to_pages": {
+                    "contract-create-select-role": "↪️ Назад"
+                }
+            },
+            "contract-create-enter-amount": {
+                "title": "",
+                "content": "",
+                "to_pages": {
+                    "contract-create-select-resource": "↪️ Назад"
+                }
+            },
+            "contract-create-enter-duration": {
+                "title": "",
+                "content": "",
+                "to_pages": {
+                    "contract-create-enter-amount": "↪️ Назад"
+                }
+            },
+            "contract-create-enter-payment": {
+                "title": "",
+                "content": "",
+                "to_pages": {
+                    "contract-create-enter-duration": "↪️ Назад"
+                }
+            },
+            "contract-create-confirm": {
+                "title": "",
+                "content": "",
+                "to_pages": {
+                    "contract-create-enter-payment": "↪️ Назад"
+                }
+            },
             "factory-menu": {
                 "title": "",
                 "content": "",
@@ -167,10 +265,14 @@
             "change-turn-page": {
                 "title": "",
                 "content": "*Смена хода...*\n\n"
-        },
+            },
             "prison-page": {
                 "title": "",
                 "content": "Вы находитесь в тюрьме."
+            },
+            "end-game-page": {
+                "title": "",
+                "content": "Игра завершена!"
             },
             "admin-panel-page": {
                 "title": "",

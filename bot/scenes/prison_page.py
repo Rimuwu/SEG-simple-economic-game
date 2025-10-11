@@ -1,6 +1,6 @@
 from oms import Page
 from aiogram.types import CallbackQuery
-from modules.ws_client import get_company
+from modules.ws_client import get_company, get_session
 from oms.utils import callback_generator
 from global_modules.logs import Logger
 
@@ -10,99 +10,61 @@ bot_logger = Logger.get_logger("bot")
 class PrisonPage(Page):
     __page_name__ = "prison-page"
     
-    async def content_worker(self):
-        """Показать информацию о заключении компании"""
-        scene_data = self.scene.get_data('scene')
-        company_id = scene_data.get('company_id')
-        
-        if not company_id:
-            return "❌ Ошибка: компания не найдена"
-        
+    async def content_worker(self) -> str:
         try:
+            scene_data = self.scene.get_data('scene')
+            if not scene_data:
+                return "⏳ Загрузка данных..."
+            
+            company_id = scene_data.get('company_id')
+            session_id = scene_data.get('session')
+            
+            if not company_id or not session_id:
+                return "❌ Ошибка: Данные компании не найдены"
+
             # Получаем данные компании
-            company_data = await get_company(id=company_id)
-            bot_logger.info(f"get_company response for prison: {company_data}")
+            company_response = await get_company(id=company_id, session_id=session_id)
+            if not company_response or "error" in company_response:
+                return "❌ Ошибка загрузки данных компании"
+
+            # Получаем данные сессии
+            session_response = await get_session(session_id=session_id)
+            if not session_response or "error" in session_response:
+                return "❌ Ошибка загрузки данных сессии"
+
+            company_name = company_response.get('name', 'Неизвестная компания')
+            prison_end_step = company_response.get('prison_end_step')
+            current_step = session_response.get('step', 0)
+            in_prison = company_response.get('in_prison', False)
+
+            content = "🚔 **ТЮРЬМА** 🚔\n\n"
             
-            if isinstance(company_data, str):
-                return f"❌ Ошибка при получении данных: {company_data}"
+            if not in_prison:
+                content += "✅ Ваша компания не находится в тюрьме.\n"
+                return content
+
+            content += f"🏢 **Компания**: {company_name}\n\n"
+            content += "⛓️ Ваша компания находится в тюрьме!.\n\n"
             
-            
-            # Получаем информацию о задолженности
-            balance = company_data.get('balance', 0)
-            company_name = company_data.get('name', 'Компания')
-            
-            # Формируем текст
-            content = "🔒 **ТЮРЬМА**\n\n"
-            content += f"Компания: *{company_name}*\n\n"
-            
-            content += "❌ Ваша компания находится в тюрьме!\n\n"
-            
-            # Информация о задолженности
-            content += f"💰 Текущий баланс: {balance:,} 💰\n\n".replace(",", " ")
-            
-            # Информация о сроке заключения
-            # В конфигурации настроек обычно есть параметр prison_duration
-            # Предположим, что это 3 хода (можно будет уточнить из settings)
-            from global_modules.load_config import ALL_CONFIGS
-            settings = ALL_CONFIGS.get('settings')
-            
-            # Примерный срок - 3 хода (если не указано иначе в настройках)
-            prison_duration = 3
-            if settings:
-                # Пытаемся получить длительность тюрьмы из настроек
-                prison_duration = getattr(settings, 'prison_duration', 3)
-            
-            content += f"⛓ **Срок заключения:** {prison_duration} ход(ов)\n\n"
-            
-            content += "📋 **Последствия заключения:**\n"
-            content += "• Компания не может производить ресурсы\n"
-            content += "• Заводы простаивают\n"
-            content += "• Невозможно совершать сделки\n"
-            content += "• Налоги продолжают начисляться\n\n"
-            
-            content += "💡 **Как избежать тюрьмы в будущем:**\n"
-            content += "• Вовремя оплачивайте налоги\n"
-            content += "• Следите за балансом компании\n"
-            content += "• Планируйте расходы заранее\n\n"
-            
-            content += f"⏳ Освобождение через: *{prison_duration}* ход(ов)"
-            
+            if prison_end_step is not None:
+                steps_remaining = prison_end_step - current_step
+                if steps_remaining > 0:
+                    content += f"⏳ **Освобождение через**: {steps_remaining} ход(а/ов)\n"
+                    content += f"📅 **Освобождение на ходу**: {prison_end_step}\n\n"
+                    content += "В это время:\n"
+                    content += "• ❌ Невозможно управлять заводами\n"
+                    content += "• ❌ Невозможно совершать сделки\n"
+                    content += "• ❌ Невозможно брать кредиты\n\n"
+                    content += "💡 *Не забывайте платить налоги, вовремя закрывать кредиты и выполнять контракты!*"
+                else:
+                    content += "✅ **Освобождение происходит на этом ходу!**\n"
+                    content += "Ожидайте начала следующего этапа..."
+            else:
+                content += "⚠️ Срок освобождения не определён.\n"
+                content += "Обратитесь к администратору."
+
             return content
             
         except Exception as e:
-            bot_logger.error(f"Ошибка при получении информации о тюрьме: {e}")
+            bot_logger.error(f"Ошибка в PrisonPage.content_worker: {e}")
             return f"❌ Ошибка при загрузке данных: {str(e)}"
-    
-    async def buttons_worker(self):
-        """Кнопки на странице тюрьмы"""
-        buttons = [
-            {
-                'text': '📊 Обновить информацию',
-                'callback_data': callback_generator(
-                    self.scene.__scene_name__,
-                    'refresh'
-                )
-            },
-            {
-                'text': '↪️ Вернуться в меню',
-                'callback_data': callback_generator(
-                    self.scene.__scene_name__,
-                    'back'
-                )
-            }
-        ]
-        
-        self.row_width = 1
-        return buttons
-    
-    @Page.on_callback('refresh')
-    async def refresh_info(self, callback: CallbackQuery, args: list):
-        """Обновить информацию на странице"""
-        await self.scene.update_message()
-        await callback.answer("🔄 Информация обновлена")
-    
-    @Page.on_callback('back')
-    async def back_to_menu(self, callback: CallbackQuery, args: list):
-        """Возврат в главное меню"""
-        await self.scene.update_page('main-page')
-        await callback.answer()
