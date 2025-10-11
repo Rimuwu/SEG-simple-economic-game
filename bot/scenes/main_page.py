@@ -10,7 +10,7 @@ class MainPage(Page):
         """ Генерация контента для главной страницы
         """
         scene_data = self.scene.get_data('scene')
-        company_data = scene_data.get('company', {})
+        company_data = scene_data.get('company_id', {})
         session_id = scene_data.get('session')
 
         # ALARM! Тут вернётся первая компания, она никак не связана с пользователем
