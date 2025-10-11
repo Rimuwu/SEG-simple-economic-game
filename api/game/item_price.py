@@ -1,9 +1,9 @@
 
+
 import asyncio
-from typing import Optional, cast
+from typing import cast
 from global_modules.models.cells import Cells
 from global_modules.db.baseclass import BaseClass
-from global_modules.models.resources import Production, Resource
 from modules.json_database import just_db
 from global_modules.load_config import ALL_CONFIGS, Resources, Improvements, Settings, Capital, Reputation
 from modules.function_way import *
@@ -102,3 +102,12 @@ class ItemPrice(BaseClass):
 
         self.material_based_price = self.calculate_material_price()
         self.save_to_base()
+
+        asyncio.create_task(websocket_manager.broadcast({
+            "type": "api-item_price_updated",
+            "data": {
+                "item_id": self.id,
+                "session_id": self.session_id,
+                "price": self.get_effective_price(),
+            }
+        }))

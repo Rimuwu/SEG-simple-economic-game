@@ -72,35 +72,35 @@ class Exchange(BaseClass):
         
         # Валидация
         if sell_amount_per_trade <= 0 or total_stock <= 0:
-            raise ValueError("Amounts must be positive integers.")
+            raise ValueError("Суммы должны быть положительными целыми числами.")
 
         if RESOURCES.get_resource(sell_resource) is None:
-            raise ValueError(f"Resource '{sell_resource}' does not exist.")
+            raise ValueError(f"Ресурс '{sell_resource}' не существует.")
         
         company = Company(_id=company_id).reupdate()
         if not company:
-            raise ValueError("Company not found.")
+            raise ValueError("Компания не найдена.")
         
         # Проверяем, есть ли у компании достаточно товара
         if company.warehouses.get(sell_resource, 0) < total_stock:
-            raise ValueError(f"Company doesn't have enough '{sell_resource}' in warehouse.")
+            raise ValueError(f"У компании недостаточно '{sell_resource}' на складе.")
         
         # Валидация типа сделки
         if offer_type == 'money':
             if price <= 0:
-                raise ValueError("Price must be a positive integer.")
+                raise ValueError("Цена должна быть положительным целым числом.")
 
         elif offer_type == 'barter':
             if not barter_resource or barter_amount <= 0:
-                raise ValueError("Barter resource and amount must be specified.")
+                raise ValueError("Бартерный ресурс и количество должны быть указаны.")
             if RESOURCES.get_resource(barter_resource) is None:
-                raise ValueError(f"Barter resource '{barter_resource}' does not exist.")
+                raise ValueError(f"Бартерный ресурс '{barter_resource}' не существует.")
         else:
-            raise ValueError("Invalid offer type.")
+            raise ValueError("Недействительный тип предложения.")
         
         session = session_manager.get_session(session_id)
         if not session:
-            raise ValueError("Session not found.")
+            raise ValueError("Сессия не найдена.")
         
         # Создаём предложение
         self.id = just_db.max_id_in_table(
@@ -125,7 +125,7 @@ class Exchange(BaseClass):
         except ValueError as e:
             # Если не удалось списать товар, удаляем предложение
             self.delete()
-            raise ValueError(f"Failed to reserve resources: {str(e)}")
+            raise ValueError(f"Не удалось зарезервировать ресурсы: {str(e)}")
 
         asyncio.create_task(websocket_manager.broadcast({
             "type": "api-exchange_offer_created",
@@ -152,20 +152,20 @@ class Exchange(BaseClass):
 
         if sell_amount_per_trade is not None:
             if sell_amount_per_trade <= 0:
-                raise ValueError("Sell amount must be positive.")
+                raise ValueError("Количество для продажи должно быть положительным.")
 
             if sell_amount_per_trade > self.total_stock:
-                raise ValueError("Sell amount cannot exceed total stock.")
+                raise ValueError("Количество для продажи не может превышать общий запас.")
             self.sell_amount_per_trade = sell_amount_per_trade
 
         if self.offer_type == 'money' and price is not None:
             if price <= 0:
-                raise ValueError("Price must be positive.")
+                raise ValueError("Цена должна быть положительной.")
             self.price = price
 
         if self.offer_type == 'barter' and barter_amount is not None:
             if barter_amount <= 0:
-                raise ValueError("Barter amount must be positive.")
+                raise ValueError("Количество для бартера должно быть положительным.")
             self.barter_amount = barter_amount
         
         self.save_to_base()
@@ -188,14 +188,14 @@ class Exchange(BaseClass):
 
         company = Company(_id=self.company_id).reupdate()
         if not company:
-            raise ValueError("Company not found.")
+            raise ValueError("Компания не найдена.")
 
         # Проверяем, есть ли место на складе для возврата товара
         current_resources = company.get_resources_amount()
         max_capacity = company.get_max_warehouse_size()
 
         if current_resources + self.total_stock > max_capacity:
-            raise ValueError(f"Not enough warehouse space to return resources. Required: {self.total_stock}, available: {max_capacity - current_resources}")
+            raise ValueError(f"Недостаточно места на складе для возврата ресурсов. Требуется: {self.total_stock}, доступно: {max_capacity - current_resources}")
 
         # Возвращаем оставшийся товар на склад компании
         company.add_resource(self.sell_resource, self.total_stock)
@@ -225,30 +225,30 @@ class Exchange(BaseClass):
         from game.session import session_manager
 
         if quantity <= 0:
-            raise ValueError("Quantity must be positive.")
+            raise ValueError("Количество должно быть положительным.")
         
         if buyer_company_id == self.company_id:
-            raise ValueError("Cannot buy from your own offer.")
+            raise ValueError("Нельзя покупать у своего собственного предложения.")
         
         buyer = Company(_id=buyer_company_id).reupdate()
         seller = Company(_id=self.company_id).reupdate()
         
         if not buyer or not seller:
-            raise ValueError("Buyer or seller company not found.")
+            raise ValueError("Компания покупателя или продавца не найдена.")
 
         if buyer.session_id != self.session_id:
-            raise ValueError("Buyer must be in the same session.")
+            raise ValueError("Покупатель должен быть в той же сессии.")
 
         # Получаем сессию для обновления цен
         session = session_manager.get_session(self.session_id)
         if not session:
-            raise ValueError("Session not found.")
+            raise ValueError("Сессия не найдена.")
 
         # Рассчитываем количество товара
         total_sell_amount = self.sell_amount_per_trade * quantity
 
         if total_sell_amount > self.total_stock:
-            raise ValueError(f"Not enough stock. Available: {self.total_stock}, requested: {total_sell_amount}")
+            raise ValueError(f"Недостаточно запасов. Доступно: {self.total_stock}, запрошено: {total_sell_amount}")
 
         # Переменная для хранения цены за единицу товара (для обновления истории цен)
         unit_price = 0
@@ -259,7 +259,7 @@ class Exchange(BaseClass):
             unit_price = self.price // self.sell_amount_per_trade  # Цена за единицу товара
 
             if buyer.balance < total_price:
-                raise ValueError(f"Not enough money. Required: {total_price}, available: {buyer.balance}")
+                raise ValueError(f"Недостаточно денег. Требуется: {total_price}, доступно: {buyer.balance}")
 
             # Выполняем сделку за монеты
             buyer.balance -= total_price
@@ -267,12 +267,12 @@ class Exchange(BaseClass):
 
             buyer.save_to_base()
             seller.save_to_base()
-            
+
         elif self.offer_type == 'barter':
             total_barter_amount = self.barter_amount * quantity
 
             if buyer.warehouses.get(self.barter_resource, 0) < total_barter_amount:
-                raise ValueError(f"Not enough '{self.barter_resource}' for barter. Required: {total_barter_amount}")
+                raise ValueError(f"Недостаточно '{self.barter_resource}' для бартера. Требуется: {total_barter_amount}")
 
             # Для бартера вычисляем условную цену на основе текущих цен предметов
             barter_resource_price = session.get_item_price(self.barter_resource)
@@ -285,17 +285,24 @@ class Exchange(BaseClass):
             except ValueError:
                 # Если у продавца не хватает места, возвращаем покупателю
                 buyer.add_resource(self.barter_resource, total_barter_amount)
-                raise ValueError("Seller doesn't have enough warehouse space for barter resource.")
+                raise ValueError("У продавца недостаточно места на складе для бартерного ресурса.")
 
         # Передаём товар покупателю
         try:
             buyer.add_resource(self.sell_resource, total_sell_amount)
         except ValueError as e:
-            pass
+            free_space = buyer.get_warehouse_free_size()
+            if free_space > 0:
+                buyer.add_resource(self.sell_resource, 
+                    min(free_space, total_sell_amount)
+                    )
 
-        # Обновляем историю цен в сессии на основе совершенной сделки
         if unit_price > 0:
             session.update_item_price(self.sell_resource, unit_price)
+
+        seller.set_economic_power(
+            total_sell_amount, self.sell_resource, 'exchange'
+        )
 
         # Обновляем запас предложения
         self.total_stock -= total_sell_amount

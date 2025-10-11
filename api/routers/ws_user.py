@@ -76,7 +76,7 @@ async def handle_create_user(client_id: str, message: dict):
     username = message.get("username")
 
     for i in [user_id, username, session_id]:
-        if i is None: return {"error": "Missing required fields."}
+        if i is None: return {"error": "Пропущены обязательные поля."}
 
     try:
         check_password(password)
@@ -122,7 +122,7 @@ async def handle_update_user(client_id: str, message: dict):
         check_password(password)
 
         old_user = User(_id=user_id).reupdate()
-        if not old_user: raise ValueError("User not found.")
+        if not old_user: raise ValueError("Пользователь не найден.")
 
         just_db.update("users",
                 {"id": user_id}, 
@@ -161,13 +161,13 @@ async def handle_delete_user(client_id: str, message: dict):
     password = message.get("password")
 
     for i in [user_id, password]:
-        if i is None: return {"error": "Missing required fields."}
+        if i is None: return {"error": "Пропущены обязательные поля."}
 
     try:
         check_password(password)
 
         user = User(_id=user_id).reupdate()
-        if not user: raise ValueError("User not found.")
+        if not user: raise ValueError("Пользователь не найден.")
 
         user.delete()
 
