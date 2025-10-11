@@ -134,6 +134,14 @@ class JSONDatabase:
             return []
 
         if not conditions:
+            if to_class:
+                results = []
+                for record in self._data[table_name]:
+                    instance = to_class()
+                    instance.load_from_base(record)
+                    results.append(instance)
+                return results
+
             return deepcopy(self._data[table_name])
 
         # Используем индексы для быстрого поиска
@@ -158,7 +166,8 @@ class JSONDatabase:
             for i in result_indexes:
                 if to_class:
                     instance = to_class()
-                    instance.load_from_base(self._data[table_name][i])
+                    instance.load_from_base(
+                        self._data[table_name][i])
                     results.append(instance)
                 else:
                     results.append(deepcopy(self._data[table_name][i]))

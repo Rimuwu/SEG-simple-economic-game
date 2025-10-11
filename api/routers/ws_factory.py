@@ -8,7 +8,7 @@ from modules.check_password import check_password
     "get-factories", 
     doc="Обработчик получения списка всех фабрик. Отправляет ответ на request_id", 
     datatypes=[
-        "company_id: int",
+        "company_id: Optional[int]",
         "complectation: Optional[str]",
         "produce: Optional[bool]",
         "is_auto: Optional[bool]",
@@ -47,14 +47,12 @@ async def handle_get_factory(client_id: str, message: dict):
     if factory_id is None:
         return {"error": "factory_id is required"}
 
-    try:
-        factory = Factory(factory_id).reupdate()
-        if not factory:
-            raise ValueError("Factory not found.")
+    factory = Factory(factory_id).reupdate()
+    if not factory:
+        raise ValueError("Factory not found.")
+    
+    return factory.to_dict() if factory else None
 
-        return {"factory": factory.to_dict()}
-    except ValueError as e:
-        return {"error": str(e)}
 
 @message_handler(
     "factory-recomplectation", 
