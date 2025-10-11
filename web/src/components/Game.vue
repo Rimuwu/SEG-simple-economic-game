@@ -65,6 +65,35 @@ const getResourceName = (resourceId) => {
   return names[resourceId] || resourceId
 }
 
+// Computed property for exchanges (latest 4)
+const latestExchanges = computed(() => {
+  const exchanges = wsManager?.gameState?.state?.exchanges || []
+  const sessionExchanges = exchanges.filter(e => 
+    e.session_id === wsManager?.gameState?.state?.session?.id
+  )
+  return sessionExchanges.slice(0, 4)
+})
+
+// Helper function to get company name by ID
+const getCompanyName = (companyId) => {
+  const company = wsManager?.gameState?.getCompanyById(companyId)
+  return company?.name || `Компания ${companyId}`
+}
+
+// Helper function to format exchange text (matching the existing format)
+const formatExchangeText = (exchange) => {
+  const companyName = getCompanyName(exchange.company_id)
+  const resourceName = getResourceName(exchange.sell_resource)
+  
+  if (exchange.offer_type === 'money') {
+    return `${companyName} выставила на продажу ${resourceName}`
+  } else if (exchange.offer_type === 'barter') {
+    const barterResourceName = getResourceName(exchange.barter_resource)
+    return `${companyName} меняет ${resourceName} на ${barterResourceName}`
+  }
+  return `${companyName} выставила на продажу ${resourceName}`
+}
+
 onMounted(() => {
   // Component mounted
 })
@@ -146,10 +175,14 @@ onMounted(() => {
         <div class="stock grid-item">
           <p class="title">БИРЖА</p>
           <div class="content">
-            <span>Компания А выставила на продажу продукт Б</span>
-            <span>Компания Б выкупила Х товара у компании С</span>
-            <span>Компания А выставила на продажу продукт Б</span>
-            <span>Компания А выставила на продажу продукт Б</span>
+            <template v-if="latestExchanges.length > 0">
+              <span v-for="exchange in latestExchanges" :key="exchange.id">
+                {{ formatExchangeText(exchange) }}
+              </span>
+            </template>
+            <template v-else>
+              <span>Никаких операций за последнее время не происходило</span>
+            </template>
           </div>
         </div>
         <div class="upgrades grid-item">
