@@ -132,7 +132,36 @@ export class GameState {
       return;
     }
     this.state.companies = companies;
+
+    // Map users to their companies
+    for (const user of this.state.users) {
+      const company = this.getCompanyById(user.company_id);
+      if (company) {
+        company.users = company.users || [];
+        company.users.push(user);
+      }
+    }
+
     console.log('[GameState] Companies updated:', companies.length);
+  }
+
+  /**
+   * Get company by index
+   * @param {number} index
+   * @returns {Object|null}
+   */
+  getCompanyByIndex(index) {
+    return this.state.companies[index] || null;
+  }
+
+  /**
+   * Get company name by index
+   * @param {number} index
+   * @returns {string}
+   */
+  getCompanyNameByIndex(index) {
+    const company = this.getCompanyByIndex(index);
+    return company ? company.name : " ";
   }
 
   /**
@@ -181,6 +210,18 @@ export class GameState {
     };
     console.log('[GameState] Current user set:', this.state.currentUser);
   }
+
+  /**
+   * Get string of usernames by company ID
+   * @param {number} companyId
+   * @returns {Array}
+   */
+  stringUsernamesByCompanyIndex(index, sep=" ", empty=" ") {
+    const company = this.getCompanyByIndex(index);
+    if (!company) return empty;
+    return company.users.map(u => u.username).join(sep);
+  }
+  
 
   /**
    * Get user by ID

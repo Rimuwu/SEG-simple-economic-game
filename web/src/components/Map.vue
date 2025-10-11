@@ -16,7 +16,7 @@ import { onMounted, onUnmounted, nextTick, inject, watch, ref } from 'vue'
 const wsManager = inject('wsManager', null)
 
 onMounted(async () => {
-    await nextTick()
+    // await nextTick()
     // Make functions globally available
     window.setTile = setTile
     window.TileTypes = TileTypes
@@ -120,5 +120,8 @@ if (wsManager) {
     
     /* Smooth transitions */
     transition: background-color 1s ease, font-size 0.3s ease;
+
+    font-size: 3rem;
+    font-family: "Ubuntu Mono", monospace;
 }
 </style>

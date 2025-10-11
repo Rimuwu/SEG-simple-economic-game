@@ -1,7 +1,7 @@
 <script setup>
 import './mapScripts.js'
 import Map from './Map.vue'
-import { onMounted, onUnmounted, ref, inject, reactive, watch } from 'vue'
+import { onMounted, onUnmounted, ref, inject, reactive, watch, computed } from 'vue'
 
 /**
  * Ref to the root page container for animation and event handling.
@@ -35,19 +35,6 @@ function handleCompaniesUpdated(e) {
   }
 }
 
-/**
- * Returns the company object for a given slot in the left/right columns.
- * @param {number} index - 1-based slot number in the column
- * @param {boolean} isLeft - True for left column, false for right
- * @returns {Object|null} Company object or null if no company
- */
-function getCompanyForSlot(index, isLeft) {
-  const companies = companiesState.list
-  const globalIdx = (index - 1) * 2 + (isLeft ? 0 : 1)
-  if (globalIdx < companies.length) return companies[globalIdx]
-  return null
-}
-
 function stateChange() {
   window.log("stateChange called, new state: " + prepState.value)
   if (state == 0) {
@@ -57,6 +44,17 @@ function stateChange() {
     document.documentElement.style.setProperty("--color-1", color_scheme[1][0])
     document.documentElement.style.setProperty("--color-2", color_scheme[1][1])
   }
+}
+
+/**
+ * Computed function to check if an item should be visible
+ * @param {number} index - Company index (0-based)
+ * @returns {boolean} - True if item has content, false if empty
+ */
+const isItemVisible = (index) => {
+  const companyName = wsManager?.gameState?.getCompanyNameByIndex(index) || ''
+  const usernames = wsManager?.gameState?.stringUsernamesByCompanyIndex(index) || ''
+  return companyName.trim() !== '' || usernames.trim() !== ''
 }
 
 /**
@@ -71,6 +69,7 @@ onMounted(() => {
 
   if (wsManager) {
     window.addEventListener('companies-updated', handleCompaniesUpdated)
+    wsManager.fetchAllGameData();
     wsManager.startPolling(5000)
   }
 
@@ -108,9 +107,9 @@ onUnmounted(() => {
     </div>
     <div class="right">
       <div class="grid">
-        <div v-for="n in 10" :key="'item-' + n" class="item" :id="'item-' + n">
-          <p class="title">Название крутой компании с длинным названием</p>  
-          <p class="users">лягушка лягушка лягушка лягушка лягушка</p>
+        <div v-for="n in 10" :key="n" class="item" v-show="isItemVisible(n - 1)">
+          <p class="title">{{ wsManager.gameState.getCompanyNameByIndex(n - 1) }}</p>  
+          <p class="users">{{ wsManager.gameState.stringUsernamesByCompanyIndex(n - 1) }}</p>
         </div>
       </div>
     </div>

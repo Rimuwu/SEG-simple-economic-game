@@ -68,7 +68,7 @@ const tileStyles = {
  * @param {string} text - Text label for the tile
  * @param {string} font_size - Optional font size for the label
  */
-function setTile(row, col, tileType, text, font_size) {
+function setTile(row, col, tileType, text) {
   if (row < 0 || row >= rows || col < 0 || col >= cols) return
   const idx = row * cols + col
   const tile = tileRefs.value[idx]
@@ -76,8 +76,8 @@ function setTile(row, col, tileType, text, font_size) {
   if (tileType !== undefined && tileType !== null) {
     tile.style.backgroundColor = tileStyles[tileType].color
   }
-  if (text !== undefined) {
-    tile.textContent = text
-  }
+  // if (text !== undefined) {
+  //   tile.textContent = text
+  // }
 }
 export { tiles, tileRefs, TileTypes, tileStyles, setTile, rows, cols }
