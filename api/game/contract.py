@@ -195,6 +195,13 @@ class Contract(BaseClass):
                 supplier.add_reputation(
                     REPUTATION.contract.completed
                 )
+                customer.add_reputation(
+                    REPUTATION.contract.completed
+                )
+
+                supplier.set_economic_power(
+                    self.amount_per_turn, self.resource, 'contract'
+                )
 
                 self.delete()
                 return True
