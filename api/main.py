@@ -5,6 +5,7 @@ import random
 from fastapi import FastAPI, Request
 from contextlib import asynccontextmanager
 
+from game.logistics import Logistics
 from game.stages import stage_game_updater
 from global_modules.api_configurate import get_fastapi_app
 from global_modules.logs import main_logger
@@ -35,6 +36,7 @@ async def lifespan(app: FastAPI):
     just_db.create_table('exchanges') # Таблица с биржей
     just_db.create_table('factories') # Таблица с заводами
     just_db.create_table('item_price') # Таблица с ценами на товары
+    just_db.create_table('logistics') # Таблица с логистикой
 
     main_logger.info("Loading sessions from database...")
     session_manager.load_from_base()
@@ -86,8 +88,6 @@ async def test1():
     if session_manager.get_session('AFRIKA'):
         session = session_manager.get_session('AFRIKA')
         session.delete()
-        
-    # return
 
     session = session_manager.create_session('AFRIKA')
     
@@ -123,42 +123,33 @@ async def test1():
     supplier.balance = 0
     customer.balance = 0
     
-    supplier.reputation = 0
-    customer.reputation = 0
+    supplier.reputation = 100
+    customer.reputation = 100
     supplier.save_to_base()
     customer.save_to_base()
 
-    # Настройка начальных ресурсов для тестирования контракта
-    print("💰 Настраиваем начальные ресурсы.. 343434.")
-    
-    # Даём поставщику металл для поставки и заказчику деньги для оплаты
-    supplier.add_resource("metal", 100)  # Металл для поставки
-    customer.add_balance(5000)  # Деньги для оплаты контракта
-    
-    contract = Contract().create(
-        supplier.id, customer.id,
-        session.session_id, 'metal', 10,
-        3, 1000
+    print("💰")
+
+    supplier.add_resource("metal", 50)  # Металл для поставки
+    customer.add_resource("wood", 50)  # Металл для поставки
+    customer.add_balance(5000, 0.0)  # Деньги для оплаты контракта
+
+    ex = Exchange().create(
+        company_id=supplier.id,
+        session_id=session.session_id,
+        sell_resource="metal",
+        sell_amount_per_trade=10,
+        count_offers=5,
+        offer_type='barter',
+        barter_resource="wood",
+        barter_amount=5,
     )
-    c_id = contract.id
-    contract.accept_contract()
     
-    for i in range(4):
-        
-        await sleep(3)
-        session.update_stage(SessionStages.Game, True)
-        for company in [supplier, customer]:
-            company.reupdate()
-        contract.reupdate()
-        
-        status = just_db.find_one("contracts", **{"id": c_id})
-        print(f"🔄 Шаг {i+1} | 1 Статус контракта: {status}")
-        
-        if i != 3:
-            print(f"➡️  Ход {i+1} | Поставляем металл...")
-            res = contract.execute_turn()
-            if not res:
-                print("❌ Ошибка поставки!")
-        
-        status = just_db.find_one("contracts", **{"id": c_id})
-        print(f"🔄 Шаг {i+1} | Статус контракта: {status}")
+    ex.buy(
+        customer.id,
+        5
+    )
+    
+    session.update_stage(SessionStages.Game, True)
+    session.update_stage(SessionStages.Game, True)
+    session.update_stage(SessionStages.Game, True)
