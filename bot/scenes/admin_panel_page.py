@@ -206,7 +206,7 @@ class AdminPanelPage(Page):
         text += "Выберите сессию для удаления:\n\n"
         
         for session in sessions:
-            sid = session.get('session_id', 'N/A')
+            sid = session.get('id', 'N/A')
             stage = session.get('stage', 'N/A')
             step = session.get('step', 0)
             text += f"• `{sid}` | Этап: {stage} | Ход: {step}\n"
@@ -231,7 +231,7 @@ class AdminPanelPage(Page):
         text += "Выберите сессию:\n\n"
         
         for session in sessions:
-            sid = session.get('session_id', 'N/A')
+            sid = session.get('id', 'N/A')
             stage = session.get('stage', 'N/A')
             step = session.get('step', 0)
             text += f"• `{sid}`\n  Этап: *{stage}* | Ход: {step}\n\n"
@@ -259,7 +259,7 @@ class AdminPanelPage(Page):
         
         if sessions and len(sessions) > 0:
             for session in sessions:
-                sid = session.get('session_id', 'N/A')
+                sid = session.get('id', 'N/A')
                 stage = session.get('stage', 'N/A')
                 buttons.append({
                     'text': f"{sid[:8]}... | {stage}",
@@ -293,7 +293,7 @@ class AdminPanelPage(Page):
         
         if sessions and len(sessions) > 0:
             for session in sessions:
-                sid = session.get('session_id', 'N/A')
+                sid = session.get('id', 'N/A')
                 stage = session.get('stage', 'N/A')
                 buttons.append({
                     'text': f"{sid[:8]}... | {stage}",
@@ -876,7 +876,7 @@ class AdminPanelPage(Page):
         
         result = await delete_session(session_id=session_id, really=True)
         
-        if result and 'error' not in result:
+        if result is None:
             await callback.answer(f"✅ Сессия {session_id} удалена", show_alert=True)
         else:
             error_msg = result.get('error', 'Неизвестная ошибка') if result else 'Нет ответа'
