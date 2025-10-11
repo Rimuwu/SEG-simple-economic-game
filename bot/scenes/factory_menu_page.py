@@ -88,10 +88,22 @@ class FactoryMenu(Page):
             
             # Не автоматические заводы
             if manual_factories:
-                content += "⚡ **Не автоматические заводы** (требуют запуска):\n"
+                content += "⚡ **Не автоматические заводы:**\n"
                 for resource_key, factories_list in manual_factories.items():
                     resource_display = self.get_resource_name(resource_key)
-                    content += f"  {resource_display}: **{len(factories_list)}** шт.\n"
+                    # Считаем работающие и остановленные
+                    working = sum(1 for f in factories_list if f.get('is_working', False))
+                    stopped = len(factories_list) - working
+                    
+                    status_text = ""
+                    if working > 0 and stopped > 0:
+                        status_text = f" (▶️ {working} работает, ⏸️ {stopped} остановлено)"
+                    elif working > 0:
+                        status_text = f" (▶️ все работают)"
+                    elif stopped > 0:
+                        status_text = f" (⏸️ все остановлены)"
+                    
+                    content += f"  {resource_display}: **{len(factories_list)}** шт.{status_text}\n"
                 content += "\n"
             
             # Простаивающие заводы

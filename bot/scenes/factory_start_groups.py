@@ -37,13 +37,13 @@ class FactoryStartGroups(Page):
         # - complectation != None (скомплектованные)
         # - complectation_stages == 0 (не перекомплектуются)
         # - is_auto = False (не автоматические, требуют ручного запуска)
-        # - produce = False (сейчас не работают)
+        # - produce = False (не запущены вручную)
         startable_factories = [
             f for f in factories 
             if f.get('complectation') is not None 
             and f.get('complectation_stages', 0) == 0
             and not f.get('is_auto', False)
-            and not f.get('produce', False)
+            and not f.get('produce', False)  # Проверяем флаг produce, а не is_working
         ]
         
         # Группируем по ресурсам
@@ -57,26 +57,27 @@ class FactoryStartGroups(Page):
         # Работающие НЕ автоматические заводы (для статистики)
         working_manual = [
             f for f in factories 
-            if f.get('produce', False)
+            if f.get('is_working', False)
             and not f.get('is_auto', False)
             and f.get('complectation') is not None
         ]
         
         content = "🏭 **Запуск заводов**\n\n"
-        content += f"Заводов готовых к запуску: {len(startable_factories)}\n"
-        content += f"Не автоматических заводов работает: {len(working_manual)}\n\n"
+        content += f"⏸️ Заводов готовых к запуску: {len(startable_factories)}\n"
+        content += f"▶️ Не автоматических заводов работает: {len(working_manual)}\n\n"
         
         if not startable_factories:
             content += "❌ Нет заводов, готовых к запуску.\n\n"
             content += "💡 Чтобы запустить завод, он должен:\n"
             content += "  • Быть скомплектованным (не пустовать)\n"
+            content += "  • Не перекомплектоваться (complectation_stages = 0)\n"
             content += "  • Быть в ручном режиме (не автоматический)\n"
-            content += "  • Не работать в данный момент"
+            content += "  • Быть остановлен (produce = False)"
         else:
             content += "📦 **Доступные группы:**\n"
             for resource_key, factories_list in groups.items():
                 resource_display = self.get_resource_name(resource_key)
-                content += f"  {resource_display}: **{len(factories_list)}** шт.\n"
+                content += f"  {resource_display}: **{len(factories_list)}** шт. ⏸️\n"
             content += "\nВыберите группу для запуска или запустите все:"
         
         return content
@@ -154,11 +155,12 @@ class FactoryStartGroups(Page):
     @Page.on_callback('start_group')
     async def start_group_handler(self, callback: CallbackQuery, args: list):
         """Обработка запуска группы заводов"""
-        if not args or len(args) < 1:
+        # args[0] = 'start_group', args[1] = resource_key
+        if not args or len(args) < 2:
             await callback.answer("❌ Не указана группа", show_alert=True)
             return
         
-        resource_key = args[0]
+        resource_key = args[1]  # Ключ ресурса находится в args[1], а не args[0]!
         scene_data = self.scene.get_data('scene')
         company_id = scene_data.get('company_id')
         
@@ -169,6 +171,16 @@ class FactoryStartGroups(Page):
             await callback.answer("❌ Ошибка загрузки заводов", show_alert=True)
             return
         
+        # Логируем для отладки
+        print(f"=== START GROUP DEBUG for resource: {resource_key} ===")
+        for f in factories:
+            if f.get('complectation') == resource_key:
+                print(f"Factory {f.get('id')}: complectation={f.get('complectation')}, "
+                      f"stages={f.get('complectation_stages', 0)}, "
+                      f"is_auto={f.get('is_auto', False)}, "
+                      f"produce={f.get('produce', False)}, "
+                      f"is_working={f.get('is_working', False)}")
+        
         # Фильтруем заводы этой группы, готовые к запуску
         target_factories = [
             f['id'] for f in factories 
@@ -177,6 +189,8 @@ class FactoryStartGroups(Page):
             and not f.get('is_auto', False)
             and not f.get('produce', False)
         ]
+        
+        print(f"Target factories to start: {target_factories}")
         
         if not target_factories:
             await callback.answer("❌ Нет заводов для запуска в этой группе", show_alert=True)
