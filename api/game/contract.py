@@ -387,3 +387,11 @@ class Contract(BaseClass):
 
     def delete(self):
         just_db.delete(self.__tablename__, id=self.id)
+        
+        asyncio.create_task(websocket_manager.broadcast({
+                "type": "api-contract_deleted",
+                "data": {
+                    "session_id": self.session_id,
+                    "contract_id": self.id
+                }
+            }))
