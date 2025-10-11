@@ -277,3 +277,31 @@ async def handle_get_session_event(client_id: str, message: dict):
 
     except ValueError as e:
         return {"error": str(e)}
+
+@message_handler(
+    "get-session-leaders", 
+    doc="Обработчик получения лидеров сессии. Отправляет ответ на request_id",
+    datatypes=[
+        "session_id: str",
+        "request_id: str",
+    ]
+)
+async def handle_get_session_leaders(client_id: str, message: dict):
+    """Обработчик получения лидеров сессии"""
+
+    session_id = message.get("session_id", "")
+
+    try:
+        session = session_manager.get_session(session_id=session_id)
+        if not session: 
+            raise ValueError("Session not found.")
+
+        leaders = session.leaders()
+        return {
+            "capital": leaders["capital"].to_dict() if leaders["capital"] else None,
+            "reputation": leaders["reputation"].to_dict() if leaders["reputation"] else None,
+            "economic": leaders["economic"].to_dict() if leaders["economic"] else None
+        }
+
+    except ValueError as e:
+        return {"error": str(e)}
