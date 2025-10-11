@@ -31,6 +31,9 @@ export class GameState {
       // Exchange offers data
       exchanges: [],
 
+      // Cities data
+      cities: [],
+
       // Map data
       map: {
         cells: [],
@@ -98,6 +101,11 @@ export class GameState {
     // Mark map as loaded if we have cells
     if (sessionData.cells && sessionData.map_size) {
       this.state.map.loaded = true;
+    }
+
+    // Update cities if provided
+    if (sessionData.cities) {
+      this.updateCities(sessionData.cities);
     }
 
     console.log('[GameState] Session updated:', this.state.session);
@@ -289,6 +297,80 @@ export class GameState {
     return this.state.exchanges.filter(e => e.company_id === companyId);
   }
 
+  // ==================== CITY METHODS ====================
+
+  /**
+   * Update cities list
+   * @param {Array} cities - Array of city objects
+   */
+  updateCities(cities) {
+    if (!Array.isArray(cities)) {
+      console.warn('[GameState] Invalid cities data:', cities);
+      return;
+    }
+    this.state.cities = cities;
+    console.log('[GameState] Cities updated:', cities.length);
+  }
+
+  /**
+   * Get city by ID
+   * @param {number} cityId
+   * @returns {Object|null}
+   */
+  getCityById(cityId) {
+    return this.state.cities.find(c => c.id === cityId) || null;
+  }
+
+  /**
+   * Get cities by session
+   * @param {string} sessionId
+   * @returns {Array}
+   */
+  getCitiesBySession(sessionId) {
+    return this.state.cities.filter(c => c.session_id === sessionId);
+  }
+
+  /**
+   * Get city by cell position
+   * @param {string} cellPosition - Format: "x.y"
+   * @returns {Object|null}
+   */
+  getCityByPosition(cellPosition) {
+    return this.state.cities.find(c => c.cell_position === cellPosition) || null;
+  }
+
+  /**
+   * Get cities by branch
+   * @param {string} branch - Branch type: 'oil', 'metal', 'wood', 'cotton'
+   * @returns {Array}
+   */
+  getCitiesByBranch(branch) {
+    return this.state.cities.filter(c => c.branch === branch);
+  }
+
+  /**
+   * Get city demand for a specific resource
+   * @param {number} cityId
+   * @param {string} resourceId
+   * @returns {Object|null} - Returns {amount, price} or null
+   */
+  getCityDemand(cityId, resourceId) {
+    const city = this.getCityById(cityId);
+    if (!city || !city.demands) return null;
+    return city.demands[resourceId] || null;
+  }
+
+  /**
+   * Check if city has demand for resource
+   * @param {number} cityId
+   * @param {string} resourceId
+   * @returns {boolean}
+   */
+  cityHasDemand(cityId, resourceId) {
+    const demand = this.getCityDemand(cityId, resourceId);
+    return demand !== null && demand.amount > 0;
+  }
+
   // ==================== MAP METHODS ====================
 
   /**
@@ -472,6 +554,7 @@ export class GameState {
     };
     this.state.factories = [];
     this.state.exchanges = [];
+    this.state.cities = [];
     this.state.map = {
       cells: [],
       size: { rows: 7, cols: 7 },

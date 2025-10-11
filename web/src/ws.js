@@ -246,6 +246,102 @@ export class WebSocketManager {
     return request_id;
   }
 
+  get_cities(callback = null) {
+    if (!this.socket || this.socket.readyState !== WebSocket.OPEN) {
+      const error = "WebSocket is not connected";
+      this.gameState.setError(error);
+      if (callback) callback({ success: false, error });
+      return null;
+    }
+    const request_id = `get_cities_${Date.now()}_${Math.random()
+      .toString(36)
+      .substr(2, 9)}`;
+    if (callback && typeof callback === "function") {
+      this.pendingCallbacks.set(request_id, callback);
+    }
+    this.socket.send(
+      JSON.stringify({
+        type: "get-cities",
+        session_id: this.gameState.state.session.id || undefined,
+        request_id: request_id,
+      })
+    );
+    return request_id;
+  }
+
+  get_city(cityId, callback = null) {
+    if (!this.socket || this.socket.readyState !== WebSocket.OPEN) {
+      const error = "WebSocket is not connected";
+      this.gameState.setError(error);
+      if (callback) callback({ success: false, error });
+      return null;
+    }
+    const request_id = `get_city_${Date.now()}_${Math.random()
+      .toString(36)
+      .substr(2, 9)}`;
+    if (callback && typeof callback === "function") {
+      this.pendingCallbacks.set(request_id, callback);
+    }
+    this.socket.send(
+      JSON.stringify({
+        type: "get-city",
+        id: cityId,
+        request_id: request_id,
+      })
+    );
+    return request_id;
+  }
+
+  get_city_demands(cityId, callback = null) {
+    if (!this.socket || this.socket.readyState !== WebSocket.OPEN) {
+      const error = "WebSocket is not connected";
+      this.gameState.setError(error);
+      if (callback) callback({ success: false, error });
+      return null;
+    }
+    const request_id = `get_city_demands_${Date.now()}_${Math.random()
+      .toString(36)
+      .substr(2, 9)}`;
+    if (callback && typeof callback === "function") {
+      this.pendingCallbacks.set(request_id, callback);
+    }
+    this.socket.send(
+      JSON.stringify({
+        type: "get-city-demands",
+        city_id: cityId,
+        request_id: request_id,
+      })
+    );
+    return request_id;
+  }
+
+  sell_to_city(cityId, companyId, resourceId, amount, password, callback = null) {
+    if (!this.socket || this.socket.readyState !== WebSocket.OPEN) {
+      const error = "WebSocket is not connected";
+      this.gameState.setError(error);
+      if (callback) callback({ success: false, error });
+      return null;
+    }
+    const request_id = `sell_to_city_${Date.now()}_${Math.random()
+      .toString(36)
+      .substr(2, 9)}`;
+    if (callback && typeof callback === "function") {
+      this.pendingCallbacks.set(request_id, callback);
+    }
+    this.socket.send(
+      JSON.stringify({
+        type: "sell-to-city",
+        city_id: cityId,
+        company_id: companyId,
+        resource_id: resourceId,
+        amount: amount,
+        password: password,
+        request_id: request_id,
+      })
+    );
+    return request_id;
+  }
+
   get_time_to_next_stage(callback = null) {
     if (!this.socket || this.socket.readyState !== WebSocket.OPEN) {
       const error = "WebSocket is not connected";
@@ -296,7 +392,10 @@ export class WebSocketManager {
     this.get_companies();
     this.get_users();
     
-    // 4. Exchange data
+    // 4. Cities
+    this.get_cities();
+    
+    // 5. Exchange data
     this.get_exchanges();
     
     // Note: Factories are fetched per company when needed
@@ -339,6 +438,14 @@ export class WebSocketManager {
         this.handleFactoriesResponse(message);
       } else if (message.request_id.startsWith("get_exchanges_")) {
         this.handleExchangesResponse(message);
+      } else if (message.request_id.startsWith("get_cities_")) {
+        this.handleCitiesResponse(message);
+      } else if (message.request_id.startsWith("get_city_demands_")) {
+        this.handleCityDemandsResponse(message);
+      } else if (message.request_id.startsWith("get_city_")) {
+        this.handleCityResponse(message);
+      } else if (message.request_id.startsWith("sell_to_city_")) {
+        this.handleSellToCityResponse(message);
       } else if (message.request_id.startsWith("get_time_")) {
         this.handleTimeResponse(message);
       } else if (message.request_id.startsWith("get_sessions_")) {
@@ -508,6 +615,96 @@ export class WebSocketManager {
     if (callback) this.pendingCallbacks.delete(requestId);
   }
 
+  handleCitiesResponse(message) {
+    const requestId = message.request_id;
+    const callback = this.pendingCallbacks.get(requestId);
+    
+    if (message.data) {
+      let citiesData = [];
+      
+      if (Array.isArray(message.data)) {
+        citiesData = message.data;
+      } else if (Array.isArray(message.data.cities)) {
+        citiesData = message.data.cities;
+      }
+      
+      // Update game state
+      this.gameState.updateCities(citiesData);
+      
+      if (callback) callback({ success: true, data: citiesData });
+    } else {
+      if (callback) callback({ success: false, error: "No cities data" });
+    }
+    
+    if (callback) this.pendingCallbacks.delete(requestId);
+  }
+
+  handleCityResponse(message) {
+    const requestId = message.request_id;
+    const callback = this.pendingCallbacks.get(requestId);
+    
+    if (message.data) {
+      // Update this specific city in the cities array
+      const cityData = message.data;
+      const existingIndex = this.gameState.state.cities.findIndex(
+        c => c.id === cityData.id
+      );
+      
+      if (existingIndex >= 0) {
+        this.gameState.state.cities[existingIndex] = cityData;
+      } else {
+        this.gameState.state.cities.push(cityData);
+      }
+      
+      if (callback) callback({ success: true, data: cityData });
+    } else {
+      if (callback) callback({ success: false, error: message.error || "No city data" });
+    }
+    
+    if (callback) this.pendingCallbacks.delete(requestId);
+  }
+
+  handleCityDemandsResponse(message) {
+    const requestId = message.request_id;
+    const callback = this.pendingCallbacks.get(requestId);
+    
+    if (message.data) {
+      // Update the city's demands in the cities array
+      const cityId = message.data.city_id;
+      const existingCity = this.gameState.state.cities.find(c => c.id === cityId);
+      
+      if (existingCity) {
+        existingCity.demands = message.data.demands;
+        existingCity.branch = message.data.branch;
+      }
+      
+      if (callback) callback({ success: true, data: message.data });
+    } else {
+      if (callback) callback({ success: false, error: message.error || "No city demands data" });
+    }
+    
+    if (callback) this.pendingCallbacks.delete(requestId);
+  }
+
+  handleSellToCityResponse(message) {
+    const requestId = message.request_id;
+    const callback = this.pendingCallbacks.get(requestId);
+    
+    if (message.data) {
+      // Refresh relevant data after successful trade
+      if (message.data.success) {
+        this.get_companies();
+        this.get_cities();
+      }
+      
+      if (callback) callback({ success: true, data: message.data });
+    } else {
+      if (callback) callback({ success: false, error: message.error || "Trade failed" });
+    }
+    
+    if (callback) this.pendingCallbacks.delete(requestId);
+  }
+
   handleTimeResponse(message) {
     const requestId = message.request_id;
     const callback = this.pendingCallbacks.get(requestId);
@@ -669,6 +866,27 @@ export class WebSocketManager {
         // Refresh exchanges
         this.get_exchanges();
         // Also refresh companies to update balances
+        this.get_companies();
+        break;
+        
+      case 'api-city-create':
+      case 'api-city-delete':
+        // Refresh cities list
+        this.get_cities();
+        break;
+        
+      case 'api-city-update-demands':
+        // Update specific city demands
+        if (message.data && message.data.city_id) {
+          this.get_city(message.data.city_id);
+        } else {
+          this.get_cities();
+        }
+        break;
+        
+      case 'api-city-trade':
+        // Refresh cities and companies after trade
+        this.get_cities();
         this.get_companies();
         break;
     }
