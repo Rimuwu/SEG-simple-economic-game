@@ -136,6 +136,7 @@ class Contract(BaseClass):
         """ Выполнение поставки за текущий ход """
         from game.company import Company
         from game.session import session_manager
+        from game.logistics import Logistics
         
         session = session_manager.get_session(self.session_id)
         if not session:
@@ -170,21 +171,28 @@ class Contract(BaseClass):
 
         # Выполняем поставку (игнорируем ограничения склада заказчика)
         try:
-            try:
-                supplier.remove_resource(self.resource, self.amount_per_turn)
-            except ValueError:
-                raise ValueError("Ошибка при списании ресурса у поставщика")
+            # try:
+            #     supplier.remove_resource(self.resource, self.amount_per_turn)
+            # except ValueError:
+            #     raise ValueError("Ошибка при списании ресурса у поставщика")
 
-            # Пытаемся добавить ресурс заказчику, сколько поместится
-            try:
-                customer.add_resource(self.resource, self.amount_per_turn)
-            except ValueError:
-                # Если места нет, добавляем сколько можем
-                free_space = customer.get_warehouse_free_size()
-                if free_space > 0:
-                    customer.add_resource(self.resource, 
-                        min(free_space, self.amount_per_turn)
-                                          )
+            # # Пытаемся добавить ресурс заказчику, сколько поместится
+            # try:
+            #     customer.add_resource(self.resource, self.amount_per_turn)
+            # except ValueError:
+            #     # Если места нет, добавляем сколько можем
+            #     free_space = customer.get_warehouse_free_size()
+            #     if free_space > 0:
+            #         customer.add_resource(self.resource, 
+            #             min(free_space, self.amount_per_turn)
+            #                               )
+            Logistics().create(
+                from_company_id=supplier.id,
+                to_company_id=customer.id,
+                resource_type=self.resource,
+                amount=self.amount_per_turn,
+                session_id=self.session_id
+            )
 
             self.successful_deliveries += 1
             self.delivered_this_turn = True

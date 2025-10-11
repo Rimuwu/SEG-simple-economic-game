@@ -25,6 +25,7 @@ class Settings:
     start_improvements_level: StartImprovementsLevel  # Начальные уровни улучшений
     max_credits_per_company: int  # Максимальное количество кредитов на компанию
     start_complectation: Dict[str, str]  # Начальная комплектация
+    logistics_speed: int  # Скорость логистики (чем больше, тем быстрее)
 
     @classmethod
     def load_from_json(cls, data: dict):
@@ -41,5 +42,6 @@ class Settings:
             max_players_in_company=data["max_players_in_company"],
             start_improvements_level=start_improvements,
             max_credits_per_company=data['max_credits_per_company'],
-            start_complectation=data['start_complectation']
+            start_complectation=data['start_complectation'],
+            logistics_speed=data['logistics_speed']
         )

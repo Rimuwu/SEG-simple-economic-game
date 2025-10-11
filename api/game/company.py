@@ -448,7 +448,8 @@ class Company(BaseClass):
                 }
             }))
 
-            if self.reputation <= 0: self.to_prison()
+            if self.reputation <= REPUTATION.prison.on_reputation: 
+                self.to_prison()
             return True
         return False
 
@@ -708,7 +709,8 @@ class Company(BaseClass):
             self.overdue_steps = 0
             self.tax_debt = 0
 
-            self.remove_reputation(self.reputation)
+            if self.reputation > 0:
+                self.remove_reputation(self.reputation)
             self.to_prison()
             return
 
