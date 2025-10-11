@@ -1,12 +1,36 @@
 <script setup>
-import { ref, onMounted } from 'vue'
+import { ref, onMounted, inject, computed } from 'vue'
 
 const pageRef = ref(null)
+const wsManager = inject('wsManager', null)
 
-const AUTHORS = import.meta.env.VITE_AUTHORS;
+// Get AUTHORS from environment, with fallback
+const AUTHORS = import.meta.env.VITE_AUTHORS || 'SEG Development Team';
+
+// Computed property for winners
+const winners = computed(() => {
+  return wsManager?.gameState?.getWinners() || {
+    capital: null,
+    reputation: null,
+    economic: null
+  }
+})
+
+// Helper to format numbers with thousand separators
+const formatNumber = (num) => {
+  return num?.toLocaleString('ru-RU') || '0'
+}
 
 onMounted(() => {
-  document.getElementById("authors").innerHTML = AUTHORS.split("/").join("<br/>");
+  const authorsElement = document.getElementById("authors")
+  if (authorsElement) {
+    authorsElement.innerHTML = AUTHORS.split("/").join("<br/>");
+  }
+  
+  // Fetch current game state to get winners
+  if (wsManager) {
+    console.log('[Endgame] Mounted, current winners:', winners.value)
+  }
 })
 
 </script>
@@ -18,15 +42,21 @@ onMounted(() => {
       <p id="title">Победители</p>
       <div id="by-money" class="element">
         <p class="title">по капиталу</p>
-        <p class="name">супер крутая компания номер 1</p>
+        <p class="name" v-if="winners.capital">{{ winners.capital.name }}</p>
+        <p class="name" v-else>—</p>
+        <p class="value" v-if="winners.capital">{{ formatNumber(winners.capital.balance) }} ₽</p>
       </div>
       <div id="by-rep" class="element">
         <p class="title">по репутации</p>
-        <p class="name">супер крутая компания номер 1</p>
+        <p class="name" v-if="winners.reputation">{{ winners.reputation.name }}</p>
+        <p class="name" v-else>—</p>
+        <p class="value" v-if="winners.reputation">Репутация: {{ winners.reputation.reputation }}</p>
       </div>
       <div id="by-level" class="element">
         <p class="title">по экономическому уровню</p>
-        <p class="name">супер крутая компания номер 1</p>
+        <p class="name" v-if="winners.economic">{{ winners.economic.name }}</p>
+        <p class="name" v-else>—</p>
+        <p class="value" v-if="winners.economic">Эконом. мощь: {{ winners.economic.economic_power }}</p>
       </div>
     </div>
 
@@ -102,5 +132,12 @@ onMounted(() => {
 }
 .name {
   font-size: 5rem;
+  margin: 5px 0;
+}
+.value {
+  font-size: 3rem;
+  opacity: 0.8;
+  margin: 5px 0;
+  font-family: "Ubuntu Mono", monospace;
 }
 </style>
