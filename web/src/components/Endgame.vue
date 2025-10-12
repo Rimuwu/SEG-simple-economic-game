@@ -44,7 +44,7 @@ onMounted(() => {
         <p class="title">по капиталу</p>
         <p class="name" v-if="winners.capital">{{ winners.capital.name }}</p>
         <p class="name" v-else>—</p>
-        <p class="value" v-if="winners.capital">{{ formatNumber(winners.capital.balance) }} ₽</p>
+        <p class="value" v-if="winners.capital">{{ formatNumber(winners.capital.balance) }}</p>
       </div>
       <div id="by-rep" class="element">
         <p class="title">по репутации</p>

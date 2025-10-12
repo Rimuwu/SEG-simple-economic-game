@@ -78,6 +78,38 @@ export class GameState {
       // Error state
       lastError: null
     });
+
+    // Timer for countdown
+    this._countdownInterval = null;
+    this._startCountdown();
+  }
+
+  /**
+   * Start the countdown timer that decrements timeToNextStage every second
+   * @private
+   */
+  _startCountdown() {
+    // Clear existing interval if any
+    if (this._countdownInterval) {
+      clearInterval(this._countdownInterval);
+    }
+
+    // Start new interval
+    this._countdownInterval = setInterval(() => {
+      if (this.state.timeToNextStage !== null && this.state.timeToNextStage > 0) {
+        this.state.timeToNextStage--;
+      }
+    }, 1000);
+  }
+
+  /**
+   * Stop the countdown timer
+   */
+  stopCountdown() {
+    if (this._countdownInterval) {
+      clearInterval(this._countdownInterval);
+      this._countdownInterval = null;
+    }
   }
 
   // ==================== SESSION METHODS ====================
@@ -153,11 +185,15 @@ export class GameState {
     }
     this.state.companies = companies;
 
+    // Reset users arrays to avoid duplication
+    for (const company of this.state.companies) {
+      company.users = [];
+    }
+
     // Map users to their companies
     for (const user of this.state.users) {
       const company = this.getCompanyById(user.company_id);
       if (company) {
-        company.users = company.users || [];
         company.users.push(user);
       }
     }
