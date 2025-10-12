@@ -335,7 +335,7 @@ async def on_update_session_stage(message: dict):
                             await scene.update_page("prison-page")
                         else:
                             # Переводим с wait-game-stage-page или change-turn-page на main-page
-                            if current_page in ["wait-game-stage-page", "change-turn-page"]:
+                            if current_page not in ["start", "name-enter", "company-create", "company-join", "wait-start-page"]:
                                 await scene.update_page("main-page")
     
     elif new_stage == "ChangeTurn":
