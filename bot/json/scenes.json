@@ -149,10 +149,7 @@
             },
             "logistics-menu": {
                 "image": "img/exchange.png",
-                "content": "",
-                "to_pages": {
-                    "main-page": "↪️ Назад"
-                }
+                "content": ""
             },
             "factory-menu": {
                 "image": "img/main_company.png",

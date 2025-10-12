@@ -494,7 +494,6 @@ class ExchangePage(OneUserPage):
                     
                     # Добавляем навигацию
                     for i, btn in enumerate(nav_row):
-                        btn['next_line'] = i == 0
                         buttons.append(btn)
                 else:
                     # Если страница одна, просто показываем кнопку поиска
@@ -538,6 +537,7 @@ class ExchangePage(OneUserPage):
         
         # Кнопки для экрана фильтра
         elif exchange_state == 'filter':
+            self.row_width = 3
             filter_page = scene_data.get('filter_page', 0)
             
             # Получаем кнопки фильтра
@@ -751,6 +751,7 @@ class ExchangePage(OneUserPage):
         
         # Кнопки для ввода количества ресурса для бартера
         elif exchange_state == 'create_input_barter_amount':
+            
             buttons.append({
                 'text': '↪️ Назад',
                 'callback_data': callback_generator(
@@ -780,7 +781,7 @@ class ExchangePage(OneUserPage):
                 'next_line': True
             })
         
-        self.row_width = 1
+        # self.row_width = 1
         return buttons
     
     # Обработчики callback'ов

@@ -239,6 +239,7 @@ class BankCreditPage(Page):
         
         # Кнопки для основного экрана
         if credit_state == 'main':
+            self.row_width = 1
             # Получаем данные компании
             company_data = await get_company(id=company_id)
             
@@ -282,6 +283,7 @@ class BankCreditPage(Page):
         
         # Кнопки для экранов ввода - добавляем кнопку отмены
         elif credit_state in ['input_period', 'input_amount', 'pay_amount']:
+            self.row_width = 2
             buttons = [
                 {
                     'text': '❌ Отменить',
@@ -294,6 +296,7 @@ class BankCreditPage(Page):
         
         # Кнопки для экрана подтверждения
         elif credit_state == 'confirm':
+            self.row_width = 1
             buttons = [
                 {
                     'text': '✅ Да, взять кредит',
@@ -310,8 +313,6 @@ class BankCreditPage(Page):
                     )
                 }
             ]
-        
-        self.row_width = 1
         return buttons
     
     @Page.on_callback('take_credit')
