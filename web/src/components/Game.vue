@@ -48,24 +48,6 @@ const formatCityDemands = (city) => {
     }))
 }
 
-// Helper function to get resource display name (you can customize this)
-const getResourceName = (resourceId) => {
-  const names = {
-    'wood_planks': 'Доски',
-    'fabric': 'Ткань',
-    'metal_parts': 'Металл. детали',
-    'oil_products': 'Нефтепродукты',
-    'generator': 'Генератор',
-    'medicine': 'Медикаменты',
-    'machinery': 'Техника',
-    'furniture': 'Мебель',
-    'clothing': 'Одежда',
-    'electronics': 'Электроника',
-    'nails': 'Гвозди',
-  }
-  return names[resourceId] || resourceId
-}
-
 // Computed property for exchanges (latest 4)
 const latestExchanges = computed(() => {
   const exchanges = wsManager?.gameState?.state?.exchanges || []
@@ -84,12 +66,12 @@ const getCompanyName = (companyId) => {
 // Helper function to format exchange text (matching the existing format)
 const formatExchangeText = (exchange) => {
   const companyName = getCompanyName(exchange.company_id)
-  const resourceName = getResourceName(exchange.sell_resource)
+  const resourceName = wsManager?.gameState?.getResourceName(exchange.sell_resource)
   
   if (exchange.offer_type === 'money') {
     return `${companyName} выставила на продажу ${resourceName}`
   } else if (exchange.offer_type === 'barter') {
-    const barterResourceName = getResourceName(exchange.barter_resource)
+    const barterResourceName = wsManager?.gameState?.getResourceName(exchange.barter_resource)
     return `${companyName} меняет ${resourceName} на ${barterResourceName}`
   }
   return `${companyName} выставила на продажу ${resourceName}`
@@ -109,7 +91,7 @@ const latestContracts = computed(() => {
 // Helper function to format contract text (matching the existing format)
 const formatContractText = (contract) => {
   const customerName = getCompanyName(contract.customer_company_id)
-  const resourceName = getResourceName(contract.resource)
+  const resourceName = wsManager?.gameState?.getResourceName(contract.resource)
   
   if (contract.supplier_company_id === 0) {
     // Free contract
@@ -152,7 +134,7 @@ onMounted(() => {
               <template v-if="city1">
                 {{ city1.name }}<br/>
                 <template v-for="demand in formatCityDemands(city1)" :key="demand.resourceId">
-                  &nbsp;&nbsp;• {{ getResourceName(demand.resourceId) }}<br/>
+                  &nbsp;&nbsp;• {{ wsManager.gameState.getResourceName(demand.resourceId) }}<br/>
                 </template>
               </template>
               <template v-else>
@@ -164,7 +146,7 @@ onMounted(() => {
               <template v-if="city2">
                 {{ city2.name }}<br/>
                 <template v-for="demand in formatCityDemands(city2)" :key="demand.resourceId">
-                  &nbsp;&nbsp;• {{ getResourceName(demand.resourceId) }}<br/>
+                  &nbsp;&nbsp;• {{ wsManager.gameState.getResourceName(demand.resourceId) }}<br/>
                 </template>
               </template>
               <template v-else>
@@ -177,7 +159,7 @@ onMounted(() => {
               <template v-if="city3">
                 {{ city3.name }}<br/>
                 <template v-for="demand in formatCityDemands(city3)" :key="demand.resourceId">
-                  &nbsp;&nbsp;• {{ getResourceName(demand.resourceId) }}<br/>
+                  &nbsp;&nbsp;• {{ wsManager.gameState.getResourceName(demand.resourceId) }}<br/>
                 </template>
               </template>
               <template v-else>
@@ -189,7 +171,7 @@ onMounted(() => {
               <template v-if="city4">
                 {{ city4.name }}<br/>
                 <template v-for="demand in formatCityDemands(city4)" :key="demand.resourceId">
-                  &nbsp;&nbsp;• {{ getResourceName(demand.resourceId) }}<br/>
+                  &nbsp;&nbsp;• {{ wsManager.gameState.getResourceName(demand.resourceId) }}<br/>
                 </template>
               </template>
               <template v-else>

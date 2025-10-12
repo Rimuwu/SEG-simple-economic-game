@@ -16,9 +16,38 @@ const turnInfo = computed(() => {
   return `${step}/${maxSteps}`
 })
 
-// Achievements computed property
-const achievements = computed(() => {
-  return wsManager?.gameState?.getAchievements() || []
+// Store randomly selected product IDs
+const randomProductIds = ref([])
+
+// Products computed property
+const products = computed(() => {
+  if (!wsManager || !wsManager.gameState) return []
+  
+  const prices = wsManager.gameState.state.itemPrices || {}
+  const allIds = Object.keys(prices)
+  
+  // If we don't have random IDs yet, or if products changed significantly, pick new ones
+  if (randomProductIds.value.length === 0 || randomProductIds.value.length > allIds.length) {
+    const shuffled = [...allIds].sort(() => Math.random() - 0.5)
+    randomProductIds.value = shuffled.slice(0, Math.min(10, allIds.length))
+  }
+  
+  // Map the selected IDs to product objects with localized names
+  return randomProductIds.value
+    .filter(itemId => prices[itemId] !== undefined) // Ensure item still exists
+    .map(itemId => {
+      const price = prices[itemId]
+      // Get localized name from GameState
+      const localizedName = wsManager.gameState.getResourceName(itemId) || itemId
+      
+      console.log(`[Between.vue] Product: ${itemId} -> ${localizedName}, Price: ${price}`)
+      
+      return {
+        id: itemId,
+        name: localizedName,
+        price: price
+      }
+    })
 })
 
 // Leaders computed property
@@ -110,25 +139,14 @@ const eventStatusText = computed(() => {
   } else if (event.starts_next_turn) {
     return 'Начнётся на следующем ходу'
   } else if (event.predictable) {
-    const stepsUntil = event.start_step - wsManager?.gameState?.state?.session?.step
+  const stepsUntil = event.start_step - wsManager?.gameState?.state?.session?.step
     return `Начнётся через ${stepsUntil} ход${stepsUntil === 1 ? '' : stepsUntil < 5 ? 'а' : 'ов'}`
   }
   return null
 })
 
 onMounted(() => {
-  // Generate achievements when component mounts
-  let sessionId = wsManager?.gameState?.state?.session?.id
-  // Try to get session ID from companies if not in session object
-  const companies = wsManager?.gameState?.state?.companies || []
-  
-  if (!sessionId && companies.length > 0) {
-    sessionId = companies[0].session_id
-  }
-  
-  if (sessionId) {
-    wsManager?.gameState?.generateAchievements(sessionId)
-  }
+  // Component mounted
 })
 </script>
 
@@ -150,15 +168,14 @@ onMounted(() => {
     <div class="right">
       <div class="grid">
 
-        <div class="achievements grid-item">
-          <p class="title">ДОСТИЖЕНИЯ</p>
+        <div class="products grid-item">
+          <p class="title">ТОВАРЫ</p>
           <div class="content">
-            <section v-for="achievement in achievements" :key="achievement.name">
-              <p class="name">{{ achievement.name }}</p>
-              <p class="desc">{{ achievement.desc }}</p>
+            <section v-for="product in products" :key="product.id">
+              <p class="name">{{ product.name }} — {{ product.price }} ₽</p>
             </section>
-            <section v-if="achievements.length === 0">
-              <p class="desc">Выдающиеся достижения отсутсвуют</p>
+            <section v-if="products.length === 0">
+              <p class="desc">Цены на товары загружаются...</p>
             </section>
           </div>
         </div>
@@ -269,14 +286,18 @@ onMounted(() => {
   text-align: center;
 }
 
-.achievements .content,
+.products .content,
 .leaders .content {
   display: flex;
   flex-direction: column;
   gap: 36px;
 }
 
-.achievements section,
+.products .content {
+  gap: 10px;
+}
+
+.products section,
 .leaders section {
   background: #3D8C00;
   padding: 5px 10px;
@@ -291,6 +312,10 @@ onMounted(() => {
   font-size: 3rem;
   text-transform: uppercase;
   margin: 0;
+}
+
+.products .name {
+  font-size: 2rem;
 }
 
 .desc {

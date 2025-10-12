@@ -53,12 +53,12 @@ const TileTypes = {
  * @type {Object}
  */
 const tileStyles = {
-  [TileTypes.MOUNTAINS]: { color: "Gray"},
-  [TileTypes.WATER]: { color: "dodgerBlue"},
-  [TileTypes.FOREST]: { color: "ForestGreen"},
-  [TileTypes.FIELD]: { color: "Khaki"},
-  [TileTypes.CITY]: { color: "orange"},
-  [TileTypes.BANK]: { color: "red"},
+  [TileTypes.MOUNTAINS]: { color: "#4E4E4E", fontColor: "#ff"},
+  [TileTypes.WATER]: { color: "#00AAFF", fontColor: "#000"},
+  [TileTypes.FOREST]: { color: "#3E8B03", fontColor: "#fff"},
+  [TileTypes.FIELD]: { color: "#81D905", fontColor: "#000"},
+  [TileTypes.CITY]: { color: "#FFBB00", fontColor: "#000"},
+  [TileTypes.BANK]: { color: "#FF4400", fontColor: "#000"},
 }
 /**
  * Sets the tile's color and label in the grid.
@@ -75,6 +75,7 @@ function setTile(row, col, tileType, text) {
   if (!tile) return
   if (tileType !== undefined && tileType !== null) {
     tile.style.backgroundColor = tileStyles[tileType].color
+    tile.style.color = tileStyles[tileType].fontColor
   }
   // if (text !== undefined) {
   //   tile.textContent = text

@@ -37,8 +37,8 @@ export class GameState {
       // Contracts data
       contracts: [],
 
-      // Achievements data (computed from company data)
-      achievements: [],
+      // Item prices data
+      itemPrices: {},
 
       // Event data
       event: {
@@ -482,82 +482,52 @@ export class GameState {
     return contracts;
   }
 
-  // ==================== ACHIEVEMENT METHODS ====================
+  // ==================== ITEM PRICE METHODS ====================
 
   /**
-   * Generate achievements based on current company data
-   * This computes achievements dynamically from companies
+   * Update item prices
+   * @param {Object} prices - Object with item_id: price pairs
    */
-  generateAchievements() {
-    const sessionId = this.state.session.id;
-    if (!sessionId) return;
-
-    const companies = this.getCompaniesBySession(sessionId);
-    if (companies.length === 0) return;
-
-    const achievements = [];
-
-    // Top earner this turn (highest balance)
-    const richest = companies.reduce((prev, current) => 
-      (current.balance > prev.balance) ? current : prev
-    );
-    if (richest.balance > 0) {
-      achievements.push({
-        company_id: richest.id,
-        company_name: richest.name,
-        type: 'richest',
-        title: 'БОГАТЕЙШАЯ КОМПАНИЯ',
-        description: `${richest.balance.toLocaleString()} монет`
-      });
-    }
-
-    // Most reputable company
-    const mostReputable = companies.reduce((prev, current) => 
-      (current.reputation > prev.reputation) ? current : prev
-    );
-    if (mostReputable.reputation > 0) {
-      achievements.push({
-        company_id: mostReputable.id,
-        company_name: mostReputable.name,
-        type: 'reputable',
-        title: 'САМАЯ УВАЖАЕМАЯ',
-        description: `Репутация: ${mostReputable.reputation}`
-      });
-    }
-
-    // Most economically powerful
-    const mostPowerful = companies.reduce((prev, current) => 
-      (current.economic_power > prev.economic_power) ? current : prev
-    );
-    if (mostPowerful.economic_power > 0) {
-      achievements.push({
-        company_id: mostPowerful.id,
-        company_name: mostPowerful.name,
-        type: 'economic',
-        title: 'ЭКОНОМИЧЕСКИЙ ЛИДЕР',
-        description: `Эконом. мощь: ${mostPowerful.economic_power}`
-      });
-    }
-
-    this.state.achievements = achievements;
-    console.log('[GameState] Achievements generated:', achievements.length);
+  updateItemPrices(prices) {
+    this.state.itemPrices = prices;
+    console.log('[GameState] Item prices updated:', Object.keys(prices).length);
   }
 
   /**
-   * Get all achievements
-   * @returns {Array}
+   * Get all item prices
+   * @returns {Object}
    */
-  getAchievements() {
-    return this.state.achievements;
+  getItemPrices() {
+    return this.state.itemPrices;
   }
 
   /**
-   * Get achievements for a specific company
-   * @param {number} companyId
+   * Get price for a specific item
+   * @param {string} itemId
+   * @returns {number|null}
+   */
+  getItemPrice(itemId) {
+    return this.state.itemPrices[itemId] || null;
+  }
+
+  /**
+   * Get item prices with price change indicators
+   * Returns array of {name, priceChange} where priceChange is '+++', '++', '+', '-', '--', '---', or ''
    * @returns {Array}
    */
-  getAchievementsByCompany(companyId) {
-    return this.state.achievements.filter(a => a.company_id === companyId);
+  getItemPricesWithTrend() {
+    const items = [];
+    // This would need historical data to calculate trends
+    // For now, return items with neutral trend
+    for (const [itemId, price] of Object.entries(this.state.itemPrices)) {
+      items.push({
+        id: itemId,
+        name: itemId, // You might want to map this to display names
+        price: price,
+        priceChange: '' // TODO: Calculate based on price history
+      });
+    }
+    return items;
   }
 
   // ==================== EVENT METHODS ====================
@@ -792,6 +762,52 @@ export class GameState {
   // ==================== UTILITY METHODS ====================
 
   /**
+   * Get localized resource display name
+   * @param {string} resourceId - Resource ID
+   * @returns {string} - Localized display name
+   */
+  getResourceName(resourceId) {
+    const names = {
+      // Raw materials (lvl 0)
+      'oil': 'Нефть',
+      'metal': 'Металл',
+      'wood': 'Дерево',
+      'cotton': 'Хлопок',
+      
+      // Level 1 products
+      'oil_products': 'Нефтепродукты',
+      'nails': 'Гвозди',
+      'boards': 'Доски',
+      'fabric': 'Ткань',
+      
+      // Level 2 products
+      'medical_equipment': 'Медицинское оборудование',
+      'machine': 'Станок',
+      'furniture': 'Мебель',
+      'tent': 'Палатка',
+      'barrel': 'Бочка',
+      'tarpaulin': 'Брезент',
+      'insulation': 'Изоляционный материал',
+      'sail': 'Парус',
+      
+      // Level 3 products
+      'generator': 'Генератор',
+      'body_armor': 'Бронежилет',
+      'refrigerator': 'Холодильник',
+      'yacht': 'Парусная яхта',
+      
+      // Legacy/alternative names (for backward compatibility)
+      'wood_planks': 'Доски',
+      'metal_parts': 'Металл. детали',
+      'medicine': 'Медикаменты',
+      'machinery': 'Техника',
+      'clothing': 'Одежда',
+      'electronics': 'Электроника',
+    };
+    return names[resourceId] || resourceId;
+  }
+
+  /**
    * Reset all state
    */
   reset() {
@@ -807,7 +823,7 @@ export class GameState {
     this.state.exchanges = [];
     this.state.cities = [];
     this.state.contracts = [];
-    this.state.achievements = [];
+    this.state.itemPrices = {};
     this.clearEvent();
     this.state.map = {
       cells: [],

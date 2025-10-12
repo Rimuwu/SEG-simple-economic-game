@@ -274,6 +274,29 @@ export class WebSocketManager {
     return request_id;
   }
 
+  get_all_item_prices(callback = null) {
+    if (!this.socket || this.socket.readyState !== WebSocket.OPEN) {
+      const error = "WebSocket is not connected";
+      this.gameState.setError(error);
+      if (callback) callback({ success: false, error });
+      return null;
+    }
+    const request_id = `get_all_item_prices_${Date.now()}_${Math.random()
+      .toString(36)
+      .substr(2, 9)}`;
+    if (callback && typeof callback === "function") {
+      this.pendingCallbacks.set(request_id, callback);
+    }
+    this.socket.send(
+      JSON.stringify({
+        type: "get-all-item-prices",
+        session_id: this.gameState.state.session.id || undefined,
+        request_id: request_id,
+      })
+    );
+    return request_id;
+  }
+
   get_cities(callback = null) {
     if (!this.socket || this.socket.readyState !== WebSocket.OPEN) {
       const error = "WebSocket is not connected";
@@ -478,8 +501,11 @@ export class WebSocketManager {
     // 7. Exchange data
     this.get_exchanges();
     
+    // 8. Item prices
+    this.get_all_item_prices();
+    
     // Note: Factories are fetched per company when needed
-    // Events, achievements, contracts, winners are handled via broadcasts
+    // Events, contracts, winners are handled via broadcasts
   }
 
   stopPolling() {
@@ -520,6 +546,8 @@ export class WebSocketManager {
         this.handleFactoriesResponse(message);
       } else if (message.request_id.startsWith("get_exchanges_")) {
         this.handleExchangesResponse(message);
+      } else if (message.request_id.startsWith("get_all_item_prices_")) {
+        this.handleItemPricesResponse(message);
       } else if (message.request_id.startsWith("get_cities_")) {
         this.handleCitiesResponse(message);
       } else if (message.request_id.startsWith("get_city_demands_")) {
@@ -721,6 +749,22 @@ export class WebSocketManager {
       if (callback) callback({ success: true, data: exchangesData });
     } else {
       if (callback) callback({ success: false, error: "No exchanges data" });
+    }
+    
+    if (callback) this.pendingCallbacks.delete(requestId);
+  }
+
+  handleItemPricesResponse(message) {
+    const requestId = message.request_id;
+    const callback = this.pendingCallbacks.get(requestId);
+    
+    if (message.data && message.data.prices) {
+      // Update game state with prices object
+      this.gameState.updateItemPrices(message.data.prices);
+      
+      if (callback) callback({ success: true, data: message.data.prices });
+    } else {
+      if (callback) callback({ success: false, error: "No item prices data" });
     }
     
     if (callback) this.pendingCallbacks.delete(requestId);
