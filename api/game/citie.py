@@ -1,5 +1,7 @@
 
 import asyncio
+import copy
+from pprint import pprint
 import random
 from typing import Optional
 from global_modules.models.cells import Cells
@@ -85,6 +87,7 @@ class Citie(BaseClass):
 
         # Спрос на товары: {resource_id: {'amount': int, 'price': int}}
         self.demands: dict = {}
+        self.demands_save: dict = {}
 
     def create(self, session_id: str, x: int, y: int, 
                name: Optional[str] = None):
@@ -141,10 +144,23 @@ class Citie(BaseClass):
         
         # Получаем количество пользователей в сессии (минимум 1 для расчётов)
         users_count = max(len(session.users), 1)
+
+        # Рассчитываем модификаторы спроса на основе разности между сохраненным и текущим спросом
+        demand_modifiers = {}
         
+        for resource_id in self.demands_save:
+            old_amount = self.demands_save.get(resource_id, {}).get('amount', 0)
+            current_amount = self.demands.get(resource_id, {}).get('amount', 0)
+
+            if old_amount > 0:
+                modifier = round(current_amount / old_amount, 2)
+            else:
+                modifier = 1.0
+            demand_modifiers[resource_id] = max(modifier, 0.1)
+
         # Очищаем старый спрос
         self.demands = {}
-        
+
         # Получаем все ресурсы, которые не являются сырьем
         for resource_id, resource in RESOURCES.resources.items():
             if not resource.raw:
@@ -152,6 +168,10 @@ class Citie(BaseClass):
                 # Для товаров с massModifier=100 будет ~100 единиц на игрока
                 base_amount = resource.massModifier * users_count
                 
+                # Применяем модификатор, основанный на продажах прошлого хода
+                previous_demand_modifier = demand_modifiers.get(resource_id, 1.0)
+                base_amount *= previous_demand_modifier
+
                 mod_price = session.get_event_effects().get(
                     'increase_price', {}
                 ).get(resource_id, 1.0)
@@ -162,16 +182,27 @@ class Citie(BaseClass):
                 # Модификатор для приоритетной ветки (увеличиваем спрос на 50%)
                 branch_modifier = 1.5 if resource.branch == self.branch else 1.0
 
-                # Финальное количество с рандомизацией ±30%
+                # Применяем модификатор продаж прошлого хода
+                previous_demand_modifier = demand_modifiers.get(resource_id, 1.0)
+                if previous_demand_modifier != 1.0:
+                    rand_demand = random.uniform(previous_demand_modifier, 1.0)
+                else:
+                    rand_demand = random.uniform(0.8, 1.5)
+
+                # Рандомизация ±60%
                 amount_variation = random.uniform(0.4, 1.6)
-                amount = int(base_amount * branch_modifier * amount_variation)
+
+                # Рассчитываем финальное количество
+                amount = int(base_amount * branch_modifier * rand_demand * amount_variation)
 
                 # Ограничение: минимум зависит от massModifier
-                min_amount = max(1, int(
-                    resource.massModifier * 0.5)
-                                 )
-                max_amount = int(resource.massModifier * users_count * 3 * mod_count)
-                amount = max(min_amount, min(amount, max_amount))
+                min_min = random.randint(0, 1)
+                if resource.branch == self.branch:
+                    min_min = 1
+
+                min_amount = max(min_min, int(resource.massModifier * 0.5))
+                max_amount = int(resource.massModifier * users_count * 2 * mod_count)
+                amount = random.randint(min_amount, max(min_amount, max_amount, amount))
 
                 # Цена с рандомизацией ±20%
                 current_item_price = session.get_item_price(resource_id)
@@ -189,6 +220,9 @@ class Citie(BaseClass):
                     'amount': amount,
                     'price': price
                 }
+
+        # Обновляем demands_save для следующего хода (сохраняем только что созданный спрос)
+        self.demands_save = copy.deepcopy(self.demands)
 
     def on_new_game_stage(self):
         """Вызывается при начале нового игрового хода"""
