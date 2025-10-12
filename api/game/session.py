@@ -112,7 +112,14 @@ class Session(BaseClass):
                         game_logger.info(f"Assigned cell {company.cell_position} to company {company.name}")
 
                 if not whitout_shedule:
-                    stage_game_updater(self.session_id)
+
+                    sh_id = scheduler.schedule_task(
+                        stage_game_updater, 
+                        datetime.now() + timedelta(seconds=GAME_TIME),
+                        kwargs={"session_id": self.session_id}
+                    )
+                    self.change_turn_schedule_id = sh_id
+                    self.save_to_base()
 
             for company in self.companies:
                 company.on_new_game_stage(self.step + 1)
@@ -190,6 +197,12 @@ class Session(BaseClass):
 
     def can_select_cells(self):
         return self.stage == SessionStages.CellSelect.value
+
+    def all_companies_have_cells(self):
+        for company in self.companies:
+            if not company.cell_position:
+                return False
+        return True
 
     @property
     def companies(self) -> list['Company']:
