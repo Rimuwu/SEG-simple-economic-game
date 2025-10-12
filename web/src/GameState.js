@@ -61,13 +61,6 @@ export class GameState {
         loaded: false
       },
 
-      // Current user data
-      currentUser: {
-        id: null,
-        username: null,
-        company_id: null
-      },
-
       // Time data
       timeToNextStage: null,
 
@@ -222,20 +215,6 @@ export class GameState {
     }
     this.state.users = users;
     console.log('[GameState] Users updated:', users.length);
-  }
-
-  /**
-   * Set current user
-   * @param {Object} user - User object
-   */
-  setCurrentUser(user) {
-    if (!user) return;
-    this.state.currentUser = {
-      id: user.id,
-      username: user.username,
-      company_id: user.company_id
-    };
-    console.log('[GameState] Current user set:', this.state.currentUser);
   }
 
   /**
@@ -729,23 +708,6 @@ export class GameState {
   }
 
   /**
-   * Check if user has a company
-   * @returns {boolean}
-   */
-  get hasCompany() {
-    return this.state.currentUser && this.state.currentUser.company_id !== null && this.state.currentUser.company_id !== 0;
-  }
-
-  /**
-   * Get current user's company
-   * @returns {Object|null}
-   */
-  get currentCompany() {
-    if (!this.hasCompany) return null;
-    return this.getCompanyById(this.state.currentUser.company_id);
-  }
-
-  /**
    * Get session stage display name
    * @returns {string}
    */
@@ -814,11 +776,6 @@ export class GameState {
     this.clearSession();
     this.state.companies = [];
     this.state.users = [];
-    this.state.currentUser = {
-      id: null,
-      username: null,
-      company_id: null
-    };
     this.state.factories = [];
     this.state.exchanges = [];
     this.state.cities = [];
