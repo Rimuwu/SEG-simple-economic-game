@@ -1,7 +1,7 @@
 import asyncio
 from typing import Optional
 from game.stages import leave_from_prison
-from global_modules.models.cells import CellType, Cells
+from global_modules.models.cells import Cells
 from modules.generate import generate_number
 from modules.websocket_manager import websocket_manager
 from global_modules.db.baseclass import BaseClass
@@ -10,6 +10,7 @@ from game.session import session_manager
 from global_modules.load_config import ALL_CONFIGS, Resources, Improvements, Settings, Capital, Reputation
 from global_modules.bank import calc_credit, get_credit_conditions, check_max_credit_steps, calc_deposit, get_deposit_conditions, check_max_deposit_steps
 from game.factory import Factory
+from modules.logs import game_logger
 
 RESOURCES: Resources = ALL_CONFIGS["resources"]
 CELLS: Cells = ALL_CONFIGS['cells']
@@ -394,6 +395,13 @@ class Company(BaseClass):
         self.improvements[improvement_type] = imp_lvl_now + 1
         self.save_to_base()
         self.reupdate()
+        
+        if improvement_type == 'factory':
+            col_need = self.get_improvements()['factory']['tasksPerTurn']
+            col_now = len(self.get_factories())
+
+            for _ in range(col_need - col_now):
+                Factory().create(self.id)
 
         asyncio.create_task(websocket_manager.broadcast({
             "type": "api-company_improvement_upgraded",
@@ -528,7 +536,7 @@ class Company(BaseClass):
 
             elif credit["steps_now"] == credit["steps_total"]:
                 # Последний день - начисляем всю оставшуюся сумму
-                credit["need_pay"] += credit["total_to_pay"] - credit['paid']
+                # credit["need_pay"] += credit["total_to_pay"] - credit['paid']
                 credit["steps_now"] += 1
 
             elif credit["steps_now"] > credit["steps_total"]:
@@ -536,8 +544,6 @@ class Company(BaseClass):
                 self.remove_reputation(REPUTATION.credit.lost)
 
             if credit["steps_now"] - credit["steps_total"] > REPUTATION.credit.max_overdue:
-                self.remove_reputation(self.reputation)
-                self.remove_credit(index)
                 self.to_prison()
 
         self.save_to_base()
@@ -631,7 +637,7 @@ class Company(BaseClass):
 
         self.in_prison = True
         self.prison_end_step = end_step
-        
+
         self.reputation = REPUTATION.start
         self.credits = []
         self.deposits = []

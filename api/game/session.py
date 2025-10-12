@@ -11,7 +11,7 @@ from enum import Enum
 from global_modules.db.baseclass import BaseClass
 from global_modules.load_config import ALL_CONFIGS, Settings
 from collections import Counter
-from global_modules.logs import main_logger
+from modules.logs import game_logger
 from modules.websocket_manager import websocket_manager
 from modules.sheduler import scheduler
 import random
@@ -102,7 +102,7 @@ class Session(BaseClass):
 
                     if len(company.users) == 0:
                         company.delete()
-                        main_logger.warning(f"Company {company.name} has no users and has been deleted.")
+                        game_logger.warning(f"Company {company.name} has no users and has been deleted.")
                         continue
 
                     elif not company.cell_position:
@@ -110,7 +110,7 @@ class Session(BaseClass):
 
                         if not free_cells: 
                             company.delete()
-                            main_logger.warning(f"No free cells available to assign to company {company.name}. Company has been deleted.")
+                            game_logger.warning(f"No free cells available to assign to company {company.name}. Company has been deleted.")
                             continue
 
                         cell = random.choice(free_cells)
@@ -118,7 +118,7 @@ class Session(BaseClass):
 
                         company.save_to_base()
                         company.reupdate()
-                        main_logger.info(f"Assigned cell {company.cell_position} to company {company.name}")
+                        game_logger.info(f"Assigned cell {company.cell_position} to company {company.name}")
 
             for company in self.companies:
                 company.on_new_game_stage(self.step + 1)
@@ -325,7 +325,7 @@ class Session(BaseClass):
 
         # Подсчёт каждого типа клетки
         self.cell_counts = dict(Counter(self.cells))
-        main_logger.info(f"Cell counts: {self.cell_counts}")
+        game_logger.info(f"Cell counts: {self.cell_counts}")
 
         self.save_to_base()
         
@@ -361,7 +361,7 @@ class Session(BaseClass):
                                         )
                     city_index += 1
 
-                    main_logger.info(f"Created city at position {x}.{y} with branch {city.branch}")
+                    game_logger.info(f"Created city at position {x}.{y} with branch {city.branch}")
 
     def can_select_cell(self, x: int, y: int):
         """ Проверяет, можно ли выбрать клетку с координатами (x, y) для компании.
@@ -503,11 +503,11 @@ class Session(BaseClass):
 
         # Объявление победителей
         if leaders["capital"]:
-            main_logger.info(f"Capital winner: {leaders['capital'].name} with {leaders['capital'].balance}")
+            game_logger.info(f"Capital winner: {leaders['capital'].name} with {leaders['capital'].balance}")
         if leaders["reputation"]:
-            main_logger.info(f"Reputation winner: {leaders['reputation'].name} with {leaders['reputation'].reputation}")
+            game_logger.info(f"Reputation winner: {leaders['reputation'].name} with {leaders['reputation'].reputation}")
         if leaders["economic"]:
-            main_logger.info(f"Economic winner: {leaders['economic'].name} with {leaders['economic'].economic_power}")
+            game_logger.info(f"Economic winner: {leaders['economic'].name} with {leaders['economic'].economic_power}")
 
         asyncio.create_task(websocket_manager.broadcast({
             "type": "api-game_ended",
@@ -554,7 +554,7 @@ class Session(BaseClass):
 
         self.save_to_base()
 
-        main_logger.info(f"Event '{event_id}' set for session {self.session_id} from step {start_step} to {end_step}")
+        game_logger.info(f"Event '{event_id}' set for session {self.session_id} from step {start_step} to {end_step}")
 
         # Запускаем шедулер для удаления события
         self.create_step_schedule(
@@ -698,7 +698,7 @@ class Session(BaseClass):
         # Устанавливаем событие
         self.set_event(event.id, start_step, end_step)
         
-        main_logger.info(f"Generated event '{event.id}' for session {self.session_id}")
+        game_logger.info(f"Generated event '{event.id}' for session {self.session_id}")
         
         # Отправляем уведомление
         asyncio.create_task(websocket_manager.broadcast({
