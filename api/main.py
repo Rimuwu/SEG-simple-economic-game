@@ -1,5 +1,6 @@
 from asyncio import sleep
 import asyncio
+import os
 from pprint import pprint
 import random
 from fastapi import FastAPI, Request
@@ -69,10 +70,8 @@ app = get_fastapi_app(
     title="API",
     version="6.6.6",
     description="SEG API",
-    debug=False,
+    debug=os.getenv("DEBUG", "False").lower() == "true",
     lifespan=lifespan,
-    limiter=False,
-    middlewares=[],
     routers=[
         connect_ws.router
     ],
@@ -92,7 +91,6 @@ async def test1():
 
     await asyncio.sleep(2)
 
-    print("🚀 Тестирование бартерного контракта с полным отслеживанием...")
 
     # Очистка и создание сессии
     if session_manager.get_session('AFRIKA'):
@@ -122,44 +120,44 @@ async def test1():
     supplier.set_position(0, 0)
     customer.set_position(2, 3)
     
+    for index, sity in enumerate(session.cities):
+        if index != 0:
+            sity.delete()
+    
     session.update_stage(SessionStages.Game, True)
     for company in [supplier, customer]:
         company.reupdate()
-    
-    # ПОЛНАЯ ОЧИСТКА ИНВЕНТАРЯ
-    print("🧹 Полностью очищаем инвентарь...")
-    supplier.warehouses = {}
-    customer.warehouses = {}
-    supplier.balance = 0
-    customer.balance = 0
-    
-    supplier.reputation = 100
-    customer.reputation = 100
-    supplier.save_to_base()
-    customer.save_to_base()
 
-    print("💰")
 
-    supplier.add_resource("metal", 50)  # Металл для поставки
-    customer.add_resource("wood", 50)  # Металл для поставки
-    customer.add_balance(5000, 0.0)  # Деньги для оплаты контракта
 
-    ex = Exchange().create(
-        company_id=supplier.id,
-        session_id=session.session_id,
-        sell_resource="metal",
-        sell_amount_per_trade=10,
-        count_offers=5,
-        offer_type='barter',
-        barter_resource="wood",
-        barter_amount=5,
-    )
+    cities = session.cities
+    for city in cities:
+        pprint(city.to_dict())
     
-    ex.buy(
-        customer.id,
-        5
-    )
+    # cities = session.cities
+    # for city in cities:
+    #     pprint(city.to_dict())
+        
+    # print('До удаления')
+    
+    for city in cities:
+        city: Citie
+        for item, data in city.demands.items():
+            amount = data['amount']
+            if amount > 0:
+                city.demands[item]['amount'] -= random.randint(0, amount)
+        city.save_to_base()
+    
+    print('После удаления')
+    
+    cities = session.cities
+    for city in cities:
+        pprint(city.to_dict())
     
     session.update_stage(SessionStages.Game, True)
-    session.update_stage(SessionStages.Game, True)
-    session.update_stage(SessionStages.Game, True)
+    for company in [supplier, customer]:
+        company.reupdate()
+
+    cities = session.cities
+    for city in cities:
+        pprint(city.to_dict())
