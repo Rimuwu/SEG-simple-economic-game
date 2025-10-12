@@ -4,11 +4,12 @@ from modules.ws_client import get_company, company_take_deposit, company_withdra
 from oms.utils import callback_generator
 from global_modules.bank import get_deposit_conditions, calc_deposit, CAPITAL, check_max_deposit_steps
 from global_modules.logs import Logger
+from oneuser_page import OneUserPage
 
 bot_logger = Logger.get_logger("bot")
 
 
-class BankDepositPage(Page):
+class BankDepositPage(OneUserPage):
     
     __page_name__ = "bank-deposit-page"
     
@@ -71,7 +72,7 @@ class BankDepositPage(Page):
             text += f"✅ {success_message}\n\n"
             # Очищаем сообщение после показа
             scene_data['success_message'] = ''
-            self.scene.set_data('scene', scene_data)
+            await self.scene.set_data('scene', scene_data)
         
         # Получаем условия вклада
         try:
@@ -430,7 +431,7 @@ _Вклад можно забрать через 3 хода после откр�
         # Устанавливаем состояние ожидания ввода суммы
         scene_data['deposit_state'] = 'input_amount'
         scene_data['error_message'] = ''  # Очищаем ошибки
-        self.scene.set_data('scene', scene_data)
+        await self.scene.set_data('scene', scene_data)
         
         # Обновляем сообщение для показа инструкции
         await self.scene.update_message()
@@ -456,7 +457,7 @@ _Вклад можно забрать через 3 хода после откр�
         # Устанавливаем состояние просмотра вклада
         scene_data['deposit_state'] = 'view_deposit'
         scene_data['viewing_deposit_index'] = deposit_index
-        self.scene.set_data('scene', scene_data)
+        await self.scene.set_data('scene', scene_data)
         
         # Обновляем сообщение для показа информации о вкладе
         await self.scene.update_message()
@@ -470,7 +471,7 @@ _Вклад можно забрать через 3 хода после откр�
         # Возвращаемся на основной экран
         scene_data['deposit_state'] = 'main'
         scene_data['viewing_deposit_index'] = None
-        self.scene.set_data('scene', scene_data)
+        await self.scene.set_data('scene', scene_data)
         
         # Обновляем сообщение
         await self.scene.update_message()
@@ -543,7 +544,7 @@ _Вклад можно забрать через 3 хода после откр�
             scene_data['success_message'] = f'Вклад изъят! Получено: {current_balance:,} 💰'.replace(",", " ")
             scene_data['deposit_state'] = 'main'
             scene_data['viewing_deposit_index'] = None
-            self.scene.set_data('scene', scene_data)
+            await self.scene.set_data('scene', scene_data)
             await self.scene.update_message()
             await callback.answer(f"✅ Вклад изъят: {current_balance:,} 💰".replace(",", " "), show_alert=True)
     
@@ -590,7 +591,7 @@ _Вклад можно забрать через 3 хода после откр�
             scene_data['deposit_state'] = 'main'
             scene_data['deposit_amount'] = 0
             scene_data['deposit_period'] = 0
-            self.scene.set_data('scene', scene_data)
+            await self.scene.set_data('scene', scene_data)
             await self.scene.update_message()
         else:
             # Успешное открытие вклада
@@ -598,7 +599,7 @@ _Вклад можно забрать через 3 хода после откр�
             scene_data['deposit_amount'] = 0
             scene_data['deposit_period'] = 0
             scene_data['success_message'] = f'Вклад открыт! Внесено: {deposit_amount:,} 💰 на {deposit_period} ход(ов)'.replace(",", " ")
-            self.scene.set_data('scene', scene_data)
+            await self.scene.set_data('scene', scene_data)
             await self.scene.update_message()
             await callback.answer(
                 f"✅ Вклад открыт!\n"
@@ -615,7 +616,7 @@ _Вклад можно забрать через 3 хода после откр�
         scene_data['deposit_amount'] = 0
         scene_data['deposit_period'] = 0
         scene_data['error_message'] = ''  # Очищаем ошибки
-        self.scene.set_data('scene', scene_data)
+        await self.scene.set_data('scene', scene_data)
         
         await callback.answer("❌ Операция отменена")
         await self.scene.update_message()
@@ -641,7 +642,7 @@ _Вклад можно забрать через 3 хода после откр�
             company_data = await get_company(id=company_id)
             if isinstance(company_data, str):
                 scene_data['error_message'] = f'Ошибка: {company_data}'
-                self.scene.set_data('scene', scene_data)
+                await self.scene.set_data('scene', scene_data)
                 await self.scene.update_message()
                 return
             
@@ -649,26 +650,26 @@ _Вклад можно забрать через 3 хода после откр�
             
             if value < min_deposit:
                 scene_data['error_message'] = f'Минимальная сумма вклада: {min_deposit:,} 💰'.replace(",", " ")
-                self.scene.set_data('scene', scene_data)
+                await self.scene.set_data('scene', scene_data)
                 await self.scene.update_message()
                 return
             
             if value > max_deposit:
                 scene_data['error_message'] = f'Максимальная сумма вклада: {max_deposit:,} 💰'.replace(",", " ")
-                self.scene.set_data('scene', scene_data)
+                await self.scene.set_data('scene', scene_data)
                 await self.scene.update_message()
                 return
             
             if value > balance:
                 scene_data['error_message'] = f'Недостаточно средств! Ваш баланс: {balance:,} 💰'.replace(",", " ")
-                self.scene.set_data('scene', scene_data)
+                await self.scene.set_data('scene', scene_data)
                 await self.scene.update_message()
                 return
             
             # Сохраняем сумму и переходим к вводу срока
             scene_data['deposit_amount'] = value
             scene_data['deposit_state'] = 'input_period'
-            self.scene.set_data('scene', scene_data)
+            await self.scene.set_data('scene', scene_data)
             
             # Обновляем сообщение для показа следующего шага
             await self.scene.update_message()
@@ -682,7 +683,7 @@ _Вклад можно забрать через 3 хода после откр�
             session_data = await get_session(session_id=session_id)
             if isinstance(session_data, str):
                 scene_data['error_message'] = f'Ошибка: {session_data}'
-                self.scene.set_data('scene', scene_data)
+                await self.scene.set_data('scene', scene_data)
                 await self.scene.update_message()
                 return
             
@@ -692,20 +693,20 @@ _Вклад можно забрать через 3 хода после откр�
             
             if value < 3:
                 scene_data['error_message'] = 'Минимальный срок вклада: 3 хода'
-                self.scene.set_data('scene', scene_data)
+                await self.scene.set_data('scene', scene_data)
                 await self.scene.update_message()
                 return
             
             if value > max_period:
                 scene_data['error_message'] = f'Срок не может превышать {max_period} ход(ов)! (Текущий ход: {current_step}, до конца игры: {max_period})'
-                self.scene.set_data('scene', scene_data)
+                await self.scene.set_data('scene', scene_data)
                 await self.scene.update_message()
                 return
             
             # Сохраняем срок и переходим к подтверждению
             scene_data['deposit_period'] = value
             scene_data['deposit_state'] = 'confirm'
-            self.scene.set_data('scene', scene_data)
+            await self.scene.set_data('scene', scene_data)
             
             # Обновляем сообщение для показа экрана подтверждения
             await self.scene.update_message()

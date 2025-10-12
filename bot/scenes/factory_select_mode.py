@@ -2,9 +2,9 @@ from oms import Page
 from aiogram.types import CallbackQuery
 from oms.utils import callback_generator
 from modules.ws_client import get_factories
+from oneuser_page import OneUserPage
 
-
-class FactorySelectMode(Page):
+class FactorySelectMode(OneUserPage):
     """Страница выбора режима заводов для перекомплектации"""
     
     __page_name__ = "factory-select-mode"

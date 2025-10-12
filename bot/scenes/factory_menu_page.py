@@ -4,11 +4,12 @@ from modules.ws_client import get_factories
 from oms.utils import callback_generator
 from global_modules.logs import Logger
 from modules.resources import get_resource_name
+from oneuser_page import OneUserPage
 
 bot_logger = Logger.get_logger("bot")
 
 
-class FactoryMenu(Page):
+class FactoryMenu(OneUserPage):
     __page_name__ = "factory-menu"
     
     def get_resource_name(self, resource_key: str) -> str:

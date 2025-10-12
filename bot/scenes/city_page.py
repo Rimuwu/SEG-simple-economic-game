@@ -6,12 +6,13 @@ from modules.ws_client import get_cities, get_city, get_company, sell_to_city
 from oms.utils import callback_generator
 from global_modules.load_config import ALL_CONFIGS, Resources
 from modules.utils import xy_into_cell
+from oneuser_page import OneUserPage
 
 
 RESOURCES: Resources = ALL_CONFIGS["resources"]
 
 
-class City(Page):
+class City(OneUserPage):
     __page_name__ = "city-page"
 
     async def data_preparate(self):
@@ -280,7 +281,7 @@ class City(Page):
         await callback.answer()
 
     @Page.on_text('int')
-    async def handle_numeric_input(self, _message: Message, value: int):
+    async def handle_numeric_input(self, message: Message, value: int):
         page_data = self.scene.get_data("city-page")
         if page_data.get("stage") != "sell_product":
             return
@@ -289,6 +290,8 @@ class City(Page):
             await self._set_status("Количество должно быть больше нуля", level="error")
             await self.scene.update_message()
             return
+
+        _ = message  # OMS требует параметр message; логика использует статусные сообщения
 
         scene_data = self.scene.get_data("scene")
         session_id = scene_data.get("session")
