@@ -60,7 +60,8 @@ const getResourceName = (resourceId) => {
     'machinery': 'Техника',
     'furniture': 'Мебель',
     'clothing': 'Одежда',
-    'electronics': 'Электроника'
+    'electronics': 'Электроника',
+    'nails': 'Гвозди',
   }
   return names[resourceId] || resourceId
 }
