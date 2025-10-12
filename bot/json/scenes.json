@@ -6,11 +6,13 @@
         },
         "pages": {
             "start": {
+                "image": "img/end_game.png",
                 "title": "",
                 "content": "Введиие код для подключения к игровой сессии: ",
                 "to_pages": {}
             },
             "name-enter": {
+                "image": "img/end_game.png",
                 "title": "",
                 "content": "Подключение успешно\nВведите ваше имя для продолжения: ",
                 "to_pages": {
@@ -35,7 +37,7 @@
                 }
             },
             "company-join": {
-                "image": "img\\main_company.png",
+                "image": "img/main_company.png",
                 "title": "",
                 "content": "Введите секретный код: ",
                 "to_pages": {
@@ -43,24 +45,24 @@
                 }
             },
             "wait-start-page": {
-                "image": "img\\cellselect_start.png",
+                "image": "img/cellselect_start.png",
                 "title": "",
                 "content": "*Ожидание начала игры...*\n\n"
             },
             "select-cell-page": {
-                "image": "img\\cellselect_start.png",
+                "image": "img/cellselect_start.png",
                 "title": "",
                 "content": "Выберите клетку, на которой будет ваша располагаться ваша компания: ",
                 "to_pages": {}
             },
             "wait-select-cell-page": {
-                "image": "img\\cellselect_start.png",
+                "image": "img/mejturn.png",
                 "title": "",
                 "content": "Ожидание выбора клетки владельцем...",
                 "to_pages": {}
             },
             "wait-game-stage-page": {
-                "image": "img\\cellselect_start.png",
+                "image": "img/cellselect_start.png",
                 "title": "",
                 "content": "Вы выбрали клетку. Ожидание начала игрового этапа...",
                 "to_pages": {}
@@ -82,6 +84,7 @@
                 "row_width": 2
             },
             "about-info-menu": {
+                "image": "img/about_company.png",
                 "title": "",
                 "content": "jh",
                 "to_pages": {
@@ -93,6 +96,7 @@
                 }
             },
             "cells-info-page": {
+                "image": "img/cellselect_start.png",
                 "title": "",
                 "content": "",
                 "to_pages": {
@@ -100,6 +104,7 @@
                 }
             },
             "inventory-page": {
+                "image": "img/inventory.png",
                 "title": "",
                 "content": "",
                 "to_pages": {
@@ -107,6 +112,7 @@
                 }
             },
             "bank-menu": {
+                "image": "img/bank.png",
                 "title": "",
                 "content": "",
                 "to_pages": {
@@ -114,6 +120,7 @@
                 }
             },
             "bank-credit-page": {
+                "image": "img/bank.png",
                 "title": "",
                 "content": "",
                 "to_pages": {
@@ -121,6 +128,7 @@
                 }
             },
             "bank-credit-amount": {
+                "image": "img/bank.png",
                 "title": "",
                 "content": "",
                 "to_pages": {
@@ -128,6 +136,7 @@
                 }
             },
             "bank-credit-period": {
+                "image": "img/bank.png",
                 "title": "",
                 "content": "",
                 "to_pages": {
@@ -135,14 +144,17 @@
                 }
             },
             "bank-deposit-page": {
+                "image": "img/bank.png",
                 "title": "",
                 "content": ""
             },
             "exchange-page": {
+                "image": "img/exchange.png",
                 "title": "",
                 "content": ""
             },
             "contract-main-page": {
+                "image": "img/contract.png",
                 "title": "",
                 "content": "",
                 "to_pages": {
@@ -150,6 +162,7 @@
                 }
             },
             "upgrade-menu": {
+                "image": "img/upgrade.png",
                 "title": "",
                 "content": "",
                 "to_pages": {
@@ -157,6 +170,7 @@
                 }
             },
             "logistics-menu": {
+                "image": "img/exchange.png",
                 "title": "",
                 "content": "",
                 "to_pages": {
@@ -164,6 +178,7 @@
                 }
             },
             "factory-menu": {
+                "image": "img/main_company.png",
                 "title": "",
                 "content": "",
                 "to_pages": {
@@ -171,34 +186,42 @@
                 }
             },
             "factory-rekit-groups": {
+                "image": "img/main_company.png",
                 "title": "",
                 "content": ""
             },
             "factory-rekit-count": {
+                "image": "img/main_company.png",
                 "title": "",
                 "content": ""
             },
             "factory-rekit-resource": {
+                "image": "img/main_company.png",
                 "title": "",
                 "content": ""
             },
             "factory-rekit-produce": {
+                "image": "img/main_company.png",
                 "title": "",
                 "content": ""
             },
             "factory-start-groups": {
+                "image": "img/main_company.png",
                 "title": "",
                 "content": ""
             },
             "change-turn-page": {
+                "image": "img/mejturn.png",
                 "title": "",
                 "content": "*Смена хода...*\n\n"
             },
             "prison-page": {
+                "image": "img/prison.png",
                 "title": "",
                 "content": "Вы находитесь в тюрьме."
             },
             "end-game-page": {
+                "image": "img/end_game.png",
                 "title": "",
                 "content": "Игра завершена!"
             },
@@ -207,10 +230,12 @@
                 "content": "Админ панель"
             },
             "city-page": {
+                "image": "img/cities.png",
                 "title": "",
                 "content": ""
             },
             "about-turn-page": {
+                "image": "img/about_turn.png",
                 "title": "",
                 "content": "",
                 "to_pages": {

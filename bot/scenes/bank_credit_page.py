@@ -102,7 +102,7 @@ class BankCreditPage(Page):
                 text += f"*Кредит #{i}*\n"
                 text += f"Осталось выплатить: {remaining:,} 💰 (из {total:,})\n".replace(",", " ")
                 text += f"Текущий платеж: {need_pay:,} 💰\n".replace(",", " ")
-                text += f"Ходов до закрытия: {steps_left}/{steps_total}\n"
+                text += f"Ходов до закрытия: {max(0, steps_left)}/{steps_total}\n"
                 
                 if need_pay > 0:
                     text += "⚠️ *Требуется оплата!*\n"
