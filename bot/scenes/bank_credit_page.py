@@ -4,10 +4,8 @@ from modules.ws_client import get_company, company_take_credit, company_pay_cred
 from oms.utils import callback_generator
 from global_modules.bank import get_credit_conditions, calc_credit, CAPITAL
 from global_modules.load_config import ALL_CONFIGS
-from pprint import pprint
-from .oneuser_page import OneUserPage
 
-class BankCreditPage(OneUserPage):
+class BankCreditPage(Page):
     
     __page_name__ = "bank-credit-page"
     

@@ -3,10 +3,9 @@ from aiogram.types import CallbackQuery
 from oms.utils import callback_generator
 from modules.ws_client import factory_set_produce, get_factories
 from modules.resources import get_resource
-from .oneuser_page import OneUserPage
 
 
-class FactoryStartGroups(OneUserPage):
+class FactoryStartGroups(Page):
     """Страница запуска заводов по группам ресурсов"""
     
     __page_name__ = "factory-start-groups"

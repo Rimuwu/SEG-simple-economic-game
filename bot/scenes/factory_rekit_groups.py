@@ -4,12 +4,11 @@ from modules.ws_client import get_factories
 from oms.utils import callback_generator
 from global_modules.logs import Logger
 from modules.resources import get_resource, get_resource_name, get_resource_emoji
-from .oneuser_page import OneUserPage
 
 bot_logger = Logger.get_logger("bot")
 
 
-class FactoryRekitGroups(OneUserPage):
+class FactoryRekitGroups(Page):
     __page_name__ = "factory-rekit-groups"
     
     def get_resource_name(self, resource_key: str) -> str:

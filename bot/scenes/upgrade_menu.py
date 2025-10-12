@@ -1,6 +1,4 @@
 from typing import Dict, Optional
-
-from oms import Page
 from aiogram.types import CallbackQuery
 from modules.ws_client import get_company, update_company_improve, get_company_cell_info
 from oms.utils import callback_generator
@@ -20,7 +18,9 @@ IMPROVEMENT_OPTIONS = {
 }
 
 
-class UpgradeMenu(OneUserPage):
+Page = OneUserPage
+
+class UpgradeMenu(Page):
     __page_name__ = "upgrade-menu"
 
     def __after_init__(self):

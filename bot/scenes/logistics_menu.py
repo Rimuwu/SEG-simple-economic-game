@@ -1,15 +1,14 @@
 from typing import Dict, List, Optional
-
-from oms import Page
 from aiogram.types import CallbackQuery, Message  # type: ignore
 from oms.utils import callback_generator
 from modules.ws_client import get_logistics, logistics_pickup
 from global_modules.load_config import ALL_CONFIGS, Resources
 from modules.utils import xy_into_cell
+from .oneuser_page import OneUserPage
 
 
 RESOURCES: Resources = ALL_CONFIGS["resources"]
-
+Page = OneUserPage
 
 class LogisticsMenu(Page):
 

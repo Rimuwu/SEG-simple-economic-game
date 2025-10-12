@@ -31,7 +31,7 @@ class CellsInfo(Page):
         position_coords = company_data.get('position_coords', [0, 0])
         
         # Получаем название и эмодзи типа клетки
-        cell_name = RESOURCE
+        cell_name = RESOURCES.get_resource()
         
         # Преобразуем координаты в буквенный формат
         cell_position = xy_into_cell(position_coords[0], position_coords[1])

@@ -1,4 +1,4 @@
-from oms import Page
+
 from aiogram.types import Message, CallbackQuery
 from modules.ws_client import get_factories
 from oms.utils import callback_generator
@@ -9,7 +9,11 @@ from .oneuser_page import OneUserPage
 bot_logger = Logger.get_logger("bot")
 
 
-class FactoryMenu(OneUserPage):
+Page = OneUserPage
+
+class FactoryMenu(Page):
+    
+    __for_blocked_pages__ = ['factory-start-groups', 'factory-rekit-groups', 'factory-rekit-count', 'factory-rekit-resource', 'factory-rekit-produce', "factory-select-mode"]
     __page_name__ = "factory-menu"
     
     def get_resource_name(self, resource_key: str) -> str:
