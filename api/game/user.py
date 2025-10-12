@@ -98,6 +98,10 @@ class User(BaseClass):
 
     def delete(self):
         just_db.delete(self.__tablename__, id=self.id)
+        
+        try:
+            self.leave_from_company()
+        except Exception: pass
 
         asyncio.create_task(websocket_manager.broadcast({
             "type": "api-user_deleted",
