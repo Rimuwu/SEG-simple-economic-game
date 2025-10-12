@@ -1147,7 +1147,7 @@ export class WebSocketManager {
         for (const company of companies) {
           if (company.cell_position) {
             // Parse cell_position format "x.y"
-            const [colStr, rowStr] = company.cell_position.split('.');
+            const [rowStr, colStr] = company.cell_position.split('.');
             const col = parseInt(colStr, 10);
             const row = parseInt(rowStr, 10);
             
