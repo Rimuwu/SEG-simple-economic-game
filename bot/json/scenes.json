@@ -194,6 +194,7 @@
                 "content": "Игра завершена!"
             },
             "admin-panel-page": {
+                "image": "img/end_game.png",
                 "content": "Админ панель"
             },
             "city-page": {
