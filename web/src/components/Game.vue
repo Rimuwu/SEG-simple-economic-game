@@ -1,203 +1,343 @@
 <script setup>
 import Map from './Map.vue'
-import { onMounted, onUnmounted, ref } from 'vue'
-import { gsap } from 'gsap'
-import { animationConfig, getDuration, getDelay, logTimelineDuration } from '../animationConfig.js'
+import { onMounted, ref, inject, computed } from 'vue'
 
 const pageRef = ref(null)
+const wsManager = inject('wsManager', null)
 
-function playEntranceAnimation() {
-  // Set initial positions (elements start off-screen)
-  gsap.set('#map-title', { y: -100, opacity: 0 })
-  gsap.set('#timer', { y: 100, opacity: 0 })
-  gsap.set('#column-right-header', { y: -80, opacity: 0 })
-  gsap.set('#column-right-content .column:first-child', { x: -200, opacity: 0 })
-  gsap.set('#column-right-content .column:last-child', { x: 200, opacity: 0 })
+// Computed properties for time and turn display
+const timeToNextStage = computed(() => {
+  return wsManager?.gameState?.getFormattedTimeToNextStage() || '--:--'
+})
 
-  gsap.set('#map', { scale: 0.5, opacity: 0 })
+const turnInfo = computed(() => {
+  const step = wsManager?.gameState?.state?.session?.step || 0
+  const maxSteps = wsManager?.gameState?.state?.session?.max_steps || 0
+  return `${step}/${maxSteps}`
+})
 
+// Computed properties for cities
+const city1 = computed(() => {
+  return wsManager?.gameState?.getCityById(1) || null
+})
 
-  // Create entrance animation timeline
-  const tl = gsap.timeline({ delay: getDelay(animationConfig.durations.delay) })
+const city2 = computed(() => {
+  return wsManager?.gameState?.getCityById(2) || null
+})
 
-  tl.to('#map-title', { y: 0, opacity: 1, duration: getDuration(animationConfig.durations.entrance), ease: animationConfig.ease.bounce })
-    .to('#map', { scale: 1, opacity: 1, duration: getDuration(animationConfig.durations.map), ease: animationConfig.ease.mapBounce }, '-=0.4')
-    .to('#timer', { y: 0, opacity: 1, duration: getDuration(animationConfig.durations.entrance), ease: animationConfig.ease.bounce }, '-=0.6')
-    .to('#column-right-header', { y: 0, opacity: 1, duration: getDuration(animationConfig.durations.slide), ease: animationConfig.ease.smooth }, '-=0.5')
-    .to('#column-right-content .column:first-child', { x: 0, opacity: 1, duration: getDuration(animationConfig.durations.slide), ease: animationConfig.ease.smooth }, '-=0.4')
-    .to('#column-right-content .column:last-child', { x: 0, opacity: 1, duration: getDuration(animationConfig.durations.slide), ease: animationConfig.ease.smooth }, '-=0.6')
-    .to('.list-item', { y: 0, opacity: 1, duration: getDuration(animationConfig.durations.listItem), ease: animationConfig.ease.smooth, stagger: getDuration(animationConfig.durations.stagger) }, '-=0.3')
+const city3 = computed(() => {
+  return wsManager?.gameState?.getCityById(3) || null
+})
+
+const city4 = computed(() => {
+  return wsManager?.gameState?.getCityById(4) || null
+})
+
+// Helper function to format city demands
+const formatCityDemands = (city) => {
+  if (!city || !city.demands) return []
   
-  // Log total duration
-  logTimelineDuration(tl, 'Game', 'entrance')
+  // Filter demands with amount > 0 and get only 2
+  return Object.entries(city.demands)
+    .filter(([_, demand]) => demand.amount > 0)
+    .slice(0, 2)
+    .map(([resourceId, demand]) => ({
+      resourceId,
+      amount: demand.amount,
+      price: demand.price
+    }))
 }
 
-function playExitAnimation() {
-  const tl = gsap.timeline()
+// Computed property for exchanges (latest 4)
+const latestExchanges = computed(() => {
+  const exchanges = wsManager?.gameState?.state?.exchanges || []
+  const sessionExchanges = exchanges.filter(e => 
+    e.session_id === wsManager?.gameState?.state?.session?.id
+  )
+  return sessionExchanges.slice(0, 4)
+})
 
-  tl.to('.list-item', { y: 20, opacity: 0, duration: getDuration(animationConfig.durations.listItemExit), ease: animationConfig.ease.exitSmooth, stagger: getDuration(0.02) })
-    .to('#column-right-content .column:first-child', { x: -100, opacity: 0, duration: getDuration(animationConfig.durations.exit), ease: animationConfig.ease.exitSmooth }, '-=0.1')
-    .to('#column-right-content .column:last-child', { x: 100, opacity: 0, duration: getDuration(animationConfig.durations.exit), ease: animationConfig.ease.exitSmooth }, '-=0.4')
-    .to('#column-right-header', { y: -40, opacity: 0, duration: getDuration(animationConfig.durations.exit), ease: animationConfig.ease.exitSmooth }, '-=0.3')
-    .to('#map-title', { y: -50, opacity: 0, duration: getDuration(animationConfig.durations.exit), ease: animationConfig.ease.exitSmooth }, '-=0.4')
-    .to('#timer', { y: 50, opacity: 0, duration: getDuration(animationConfig.durations.exit), ease: animationConfig.ease.exitSmooth }, '-=0.4')
-    .to('#map', { scale: 0.8, opacity: 0, duration: getDuration(animationConfig.durations.exit), ease: animationConfig.ease.exitSmooth }, '-=0.3')
+// Helper function to get company name by ID
+const getCompanyName = (companyId) => {
+  const company = wsManager?.gameState?.getCompanyById(companyId)
+  return company?.name || `Компания ${companyId}`
+}
 
-  logTimelineDuration(tl, 'Game', 'exit')
+// Helper function to format exchange text (matching the existing format)
+const formatExchangeText = (exchange) => {
+  const companyName = getCompanyName(exchange.company_id)
+  const resourceName = wsManager?.gameState?.getResourceName(exchange.sell_resource)
+  
+  if (exchange.offer_type === 'money') {
+    return `${companyName} выставила на продажу ${resourceName}`
+  } else if (exchange.offer_type === 'barter') {
+    const barterResourceName = wsManager?.gameState?.getResourceName(exchange.barter_resource)
+    return `${companyName} меняет ${resourceName} на ${barterResourceName}`
+  }
+  return `${companyName} выставила на продажу ${resourceName}`
+}
+
+// Computed property for contracts (latest 2)
+const latestContracts = computed(() => {
+  const contracts = wsManager?.gameState?.state?.contracts || []
+  const sessionContracts = contracts.filter(c => 
+    c.session_id === wsManager?.gameState?.state?.session?.id
+  )
+  // Show pending contracts first (not yet accepted)
+  const pendingContracts = sessionContracts.filter(c => !c.accepted)
+  return pendingContracts.slice(0, 2)
+})
+
+// Helper function to format contract text (matching the existing format)
+const formatContractText = (contract) => {
+  const customerName = getCompanyName(contract.customer_company_id)
+  const resourceName = wsManager?.gameState?.getResourceName(contract.resource)
+  
+  if (contract.supplier_company_id === 0) {
+    // Free contract
+    return `${customerName} создала свободный контракт на ${resourceName} на ${contract.duration_turns} ходов`
+  } else {
+    // Direct contract
+    const supplierName = getCompanyName(contract.supplier_company_id)
+    return `${customerName} создала контракт с ${supplierName} на ${resourceName} на ${contract.duration_turns} ходов`
+  }
 }
 
 onMounted(() => {
-  playEntranceAnimation()
-
-  // Listen for exit animation trigger
-  pageRef.value?.addEventListener('triggerExit', playExitAnimation)
-})
-
-onUnmounted(() => {
-  pageRef.value?.removeEventListener('triggerExit', playExitAnimation)
+  // Component mounted
 })
 </script>
 
+
 <template>
+  <!--
+    Preparation page layout.
+    Left column: title, map, session key.
+    Right columns: alternating company slots (left/right).
+  -->
   <div id="page" ref="pageRef">
-    <div id="column-left">
-      <div id="map-title">
-        Карта мира
-      </div>
-
-      <Map />
-
-      <div id="timer">
-        Время до конца этапа: 00:00
+    <div class="left">
+      <Map class="map" />
+      <div class="footer">
+        <div>До конца этапа {{ timeToNextStage }}</div>
+        <div>{{ turnInfo }}</div>
       </div>
     </div>
+    <div class="right">
+      <div class="grid">
+        
+        <div class="cities grid-item">
+          <p class="title">ГОРОДА</p>
+          <div class="content">
+            <span>
+              <!-- City 1 -->
+              <template v-if="city1">
+                {{ city1.name }}<br/>
+                <template v-for="demand in formatCityDemands(city1)" :key="demand.resourceId">
+                  &nbsp;&nbsp;• {{ wsManager.gameState.getResourceName(demand.resourceId) }}<br/>
+                </template>
+              </template>
+              <template v-else>
+                Город 1<br/>
+              </template>
+              <br/>
+              
+              <!-- City 2 -->
+              <template v-if="city2">
+                {{ city2.name }}<br/>
+                <template v-for="demand in formatCityDemands(city2)" :key="demand.resourceId">
+                  &nbsp;&nbsp;• {{ wsManager.gameState.getResourceName(demand.resourceId) }}<br/>
+                </template>
+              </template>
+              <template v-else>
+                Город 2<br/>
+              </template>
+            </span>
 
-    <div id="column-right">
-      <div id="column-right-header">
-        <p class="column-title"> Спрос </p>
-        <p class="column-title"> Биржа </p>
-      </div>
-      <div id="column-right-content">
-        <div id="list-col-left" class="column">
-          <div v-for="n in 4" :key="n" class="list-item" :id="'demand-' + n">
-            Товар {{ n }}
+            <span>
+              <!-- City 3 -->
+              <template v-if="city3">
+                {{ city3.name }}<br/>
+                <template v-for="demand in formatCityDemands(city3)" :key="demand.resourceId">
+                  &nbsp;&nbsp;• {{ wsManager.gameState.getResourceName(demand.resourceId) }}<br/>
+                </template>
+              </template>
+              <template v-else>
+                Город 3<br/>
+              </template>
+              <br/>
+              
+              <!-- City 4 -->
+              <template v-if="city4">
+                {{ city4.name }}<br/>
+                <template v-for="demand in formatCityDemands(city4)" :key="demand.resourceId">
+                  &nbsp;&nbsp;• {{ wsManager.gameState.getResourceName(demand.resourceId) }}<br/>
+                </template>
+              </template>
+              <template v-else>
+                Город 4<br/>
+              </template>
+            </span>
           </div>
         </div>
-        <div id="list-col-right" class="column">
-          <div v-for="n in 4" :key="n" class="list-item" :id="'stock-' + n">
-            Компания А выставила Y продукта X за Z продукта / монет {{ n }}
+
+        <div class="stock grid-item">
+          <p class="title">БИРЖА</p>
+          <div class="content">
+            <template v-if="latestExchanges.length > 0">
+              <span v-for="exchange in latestExchanges" :key="exchange.id">
+                {{ formatExchangeText(exchange) }}
+              </span>
+            </template>
+            <template v-else>
+              <span>Никаких операций за последнее время не происходило</span>
+            </template>
           </div>
         </div>
+        <div class="upgrades grid-item">
+          <p class="title">УЛУЧШЕНИЯ</p>
+          <div class="content">
+            <span>Компания А улучшила своё хранилище до уровня 2</span>
+            <span>Компания А улучшила своё хранилище до уровня 2</span>
+            <span>Компания А улучшила своё хранилище до уровня 2</span>
+            <span>Компания А улучшила своё хранилище до уровня 2</span>
+          </div>
+        </div>
+        <div class="contracts grid-item">
+          <p class="title">КОНТРАКТЫ</p>
+          <div class="content">
+            <template v-if="latestContracts.length > 0">
+              <span v-for="contract in latestContracts" :key="contract.id">
+                {{ formatContractText(contract) }}
+              </span>
+            </template>
+            <template v-else>
+              <span>На данный момент контракты отсутсвуют</span>
+            </template>
+          </div>
+        </div>
+
+
       </div>
     </div>
   </div>
-
 </template>
 
 <style scoped>
 #page {
   display: flex;
+  height: 100vh;
+  background-color: #3D8C00;
+  font-family: "Inter", sans-serif;
+  padding: 0;
   margin: 0;
-  padding: var(--spacing-sm);
-
-  gap: var(--spacing-lg);
-  width: calc(100vw - var(--spacing-sm) * 2);
-  height: calc(100vh - var(--spacing-sm) * 2);
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
 }
 
-#column-left {
-  flex: 1;
-  height: 100%;
+.left,
+.right {
+  width: 50%;
+  padding: 40px;
+}
+
+
+.left {
+  background-color: #3D8C00;
   display: flex;
   flex-direction: column;
   align-items: center;
+  justify-content: center;
+}
+
+.right {
+  background-color: #0C6892;
+
+  color: black;
+  padding: 90px 50px;
+}
+
+.grid {
+  margin: auto;
+  display: grid;
+  padding: 0; margin: 0;
+
+  width: 100%;
+  height: 100%;
+
+  justify-items: stretch;
+  align-items: center;
+  align-content: space-between;
   justify-content: space-between;
-  gap: var(--spacing-sm);
+
+  grid-template-columns: 47.5% 47.5%;
+  grid-template-rows: 47.5% 47.5%;
 }
 
-#column-right {
-  flex: 1;
-  display: flex;
-  flex-direction: column;
+.grid-item {
+  width: 100%; height: 100%;
+  /* background: #0f0; */
 }
 
-#column-right-content {
-  flex: 1;
-  display: flex;
-  gap: var(--spacing-sm);
+.content {
+  font-size: 2rem;
+  color: white;
+  font-weight: 400;
 }
 
-#column-right-header {
+.title {
+  font-size: 4rem;
+  margin: 0;
+  margin-bottom: 10px;
+  text-transform: uppercase;
+  margin-bottom: 20px;
+  color: white;
+  text-align: center;
+}
+
+.cities .content {
+  padding: 5px 10px;
+
+  width: 100%;
   display: flex;
   flex-direction: row;
+  justify-content: space-between;
+  text-align: left;
+  line-height: 1.5;
+  background: #3D8C00;
 }
 
-.column-title {
-  flex: 1;
-  font-size: var(--text-xl);
-  font-weight: 700;
-  text-align: center;
-  margin-bottom: var(--spacing-sm);
-  color: white;
-  text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.3);
-}
-
-.column {
-  flex: 1;
+.stock .content, .upgrades .content, .contracts .content {
   display: flex;
   flex-direction: column;
-  gap: var(--spacing-sm);
-  margin: var(--spacing-sm);
+  gap: 10px;
+}
+.stock span, .upgrades span, .contracts span {
+  background: #3D8C00;
+  padding: 5px 10px;
 }
 
-.list-item {
-  background: rgba(255, 255, 255, 0.95);
-  color: #333;
-  border: var(--border-width) solid rgba(255, 255, 255, 0.3);
-  border-radius: var(--border-radius);
-  padding: var(--spacing-sm);
-  font-size: var(--text-md);
-  text-align: center;
-  flex: 1;
-  font-weight: 600;
-  transition: all 0.2s ease;
-  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.15);
-  backdrop-filter: blur(10px);
-  /* Initial state for animation */
-  transform: translateY(20px);
-  opacity: 0;
-}
-
-.list-item:hover {
-  background: rgba(255, 255, 255, 1);
-  transform: translateY(-2px);
-  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.2);
-}
-
-#map-title {
-  font-size: var(--text-xl);
-  font-weight: 700;
-  text-align: center;
-  margin: var(--spacing-sm) 0;
-  padding: var(--spacing-sm) 0;
+.footer {
   width: 90%;
+
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  justify-content: space-between;
+
+  font-weight: normal;
+  font-size: 4rem;
+
+  gap: 5%;
+
   color: white;
-  text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.3);
 }
 
-#timer {
-  font-size: var(--text-lg);
-  text-align: center;
-  margin: var(--spacing-sm);
-  padding: var(--spacing-md);
+.footer div {
+  background: #0C6792;
+  padding: 25px 50px;
+}
+
+.map {
   width: 90%;
-  background: rgba(255, 255, 255, 0.95);
-  color: #333;
-  border-radius: var(--border-radius);
-  border: var(--border-width) solid rgba(255, 255, 255, 0.3);
-  font-weight: 700;
-  backdrop-filter: blur(10px);
-  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+  margin: 0; padding: 0;
 }
 </style>

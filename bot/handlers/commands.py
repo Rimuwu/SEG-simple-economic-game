@@ -251,7 +251,7 @@ async def confirm_leave(message: Message, state: FSMContext):
     await state.clear()
 
     
-# http://localhost:8000/ws/status - тут можно посмотреть статус вебсокета и доступные типы для отправки сообщений через send_message
+# http://localhost:81/ws/status - тут можно посмотреть статус вебсокета и доступные типы для отправки сообщений через send_message
 @dp.message(Command("ping"))
 async def ping_command(message: Message):
     """Обработчик команды /ping"""
