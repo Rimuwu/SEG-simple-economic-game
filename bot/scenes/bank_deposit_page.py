@@ -321,6 +321,14 @@ _Вклад можно забрать через 3 хода после откр�
                                     str(i)
                                 )
                             })
+                        
+                buttons.append({
+                    'text': f'⬅️ Назад',
+                    'callback_data': callback_generator(
+                        self.scene.__scene_name__,
+                        'back_to_bank'
+                    )
+                })
         
         # Кнопки для экрана просмотра вклада
         elif deposit_state == 'view_deposit':
@@ -350,7 +358,7 @@ _Вклад можно забрать через 3 хода после откр�
                 
                 # Кнопка возврата к списку вкладов
                 buttons.append({
-                    'text': '⬅️ Назад к списку',
+                    'text': '⬅️ Назад',
                     'callback_data': callback_generator(
                         self.scene.__scene_name__,
                         'back_to_main'
@@ -620,6 +628,17 @@ _Вклад можно забрать через 3 хода после откр�
         
         await callback.answer("❌ Операция отменена")
         await self.scene.update_message()
+    
+    
+    @Page.on_callback('back_to_bank')
+    async def back_to_bank_handler(self, callback: CallbackQuery, args: list):
+        scene_data = self.scene.get_data('scene')
+        scene_data['deposit_state'] = 'main'
+        scene_data['deposit_amount'] = 0
+        scene_data['deposit_period'] = 0
+        scene_data['error_message'] = ''  # Очищаем ошибки
+        await self.scene.set_data('scene', scene_data)
+        await self.scene.update_page('bank-menu')
     
     @Page.on_text('int')
     async def handle_input(self, message: Message, value: int):

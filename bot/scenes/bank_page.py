@@ -4,9 +4,6 @@ from oms.utils import callback_generator
 from .oneuser_page import OneUserPage
 
 
-Page = OneUserPage
-
-
 class BankPage(OneUserPage):
 
     __page_name__ = "bank-menu"
