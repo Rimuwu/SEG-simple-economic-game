@@ -38,20 +38,14 @@ function testLog() {
 }
 
 function testError() {
-  if (typeof window.error === 'function') {
-    window.error('This is a test error message from Admin Panel')
-  } else {
-    console.error('Error function not available yet')
-  }
+  console.error('This is a test error message from Admin Panel')
 }
 
 function testWebSocket() {
   if (wsManager) {
     wsManager.ping()
   } else {
-    if (typeof window.error === 'function') {
-      window.error('WebSocket manager not available')
-    }
+    console.error('WebSocket manager not available')
   }
 }
 </script>

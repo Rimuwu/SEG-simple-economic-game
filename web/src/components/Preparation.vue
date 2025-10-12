@@ -36,7 +36,7 @@ function handleCompaniesUpdated(e) {
 }
 
 function stateChange() {
-  window.log("stateChange called, new state: " + prepState.value)
+  console.log("stateChange called, new state: " + prepState.value)
   if (state == 0) {
     document.documentElement.style.setProperty("--color-1", color_scheme[0][0])
     document.documentElement.style.setProperty("--color-2", color_scheme[0][1])

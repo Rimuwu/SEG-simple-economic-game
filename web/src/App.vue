@@ -116,7 +116,7 @@ function getWebSocketUrl() {
 let wsManager = null
 const wsUrl = getWebSocketUrl()
 console.log(`🔌 Connecting to WebSocket: ${wsUrl}`)
-wsManager = new WebSocketManager(wsUrl, globalThis.console)
+wsManager = new WebSocketManager(wsUrl)
 wsManager.connect()
 globalThis.wsManager = wsManager
 
@@ -143,13 +143,9 @@ watch(
 globalThis.refreshMap = () => {
   if (wsManager && wsManager.map) {
     wsManager.refreshMap()
-    if (typeof window.log === 'function') {
-      window.log('Global map refresh called')
-    }
+    console.log('Global map refresh called')
   } else {
-    if (typeof window.error === 'function') {
-      window.error('No map data available for global refresh')
-    }
+    console.error('No map data available for global refresh')
   }
 }
 
@@ -202,7 +198,7 @@ globalThis.saveGameState = () => {
     return null
   }
   let timestamp = new Date();
-  const formatedTime = `${timestamp.getUTCDay()}_${timestamp.getHours()}.${timestamp.getMinutes()}.${timestamp.getSeconds()}`
+  const formatedTime = `${timestamp.getHours()}.${timestamp.getMinutes()}.${timestamp.getSeconds()}`
   downloadFile(JSON.stringify(wsManager.gameState.toJSON()), formatedTime + "_gameState.json", "text/plain")
 }
 

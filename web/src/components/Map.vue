@@ -32,9 +32,7 @@ onMounted(async () => {
         setTile(5, 5, TileTypes.CITY, "ГОРОД Г")
         setTile(3, 3, TileTypes.BANK, "ЦЕНТР. БАНК")
         
-        if (typeof window.log === 'function') {
-            window.log('Map loaded with default static data')
-        }
+        console.log('Map loaded with default static data')
     }
 })
 

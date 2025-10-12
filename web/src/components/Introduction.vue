@@ -56,46 +56,30 @@ function stopInstructionRotation() {
 
 function joinSession() {
   if (!wsManager) {
-    if (typeof window.error === 'function') {
-      window.error('WebSocket manager not available');
-    } else {
-      console.error('WebSocket manager not available');
-    }
+    console.error('WebSocket manager not available');
     return;
   }
 
   if (!sessionId.value.trim()) {
-    if (typeof window.error === 'function') {
-      window.error('Please enter a session ID');
-    } else {
-      console.error('Please enter a session ID');
-    }
+    console.error('Please enter a session ID');
     return;
   }
 
   isJoining.value = true;
 
-  if (typeof window.log === 'function') {
-    window.log('Attempting to join session: ' + sessionId.value);
-  }
+  console.log('Attempting to join session: ' + sessionId.value);
 
   // Use the WebSocket manager to join the session
   wsManager.join_session(sessionId.value.trim(), (result) => {
     isJoining.value = false;
 
     if (result.success) {
-      if (typeof window.log === 'function') {
-        window.log('Successfully joined session: ' + wsManager.session_id);
-      }
+      console.log('Successfully joined session: ' + wsManager.session_id);
 
       // Navigate to the next page (Preparation)
       emit('navigateTo', 'Preparation');
     } else {
-      if (typeof window.error === 'function') {
-        window.error('Failed to join session: ' + (result.error || 'Session not found'));
-      } else {
-        console.error('Failed to join session:', result.error);
-      }
+      console.error('Failed to join session:', result.error || 'Session not found');
     }
   });
 }
