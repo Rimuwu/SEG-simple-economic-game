@@ -1,9 +1,10 @@
 import { GameState } from './GameState.js';
 
 export class WebSocketManager {
-  constructor(url) {
+  constructor(url, consoleObj) {
     this.url = url;
     this.socket = null;
+    this.console = consoleObj;
     
     // Initialize GameState
     this.gameState = new GameState();
@@ -1147,7 +1148,7 @@ export class WebSocketManager {
         for (const company of companies) {
           if (company.cell_position) {
             // Parse cell_position format "x.y"
-            const [rowStr, colStr] = company.cell_position.split('.');
+            const [colStr, rowStr] = company.cell_position.split('.');
             const col = parseInt(colStr, 10);
             const row = parseInt(rowStr, 10);
             
