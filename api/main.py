@@ -8,13 +8,14 @@ from contextlib import asynccontextmanager
 from game.logistics import Logistics
 from game.stages import stage_game_updater
 from global_modules.api_configurate import get_fastapi_app
-from global_modules.logs import main_logger
+from modules.logs import *
 from modules.json_database import just_db
 from modules.sheduler import scheduler
 from game.session import session_manager
 from game.exchange import Exchange
 from game.citie import Citie
 from os import getenv
+from global_modules.logs import main_logger
 
 # Импортируем роуты
 from routers import connect_ws
@@ -23,9 +24,14 @@ debug = getenv("DEBUG", "False").lower() == "true"
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
+
+    game_logger.info("====================== GAME is starting up...")
+    websocket_logger.info("====================== GAME is starting up...")
+    main_logger.info("====================== GAME is starting up...")
+    routers_logger.info("====================== GAME is starting up...")
+
     # Startup
-    main_logger.info("API is starting up...")
-    main_logger.info("Creating missing tables on startup...")
+    websocket_logger.info("Creating missing tables on startup...")
     # just_db.drop_all() # Тестово
 
     just_db.create_table('sessions') # Таблица сессий
@@ -41,11 +47,11 @@ async def lifespan(app: FastAPI):
     just_db.create_table('item_price') # Таблица с ценами на товары
     just_db.create_table('logistics') # Таблица с логистикой
 
-    main_logger.info("Loading sessions from database...")
+    websocket_logger.info("Loading sessions from database...")
     session_manager.load_from_base()
 
     await sleep(5)
-    main_logger.info("Starting task scheduler...")
+    websocket_logger.info("Starting task scheduler...")
 
     asyncio.create_task(scheduler.start())
     if debug:
@@ -53,15 +59,15 @@ async def lifespan(app: FastAPI):
 
     yield
 
-    main_logger.info("API is shutting down...")
+    websocket_logger.info("API is shutting down...")
 
-    main_logger.info("Stopping task scheduler...")
+    websocket_logger.info("Stopping task scheduler...")
     scheduler.stop()
     scheduler.cleanup_shutdown_tasks()
 
 app = get_fastapi_app(
     title="API",
-    version="1.0.0",
+    version="6.6.6",
     description="SEG API",
     debug=False,
     lifespan=lifespan,
@@ -70,7 +76,7 @@ app = get_fastapi_app(
     routers=[
         connect_ws.router
     ],
-    api_logger=main_logger
+    api_logger=websocket_logger
 )
 
 @app.get("/")

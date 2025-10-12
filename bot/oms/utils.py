@@ -142,6 +142,9 @@ def prepare_image(image_path: str):
     if not image_path:
         return None
 
+    if not isinstance(image_path, str):
+        return None
+
     # Если это URL
     if image_path.startswith(('http://', 'https://')):
         return image_path

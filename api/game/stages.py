@@ -1,7 +1,7 @@
 from modules.sheduler import scheduler
 from datetime import datetime, timedelta
 from global_modules.load_config import ALL_CONFIGS, Settings
-from global_modules.logs import main_logger
+from modules.logs import game_logger
 
 settings: Settings = ALL_CONFIGS['settings']
 
@@ -15,7 +15,7 @@ async def stage_game_updater(session_id: str):
     session = session_manager.get_session(session_id)
 
     if not session: return 0
-    if session.stage == SessionStages.CellSelect.value or session.stage == SessionStages.ChangeTurn.value:
+    if session.stage != SessionStages.Game.value:
         session.update_stage(SessionStages.Game)
         sh_id = scheduler.schedule_task(
             stage_game_updater, 
@@ -69,5 +69,5 @@ async def clear_session_event(session_id: str):
     session.save_to_base()
     session.reupdate()
     
-    main_logger.info(f"Event cleared for session {session_id}")
+    game_logger.info(f"Event cleared for session {session_id}")
     return 1

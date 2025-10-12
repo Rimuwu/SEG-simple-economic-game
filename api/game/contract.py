@@ -207,9 +207,11 @@ class Contract(BaseClass):
                     REPUTATION.contract.completed
                 )
 
-                supplier.set_economic_power(
-                    self.amount_per_turn, self.resource, 'contract'
-                )
+                creator_company = Company(_id=self.who_creator).reupdate()
+                if creator_company is not None:
+                    creator_company.set_economic_power(
+                        self.amount_per_turn, self.resource, 'contract'
+                    )
 
                 self.delete()
                 return True

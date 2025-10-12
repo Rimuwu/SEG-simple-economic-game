@@ -2,6 +2,7 @@ import asyncio
 from global_modules.db.baseclass import BaseClass
 from modules.json_database import just_db
 from modules.websocket_manager import websocket_manager
+from modules.validation import validate_username
 
 class User(BaseClass):
 
@@ -31,6 +32,8 @@ class User(BaseClass):
                                           session_id=session_id)
         if with_this_name:
             raise ValueError(f"Имя пользователя '{username}' уже занято в этой сессии.")
+
+        username = validate_username(username)
         self.username = username
 
         self.session_id = session_id
@@ -98,6 +101,10 @@ class User(BaseClass):
 
     def delete(self):
         just_db.delete(self.__tablename__, id=self.id)
+        
+        try:
+            self.leave_from_company()
+        except Exception: pass
 
         asyncio.create_task(websocket_manager.broadcast({
             "type": "api-user_deleted",
