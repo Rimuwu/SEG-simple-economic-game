@@ -2,9 +2,10 @@ from oms import Page
 from aiogram.types import Message, CallbackQuery
 from oms.utils import callback_generator
 from global_modules.logs import Logger
-from modules.resources import RESOURCES
+from global_modules.load_config import ALL_CONFIGS, Resources
 
 bot_logger = Logger.get_logger("bot")
+RESOURCES: Resources = ALL_CONFIGS["resources"]
 
 
 class FactoryRekitResource(Page):
@@ -23,32 +24,39 @@ class FactoryRekitResource(Page):
         if group_type == 'idle':
             group_name = "⚪️ Простаивающие заводы"
         else:
-            resource_info = RESOURCES.get(group_type, {"name": group_type, "emoji": "📦"})
-            group_name = f"{resource_info['emoji']} {resource_info['name']}"
+            resource = RESOURCES.get_resource(group_type)
+            group_name = f"{resource.emoji} {resource.label}" if resource else group_type
         
         count_display = "все" if count_str == "all" else count_str
         
         content = "🔄 **Перекомплектация заводов**\n\n"
         content += f"Группа: {group_name}\n"
         content += f"Количество: **{count_display}**\n\n"
-        content += "Выберите ресурс для перекомплектации:"
+        content += "Выберите продукт для производства:\n"
+        content += "⏳ _Перекомплектация займёт время согласно сложности производства_"
         
         return content
     
     async def buttons_worker(self):
-        """Кнопки с доступными ресурсами"""
+        """Кнопки с доступными ресурсами (только производимые, без сырья)"""
         buttons = []
         
-        # Добавляем кнопки для всех доступных ресурсов
-        for resource_key, resource_info in RESOURCES.items():
-            buttons.append({
-                'text': f'{resource_info["emoji"]} {resource_info["name"]}',
-                'callback_data': callback_generator(
-                    self.scene.__scene_name__,
-                    'rekit',
-                    resource_key
-                )
-            })
+        # Получаем только производимые ресурсы (без raw=true)
+        produced_resources = RESOURCES.get_produced_resources()
+        
+        # Добавляем кнопки компактно
+        for resource_key in produced_resources:
+            resource = RESOURCES.get_resource(resource_key)
+            if resource:
+                buttons.append({
+                    'text': f'{resource.emoji} {resource.label}',
+                    'callback_data': callback_generator(
+                        self.scene.__scene_name__,
+                        'rekit',
+                        resource_key
+                    ),
+                    'next_line': True
+                })
         
         # Кнопка назад
         buttons.append({
@@ -56,10 +64,10 @@ class FactoryRekitResource(Page):
             'callback_data': callback_generator(
                 self.scene.__scene_name__,
                 'back'
-            )
+            ),
+            'next_line': True
         })
         
-        self.row_width = 2
         return buttons
     
     @Page.on_callback('rekit')

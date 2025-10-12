@@ -286,13 +286,63 @@ async def on_update_session_stage(message: dict):
     session_id = data.get('session_id')
     new_stage = data.get('new_stage')
     print("=====================", session_id, new_stage)
+    
     if new_stage == "CellSelect":
-        await go_to_page(session_id, "wait-start-page", "select-cell-page")
+        # Получаем все компании в сессии
+        companies = await get_companies(session_id=session_id)
+        
+        for company in companies:
+            company_id = company.get('id')
+            owner_id = company.get('owner')
+            
+            # Получаем всех пользователей компании
+            users = await get_users(session_id=session_id, company_id=company_id)
+            
+            for user in users:
+                user_id = user.get('id')
+                
+                if user_id and scene_manager.has_scene(user_id):
+                    scene = scene_manager.get_scene(user_id)
+                    if scene:
+                        # Владелец идёт на страницу выбора клетки
+                        if user_id == owner_id:
+                            await scene.update_page("select-cell-page")
+                        else:
+                            # Остальные ждут выбора владельца
+                            await scene.update_page("wait-select-cell-page")
+    
     elif new_stage == "Game":
-        await go_to_page(session_id, "wait-game-stage-page", "main-page")
-        await go_to_page(session_id, "change-turn-page", "main-page")
+        # Проверяем каждую компанию на нахождение в тюрьме
+        companies = await get_companies(session_id=session_id)
+        
+        for company in companies:
+            company_id = company.get('id')
+            in_prison = company.get('in_prison', False)
+            
+            # Получаем всех пользователей компании
+            users = await get_users(session_id=session_id, company_id=company_id)
+            
+            for user in users:
+                user_id = user.get('id')
+                
+                if user_id and scene_manager.has_scene(user_id):
+                    scene = scene_manager.get_scene(user_id)
+                    if scene:
+                        current_page = scene.page
+                        
+                        # Если компания в тюрьме - переводим на страницу тюрьмы
+                        if in_prison:
+                            await scene.update_page("prison-page")
+                        else:
+                            # Переводим с wait-game-stage-page или change-turn-page на main-page
+                            if current_page not in ["start", "name-enter", "company-create", "company-join", "wait-start-page"]:
+                                await scene.update_page("main-page")
+    
     elif new_stage == "ChangeTurn":
         await go_to_page(session_id, None, "change-turn-page")
+    
+    elif new_stage == "End":
+        await go_to_page(session_id, None, "end-game-page")
 
 
 @ws_client.on_event("disconnect")
@@ -310,6 +360,46 @@ async def on_disconnect():
         await asyncio.sleep(1)
 
     print("❌ Не удалось подключиться после 15 попыток, выход.")
+
+
+@ws_client.on_message("api-company_to_prison")
+async def on_company_to_prison(message: dict):
+    data = message.get('data', {})
+    company_id = data.get('company_id')
+    await go_to_page(company_id, None, "prison-page")
+
+
+@ws_client.on_message("api-company_set_position")
+async def on_company_set_position(message: dict):
+    """Обработчик установки позиции компании"""
+    data = message.get('data', {})
+    company_id = data.get('company_id')
+    new_position = data.get('new_position')
+    
+    print(f"[api-company_set_position] Company {company_id} set position to {new_position}")
+    
+    if not company_id:
+        return
+    
+    # Переводим всех пользователей компании на страницу ожидания начала игры
+    users = await get_users(company_id=company_id)
+    
+    print(f"[api-company_set_position] Found {len(users) if users else 0} users in company {company_id}")
+    
+    for user in users:
+        user_id = user.get('id')
+        
+        if user_id and scene_manager.has_scene(user_id):
+            scene = scene_manager.get_scene(user_id)
+            if scene:
+                current_page = scene.page
+                
+                print(f"[api-company_set_position] User {user_id} current page: {current_page}")
+                
+                # Переводим только если пользователь был на странице выбора или ожидания
+                if current_page in ["select-cell-page", "wait-select-cell-page"]:
+                    print(f"[api-company_set_position] Moving user {user_id} to wait-game-stage-page")
+                    await scene.update_page("wait-game-stage-page")
     
     
 @dp.message(Command("docs"), AdminFilter())
