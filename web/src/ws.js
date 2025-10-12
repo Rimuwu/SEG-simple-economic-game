@@ -1,9 +1,10 @@
 import { GameState } from './GameState.js';
 
 export class WebSocketManager {
-  constructor(url) {
+  constructor(url, consoleObj) {
     this.url = url;
     this.socket = null;
+    this.console = consoleObj;
     
     // Initialize GameState
     this.gameState = new GameState();

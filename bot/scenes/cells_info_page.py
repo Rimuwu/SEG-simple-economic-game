@@ -1,7 +1,12 @@
 from oms import Page
 from modules.ws_client import get_company
 from modules.utils import xy_into_cell
-from modules.resources import get_resource_name, get_resource_emoji
+from modules.resources import get_resource_name
+from global_modules.load_config import ALL_CONFIGS, Resources
+
+
+RESOURCES : Resources = ALL_CONFIGS["resources"]
+
 
 class CellsInfo(Page):
     
@@ -26,7 +31,7 @@ class CellsInfo(Page):
         position_coords = company_data.get('position_coords', [0, 0])
         
         # Получаем название и эмодзи типа клетки
-        cell_name = get_resource_name(cell_type)
+        cell_name = RESOURCES.get_resource()
         
         # Преобразуем координаты в буквенный формат
         cell_position = xy_into_cell(position_coords[0], position_coords[1])

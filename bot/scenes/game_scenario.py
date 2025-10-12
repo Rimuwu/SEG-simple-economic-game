@@ -15,12 +15,15 @@ from scenes.bank_credit_page import BankCreditPage
 from scenes.bank_deposit_page import BankDepositPage
 from scenes.contract_main_page import ContractMainPage
 from scenes.city_page import City
+from scenes.upgrade_menu import UpgradeMenu
+from scenes.logistics_menu import LogisticsMenu
 from scenes.factory_menu_page import FactoryMenu
 from scenes.factory_rekit_groups import FactoryRekitGroups
 from scenes.factory_rekit_count import FactoryRekitCount
 from scenes.factory_rekit_resource import FactoryRekitResource
 from scenes.factory_rekit_produce import FactoryRekitProduce
 from scenes.factory_start_groups import FactoryStartGroups
+from scenes.factory_change_mode import FactoryChangeMode
 from scenes.exchange_page import ExchangePage
 from scenes.change_turn_page import ChangeTurnPage
 from scenes.prison_page import PrisonPage
@@ -51,12 +54,15 @@ class GameManager(AdminScene):
         BankCreditPage,
         BankDepositPage,
         ContractMainPage,
+        UpgradeMenu,
+        LogisticsMenu,
         FactoryMenu,
         FactoryRekitGroups,
         FactoryRekitCount,
         FactoryRekitResource,
         FactoryRekitProduce,
         FactoryStartGroups,
+        FactoryChangeMode,
         ChangeTurnPage,
         PrisonPage,
         EndGamePage,

@@ -251,6 +251,19 @@ async def confirm_leave(message: Message, state: FSMContext):
     await state.clear()
 
     
+@dp.message(Command("prevpage"))
+async def go_previous_page(message: Message):
+    """Возвращает пользователя на предыдущую страницу сцены."""
+    user_id = message.from_user.id
+
+    scene = scene_manager.get_scene(user_id)
+    scene_data = scene.get_data('scene') or {}
+    try:
+        await scene.update_page("main-page")
+    except Exception as exc:  # noqa: BLE001
+        await message.answer(f"Не удалось переключиться: {exc}")
+
+
 # http://localhost:81/ws/status - тут можно посмотреть статус вебсокета и доступные типы для отправки сообщений через send_message
 @dp.message(Command("ping"))
 async def ping_command(message: Message):
