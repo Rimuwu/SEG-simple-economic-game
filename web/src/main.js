@@ -8,7 +8,4 @@ import { createApp } from 'vue'
 import App from './App.vue'
 import './style.css'
 
-/**
- * Mounts the App component to the #app element in index.html
- */
 createApp(App).mount('#app')

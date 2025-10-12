@@ -18,22 +18,38 @@
   --border-width: clamp(2px, min(0.33vw, 0.4vh), 6px);
 }
 
+
+@font-face {
+  font-family: "Inter";
+  src: local("./public/Inter.ttf") format("ttf");
+}
+
+@font-face {
+  font-family: "Ubuntu Mono";
+  src: local("./public/UbuntuMono-Regular.ttf") format("ttf");
+}
+
+
+
 body {
-  margin: 0;
-  padding: 0;
-  min-width: 320px;
   width: 100vw;
   height: 100vh;
 
-  font-family: "Montserrat", sans-serif;
+  font-family: "Inter", sans-serif;
   font-optical-sizing: auto;
   font-weight: 700;
-  font-style: normal;
   font-size: var(--text-sm);
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+
+  margin: 0;
+  padding: 0;
+}
+
+html {
+    font-size: 11px;
 }
 
 #app {
   width: 100vw;
   height: 100vh;
+  margin: 0; padding: 0;
 }

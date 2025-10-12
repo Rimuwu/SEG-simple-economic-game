@@ -44,6 +44,11 @@ services:
     networks:
       - seg_network
     restart: unless-stopped
+    environment:
+      VITE_API_URL: ${VITE_API_URL}
+      VITE_DEBUG: ${DEBUG}
+      VITE_AUTHORS: ${VITE_AUTHORS}
+
 
 networks:
   seg_network:
