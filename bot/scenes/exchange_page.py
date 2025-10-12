@@ -104,7 +104,7 @@ class ExchangePage(OneUserPage):
         if filter_resource:
             resource = RESOURCES.get_resource(filter_resource)
             if resource:
-                text += f"🔍 Фильтр: {resource.emoji} {resource.label}\n\n"
+                text += f"🔍 Поиск: {resource.emoji} {resource.label}\n\n"
             exchanges = await get_exchanges(
                 session_id=session_id,
                 sell_resource=filter_resource
@@ -168,7 +168,7 @@ class ExchangePage(OneUserPage):
     
     async def _filter_screen(self, scene_data: dict):
         """Экран фильтра по ресурсам"""
-        text = "🔍 *Выберите ресурс для фильтрации*\n\n"
+        text = "🔍 *Выберите ресурс для поиска*\n\n"
         text += "Выберите ресурс, чтобы увидеть только предложения с этим товаром:"
         return text
     
@@ -475,7 +475,7 @@ class ExchangePage(OneUserPage):
                     
                     # Кнопка фильтра посередине
                     nav_row.append({
-                        'text': '🔍 Фильтр',
+                        'text': '🔍 Поиск',
                         'callback_data': callback_generator(
                             self.scene.__scene_name__,
                             'open_filter'
@@ -497,9 +497,9 @@ class ExchangePage(OneUserPage):
                         btn['next_line'] = i == 0
                         buttons.append(btn)
                 else:
-                    # Если страница одна, просто показываем кнопку фильтра
+                    # Если страница одна, просто показываем кнопку поиска
                     buttons.append({
-                        'text': '🔍 Фильтр',
+                        'text': '🔍 Поиск',
                         'callback_data': callback_generator(
                             self.scene.__scene_name__,
                             'open_filter'
@@ -507,9 +507,9 @@ class ExchangePage(OneUserPage):
                         'next_line': True
                     })
             else:
-                # Нет предложений - показываем только фильтр
+                # Нет предложений - показываем только поиск
                 buttons.append({
-                    'text': '🔍 Фильтр',
+                    'text': '🔍 Поиск',
                     'callback_data': callback_generator(
                         self.scene.__scene_name__,
                         'open_filter'
@@ -518,7 +518,7 @@ class ExchangePage(OneUserPage):
             
             # Кнопка "Создать предложение" (будет реализована позже)
             buttons.append({
-                'text': '➕ Создать предложение',
+                'text': '➕ Создать',
                 'callback_data': callback_generator(
                     self.scene.__scene_name__,
                     'create_offer'
@@ -826,7 +826,7 @@ class ExchangePage(OneUserPage):
         await self.scene.set_data('scene', scene_data)
         
         await self.scene.update_message()
-        await callback.answer("🔍 Выберите ресурс для фильтрации")
+        await callback.answer("🔍 Выберите ресурс для поиска")
     
     @Page.on_callback('filter_page')
     async def filter_page_handler(self, callback: CallbackQuery, args: list):
@@ -881,7 +881,7 @@ class ExchangePage(OneUserPage):
         
         resource_name = self.item_filter.get_resource_name(resource_id)
         await self.scene.update_message()
-        await callback.answer(f"✅ Фильтр: {resource_name}")
+        await callback.answer(f"✅ Поиск: {resource_name}")
     
     @Page.on_callback('reset_filter')
     async def reset_filter_handler(self, callback: CallbackQuery, args: list):
@@ -894,7 +894,7 @@ class ExchangePage(OneUserPage):
         await self.scene.set_data('scene', scene_data)
         
         await self.scene.update_message()
-        await callback.answer("🔄 Фильтр сброшен")
+        await callback.answer("🔄 Поиск сброшен")
     
     @Page.on_callback('back_to_list')
     async def back_to_list_handler(self, callback: CallbackQuery, args: list):
