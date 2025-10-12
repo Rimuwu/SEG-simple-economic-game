@@ -394,6 +394,13 @@ class Company(BaseClass):
         self.improvements[improvement_type] = imp_lvl_now + 1
         self.save_to_base()
         self.reupdate()
+        
+        if improvement_type == 'factory':
+            col_need = self.get_improvements()['factory']['tasksPerTurn']
+            col_now = len(self.get_factories())
+
+            for _ in range(col_need - col_now):
+                Factory().create(self.id)
 
         asyncio.create_task(websocket_manager.broadcast({
             "type": "api-company_improvement_upgraded",
