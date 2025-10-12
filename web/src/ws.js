@@ -1132,12 +1132,32 @@ export class WebSocketManager {
         mapElement.style.gridTemplateRows = `repeat(${size.rows}, 1fr)`;
       }
 
+      // First, load the base terrain (don't pass text to keep default labels)
       for (let i = 0; i < cells.length && i < size.rows * size.cols; i++) {
         const row = Math.floor(i / size.cols);
         const col = i % size.cols;
         const cellType = this.gameState.getCellType(cells[i]);
-        const terrainSymbol = this.gameState.getTerrainName(cells[i]);
-        window.setTile(row, col, cellType, terrainSymbol);
+        // Don't pass text parameter to keep the default coordinate labels
+        window.setTile(row, col, cellType);
+      }
+
+      // Then, overlay company tiles on their positions
+      const sessionId = this.gameState.state.session.id;
+      if (sessionId) {
+        const companies = this.gameState.getCompaniesBySession(sessionId);
+        for (const company of companies) {
+          if (company.cell_position) {
+            // Parse cell_position format "x.y"
+            const [colStr, rowStr] = company.cell_position.split('.');
+            const col = parseInt(colStr, 10);
+            const row = parseInt(rowStr, 10);
+            
+            // Set company tile with company name
+            if (row >= 0 && row < size.rows && col >= 0 && col < size.cols) {
+              window.setTile(row, col, window.TileTypes.COMPANY, company.name);
+            }
+          }
+        }
       }
 
       return true;
