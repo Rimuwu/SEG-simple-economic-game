@@ -156,6 +156,13 @@
                     "main-page": "↪️ Назад"
                 }
             },
+            "logistics-menu": {
+                "title": "",
+                "content": "",
+                "to_pages": {
+                    "main-page": "↪️ Назад"
+                }
+            },
             "factory-menu": {
                 "title": "",
                 "content": "",
