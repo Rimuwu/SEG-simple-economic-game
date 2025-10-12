@@ -10,6 +10,7 @@ from modules.load_scenes import load_scenes_from_db
 
 from oms import register_handlers, scene_manager
 import handlers
+from handlers.errors import error_handler
 
 # Настройка логирования
 bot_logger = Logger.get_logger("bot")
@@ -25,6 +26,9 @@ async def main():
         db.create_table('messages')
         db.create_table('scenes')
 
+        # Регистрируем обработчик ошибок
+        dp.error.register(error_handler)
+        
         register_handlers(dp)
 
         await ws_client.connect() # Подключаемся к WebSocket серверу
