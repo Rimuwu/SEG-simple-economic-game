@@ -19,6 +19,18 @@
 }
 
 
+@font-face {
+  font-family: "Inter";
+  src: local("./public/Inter.ttf") format("ttf");
+}
+
+@font-face {
+  font-family: "Ubuntu Mono";
+  src: local("./public/UbuntuMono-Regular.ttf") format("ttf");
+}
+
+
+
 body {
   width: 100vw;
   height: 100vh;
