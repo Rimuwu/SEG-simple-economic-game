@@ -8,7 +8,7 @@ services:
       - DEBUG=${DEBUG}
       - UPDATE_PASSWORD=${UPDATE_PASSWORD}
     ports:
-      - "81:8000"
+      - "81:81"
     restart: unless-stopped
     volumes:
       - ./logs:/logs:rw

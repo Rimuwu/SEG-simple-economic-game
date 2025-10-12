@@ -227,7 +227,7 @@ class WebSocketClient:
     def get_client_id(self) -> str: return self.client_id
 
 # Фабричная функция для создания клиента
-def create_client(uri: str = "ws://localhost:8000/ws/connect", 
+def create_client(uri: str = "ws://localhost:81/ws/connect", 
                  client_id: Optional[str] = None,
                  logger = None) -> WebSocketClient:
     """
