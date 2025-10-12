@@ -218,7 +218,9 @@ class Scene:
         # Если раньше было фото, а теперь нет, удаляем сообщение и отправляем новое
         if last_have_photo and not has_new_photo:
             print("OMS: Раньше было фото, а теперь нет, пересоздаем сообщение")
-            await self.__bot__.delete_message(self.user_id, self.message_id)
+            try:
+                await self.__bot__.delete_message(self.user_id, self.message_id)
+            except Exception as e: pass
             await self.send_message()
             return
 
@@ -261,7 +263,10 @@ class Scene:
             # Если не удалось обновить, пересоздаем сообщение
             try:
                 print("OMS: Пересоздаем сообщение")
-                await self.__bot__.delete_message(self.user_id, self.message_id)
+                try:
+                    await self.__bot__.delete_message(self.user_id, self.message_id)
+                except Exception as e: pass
+            
                 await self.send_message()
             except Exception as delete_error:
                 print(f"OMS: Ошибка при пересоздании сообщения: {delete_error}")
@@ -335,9 +340,11 @@ class Scene:
 
         if self.scene.settings.delete_after_send:
             print("Delete message after send")
-            await self.__bot__.delete_message(
-                self.user_id, message.message_id
-            )
+            try:
+                await self.__bot__.delete_message(
+                    self.user_id, message.message_id
+                )
+            except Exception as e: pass
 
         await self.update_key(page.__page_name__, 'last_message', message.text)
         await page.post_handle('text')
@@ -399,9 +406,12 @@ class Scene:
     # ==== Конец сцены ====
 
     async def end(self):
-        await self.__bot__.delete_message(
-            self.user_id, self.message_id
-        )
+        try:
+            await self.__bot__.delete_message(
+                self.user_id, self.message_id
+            ) 
+        except Exception as e: pass
+
         scene_manager.remove_scene(self.user_id)
         if self.__delete_function__:
             await self.__delete_function__(self.user_id)

@@ -1,7 +1,6 @@
 {
     "scene-manager": {
         "settings": {
-            "parse_mode": "Markdown",
             "delete_after_send": true
         },
         "pages": {
