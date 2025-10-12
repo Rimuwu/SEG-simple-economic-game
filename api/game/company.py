@@ -448,7 +448,8 @@ class Company(BaseClass):
                 }
             }))
 
-            if self.reputation <= 0: self.to_prison()
+            if self.reputation <= REPUTATION.prison.on_reputation: 
+                self.to_prison()
             return True
         return False
 
@@ -630,6 +631,25 @@ class Company(BaseClass):
 
         self.in_prison = True
         self.prison_end_step = end_step
+        
+        self.reputation = REPUTATION.start
+        self.credits = []
+        self.deposits = []
+
+        self.tax_debt = 0
+        self.overdue_steps = 0
+        self.this_turn_income = 0
+
+        for i in self.get_factories():
+            i.is_auto = False
+            i.save_to_base()
+
+        for i in self.get_contracts():
+            i.delete()
+
+        for i in self.exchanges:
+            i.delete()
+
         self.save_to_base()
         self.reupdate()
 
@@ -708,7 +728,8 @@ class Company(BaseClass):
             self.overdue_steps = 0
             self.tax_debt = 0
 
-            self.remove_reputation(self.reputation)
+            if self.reputation > 0:
+                self.remove_reputation(self.reputation)
             self.to_prison()
             return
 

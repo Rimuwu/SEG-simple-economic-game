@@ -3,7 +3,7 @@ from aiogram.types import Message, CallbackQuery
 from oms.utils import callback_generator
 from global_modules.logs import Logger
 from modules.ws_client import get_factories
-from modules.resources import RESOURCES
+from modules.resources import RESOURCES, get_resource_name
 
 bot_logger = Logger.get_logger("bot")
 
@@ -15,6 +15,12 @@ class FactoryRekitCount(Page):
         """Показать запрос количества заводов"""
         scene_data = self.scene.get_data('scene')
         group_type = scene_data.get('rekit_group')
+        error_message = scene_data.get('rekit_count_error')
+        
+        # Очищаем ошибку после отображения
+        if error_message:
+            scene_data.pop('rekit_count_error', None)
+            await self.scene.set_data('scene', scene_data)
         
         if not group_type:
             return "❌ Ошибка: группа заводов не выбрана"
@@ -24,10 +30,9 @@ class FactoryRekitCount(Page):
         available_count = 0
         
         if company_id:
-            factories_response = await get_factories(company_id)
-            # Проверяем, что получили корректный ответ
-            if factories_response and isinstance(factories_response, dict) and "factories" in factories_response:
-                factories = factories_response["factories"]
+            factories = await get_factories(company_id)
+            # Проверяем, что получили корректный ответ (список)
+            if factories and isinstance(factories, list):
                 # Считаем заводы в выбранной группе
                 if group_type == 'idle':
                     available_count = sum(1 for f in factories if f.get('complectation') is None)
@@ -38,10 +43,14 @@ class FactoryRekitCount(Page):
         if group_type == 'idle':
             group_name = "⚪️ Простаивающие заводы"
         else:
-            resource_info = RESOURCES.get(group_type, {"name": group_type, "emoji": "📦"})
-            group_name = f"{resource_info['emoji']} {resource_info['name']}"
+            group_name = get_resource_name(group_type)
         
         content = "🔄 **Перекомплектация заводов**\n\n"
+        
+        # Показываем ошибку, если она есть
+        if error_message:
+            content += f"❌ **{error_message}**\n\n"
+        
         content += f"Группа: {group_name}\n"
         content += f"Доступно заводов: **{available_count}**\n\n"
         content += "Введите количество заводов для перекомплектации:"
@@ -66,33 +75,40 @@ class FactoryRekitCount(Page):
     @Page.on_text('int')
     async def handle_text_input(self, message: Message, value: int):
         """Обработка текстового ввода количества"""
+        scene_data = self.scene.get_data('scene')
+        
         if value <= 0:
-            await message.answer("❌ Количество должно быть больше 0")
+            # Сохраняем ошибку и обновляем страницу
+            scene_data['rekit_count_error'] = "Количество должно быть больше 0"
+            await self.scene.set_data('scene', scene_data)
+            await self.scene.update_message()
             return
         
         # Получаем данные о заводах для проверки
-        scene_data = self.scene.get_data('scene')
         group_type = scene_data.get('rekit_group')
         company_id = scene_data.get('company_id')
         
         if not company_id or not group_type:
-            await message.answer("❌ Ошибка: недостаточно данных")
+            # Сохраняем ошибку и обновляем страницу
+            scene_data['rekit_count_error'] = "Недостаточно данных"
+            await self.scene.set_data('scene', scene_data)
+            await self.scene.update_message()
             return
         
         # Проверяем доступное количество заводов
-        factories_response = await get_factories(company_id)
-        if factories_response and isinstance(factories_response, dict) and "factories" in factories_response:
-            factories = factories_response["factories"]
+        factories = await get_factories(company_id)
+        # get_factories возвращает список напрямую
+        if factories and isinstance(factories, list):
             if group_type == 'idle':
                 available_count = sum(1 for f in factories if f.get('complectation') is None)
             else:
                 available_count = sum(1 for f in factories if f.get('complectation') == group_type)
             
             if value > available_count:
-                await message.answer(
-                    f"❌ Недостаточно заводов!\n"
-                    f"Доступно: {available_count}, запрошено: {value}"
-                )
+                # Сохраняем ошибку и обновляем страницу
+                scene_data['rekit_count_error'] = f"Недостаточно заводов! Доступно: {available_count}, запрошено: {value}"
+                await self.scene.set_data('scene', scene_data)
+                await self.scene.update_message()
                 return
         
         # Сохраняем количество

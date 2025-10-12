@@ -83,16 +83,15 @@ class SelectCell(Page):
         if cell_name:
             x, y = cell_into_xy(cell_name)
             data = self.scene.get_data('scene')
-            response = await set_company_position(company_id=data.get('company_id'), x=x, y=y)
-            # if "data" in response:
-            #     if "error" in response["data"]:
-            #         self.content = self.content.replace("Выберите свободную клетку для размещения вашей компании:", 
-            #                                             "Данная клетка уже занята, выберите другую:")
-            #         await self.scene.update_message()
-            #         return
+            company_id = data.get('company_id')
+            response = await set_company_position(company_id=company_id, x=x, y=y)
+            
             if response.get("result") == False:
-                self.content = "Данная клетка уже занята, выберите другую:s"
+                self.content = "Данная клетка уже занята, выберите другую:"
                 await self.scene.update_message()
                 return
 
+            # WebSocket обработчик "api-company_set_position" автоматически переведёт 
+            # всех пользователей компании на страницу "wait-game-stage-page"
+            # Но для владельца переходим сразу, не дожидаясь WebSocket события
             await self.scene.update_page("wait-game-stage-page")

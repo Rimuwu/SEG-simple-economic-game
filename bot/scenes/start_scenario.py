@@ -1,12 +1,14 @@
 from scenes.game_info_page import GameInfo
-from oms import Scene
+from scenes.admin_panel_page import AdminPanelPage
+from scenes.base_scene import AdminScene
 from modules.db import db
 
 
-class StartManager(Scene):
+class StartManager(AdminScene):
     __scene_name__ = 'start-scene-manager'
     __pages__ = [
-        GameInfo
+        GameInfo,
+        AdminPanelPage
     ]
     
     @staticmethod

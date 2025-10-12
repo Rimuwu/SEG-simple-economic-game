@@ -13,12 +13,12 @@ bot_logger = Logger.get_logger("bot")
 # Создаем WebSocket клиента
 ws_client = create_client(
     client_id=f"bot_client_{int(time.time())}", 
-    uri=os.getenv("WS_SERVER_URI", "ws://localhost:8000/ws/connect"),
+    uri=os.getenv("WS_SERVER_URI", "ws://localhost:81/ws/connect"),
     logger=bot_logger
 )
 
 # Функции для работы с компаниями
-async def get_companies(session_id: Optional[int] = None, in_prison: Optional[bool] = None, cell_position: Optional[str] = None):
+async def get_companies(session_id: Optional[str] = None, in_prison: Optional[bool] = None, cell_position: Optional[str] = None):
     """Получение списка компаний"""
     return await ws_client.send_message(
         "get-companies",
@@ -153,6 +153,27 @@ async def company_pay_taxes(company_id: str, amount: int):
         wait_for_response=True
     )
 
+async def company_take_deposit(company_id: str, amount: int, period: int):
+    """Создание вклада компанией"""
+    return await ws_client.send_message(
+        "company-take-deposit",
+        company_id=company_id,
+        amount=amount,
+        period=period,
+        password=UPDATE_PASSWORD,
+        wait_for_response=True
+    )
+
+async def company_withdraw_deposit(company_id: str, deposit_index: int):
+    """Снятие вклада компанией"""
+    return await ws_client.send_message(
+        "company-withdraw-deposit",
+        company_id=company_id,
+        deposit_index=deposit_index,
+        password=UPDATE_PASSWORD,
+        wait_for_response=True
+    )
+
 async def company_complete_free_factories(company_id: int, new_resource: str, count: int, 
                                         find_resource: Optional[str] = None, 
                                         produce_status: Optional[bool] = None):
@@ -168,11 +189,253 @@ async def company_complete_free_factories(company_id: int, new_resource: str, co
         wait_for_response=True
     )
 
+# Функции для работы с логистикой
+async def get_logistics(session_id: Optional[str] = None, company_id: Optional[int] = None, 
+                       city_id: Optional[int] = None):
+    """Получение списка логистики (доставок)
+    
+    Args:
+        session_id: ID сессии для фильтрации
+        company_id: ID компании для фильтрации
+        city_id: ID города для фильтрации
+    """
+    return await ws_client.send_message(
+        "get-logistics",
+        session_id=session_id,
+        company_id=company_id,
+        city_id=city_id,
+        wait_for_response=True
+    )
+
+async def logistics_pickup(logistics_id: int, company_id: int):
+    """Получение ожидающего груза компанией
+    
+    Args:
+        logistics_id: ID логистики
+        company_id: ID компании, которая забирает груз
+    """
+    return await ws_client.send_message(
+        "logistics-pickup",
+        logistics_id=logistics_id,
+        company_id=company_id,
+        password=UPDATE_PASSWORD,
+        wait_for_response=True
+    )
+
+# Функции для работы с контрактами
+async def get_contracts(session_id: Optional[str] = None, 
+                       supplier_company_id: Optional[int] = None,
+                       customer_company_id: Optional[int] = None,
+                       accepted: Optional[bool] = None,
+                       resource: Optional[str] = None):
+    """Получение списка контрактов с фильтрацией
+    
+    Args:
+        session_id: ID сессии
+        supplier_company_id: ID компании-поставщика
+        customer_company_id: ID компании-заказчика
+        accepted: Фильтр по статусу принятия (True/False/None)
+        resource: Фильтр по ресурсу
+    """
+    return await ws_client.send_message(
+        "get-contracts",
+        session_id=session_id,
+        supplier_company_id=supplier_company_id,
+        customer_company_id=customer_company_id,
+        accepted=accepted,
+        resource=resource,
+        wait_for_response=True
+    )
+
+async def get_contract(id: Optional[int] = None,
+                      supplier_company_id: Optional[int] = None,
+                      customer_company_id: Optional[int] = None,
+                      session_id: Optional[str] = None,
+                      accepted: Optional[bool] = None,
+                      resource: Optional[str] = None):
+    """Получение конкретного контракта
+    
+    Args:
+        id: ID контракта
+        supplier_company_id: ID компании-поставщика
+        customer_company_id: ID компании-заказчика
+        session_id: ID сессии
+        accepted: Статус принятия
+        resource: Ресурс контракта
+    """
+    return await ws_client.send_message(
+        "get-contract",
+        id=id,
+        supplier_company_id=supplier_company_id,
+        customer_company_id=customer_company_id,
+        session_id=session_id,
+        accepted=accepted,
+        resource=resource,
+        wait_for_response=True
+    )
+
+async def create_contract(supplier_company_id: int, customer_company_id: int,
+                         session_id: str, resource: str, amount_per_turn: int,
+                         duration_turns: int, payment_amount: int, who_creator: int):
+    """Создание контракта
+    
+    Args:
+        supplier_company_id: ID компании-поставщика
+        customer_company_id: ID компании-заказчика
+        session_id: ID сессии
+        resource: Ресурс для поставки
+        amount_per_turn: Количество ресурса за ход
+        duration_turns: Длительность контракта в ходах
+        payment_amount: Общая сумма оплаты
+        who_creator: ID пользователя-создателя
+    """
+    return await ws_client.send_message(
+        "create-contract",
+        supplier_company_id=supplier_company_id,
+        customer_company_id=customer_company_id,
+        session_id=session_id,
+        resource=resource,
+        amount_per_turn=amount_per_turn,
+        duration_turns=duration_turns,
+        payment_amount=payment_amount,
+        who_creator=who_creator,
+        password=UPDATE_PASSWORD,
+        wait_for_response=True
+    )
+
+async def accept_contract(contract_id: int, who_accepter: int):
+    """Принятие контракта поставщиком
+    
+    Args:
+        contract_id: ID контракта
+        who_accepter: ID пользователя, принимающего контракт
+    """
+    return await ws_client.send_message(
+        "accept-contract",
+        contract_id=contract_id,
+        who_accepter=who_accepter,
+        password=UPDATE_PASSWORD,
+        wait_for_response=True
+    )
+
+async def decline_contract(contract_id: int, who_decliner: int):
+    """Отклонение контракта поставщиком
+    
+    Args:
+        contract_id: ID контракта
+        who_decliner: ID пользователя, отклоняющего контракт
+    """
+    return await ws_client.send_message(
+        "decline-contract",
+        contract_id=contract_id,
+        who_decliner=who_decliner,
+        password=UPDATE_PASSWORD,
+        wait_for_response=True
+    )
+
+async def execute_contract(contract_id: int):
+    """Выполнение поставки по контракту
+    
+    Args:
+        contract_id: ID контракта
+    """
+    return await ws_client.send_message(
+        "execute-contract",
+        contract_id=contract_id,
+        password=UPDATE_PASSWORD,
+        wait_for_response=True
+    )
+
+async def cancel_contract(contract_id: int, who_canceller: int):
+    """Отмена контракта с возвратом части денег и штрафом репутации
+    
+    Args:
+        contract_id: ID контракта
+        who_canceller: ID пользователя, отменяющего контракт
+    """
+    return await ws_client.send_message(
+        "cancel-contract",
+        contract_id=contract_id,
+        who_canceller=who_canceller,
+        password=UPDATE_PASSWORD,
+        wait_for_response=True
+    )
+
+async def get_company_contracts(company_id: int, as_supplier: Optional[bool] = None,
+                               as_customer: Optional[bool] = None,
+                               accepted_only: Optional[bool] = None):
+    """Получение контрактов компании (как поставщика и/или как заказчика)
+    
+    Args:
+        company_id: ID компании
+        as_supplier: Получить контракты где компания - поставщик
+        as_customer: Получить контракты где компания - заказчик
+        accepted_only: Только принятые контракты
+    """
+    return await ws_client.send_message(
+        "get-company-contracts",
+        company_id=company_id,
+        as_supplier=as_supplier,
+        as_customer=as_customer,
+        accepted_only=accepted_only,
+        wait_for_response=True
+    )
+
 async def get_company_users(company_id: int):
     """Получение списка пользователей компании"""
     return await ws_client.send_message(
         "get-company-users",
         company_id=company_id,
+        wait_for_response=True
+    )
+
+async def notforgame_update_company_balance(company_id: int, balance_change: int):
+    """Обновление баланса компании. НЕ ИСПОЛЬЗОВАТЬ В ИГРОВОМ ПРОЦЕССЕ!
+    
+    Args:
+        company_id: ID компании
+        balance_change: Изменение баланса (может быть отрицательным)
+    """
+    return await ws_client.send_message(
+        "notforgame-update-company-balance",
+        company_id=company_id,
+        balance_change=balance_change,
+        password=UPDATE_PASSWORD,
+        wait_for_response=True
+    )
+
+async def notforgame_update_company_items(company_id: int, item_id: str, quantity_change: int, 
+                                          ignore_space: Optional[bool] = None):
+    """Обновление предметов компании. НЕ ИСПОЛЬЗОВАТЬ В ИГРОВОМ ПРОЦЕССЕ!
+    
+    Args:
+        company_id: ID компании
+        item_id: ID предмета/ресурса
+        quantity_change: Изменение количества (может быть отрицательным)
+        ignore_space: Игнорировать ограничения на место в складе
+    """
+    return await ws_client.send_message(
+        "notforgame-update-company-items",
+        company_id=company_id,
+        item_id=item_id,
+        quantity_change=quantity_change,
+        ignore_space=ignore_space,
+        password=UPDATE_PASSWORD,
+        wait_for_response=True
+    )
+
+async def notforgame_update_company_name(company_id: int, new_name: str):
+    """Обновление названия компании
+    
+    Args:
+        company_id: ID компании
+        new_name: Новое название компании
+    """
+    return await ws_client.send_message(
+        "notforgame-update-company-name",
+        company_id=company_id,
+        new_name=new_name,
+        password=UPDATE_PASSWORD,
         wait_for_response=True
     )
 
@@ -254,12 +517,20 @@ async def create_session(session_id: Optional[str] = None):
     )
 
 async def update_session_stage(session_id: Optional[str] = None, 
-                              stage: Literal['FreeUserConnect', 'CellSelect', 'Game', 'End'] = 'FreeUserConnect'):
-    """Обновление стадии сессии"""
+                              stage: Literal['FreeUserConnect', 'CellSelect', 'Game', 'End'] = 'FreeUserConnect',
+                              add_shedule: Optional[bool] = None):
+    """Обновление стадии сессии
+    
+    Args:
+        session_id: ID сессии
+        stage: Новая стадия сессии
+        add_shedule: Запускать ли таймер после обновления этапа (по умолчанию True)
+    """
     return await ws_client.send_message(
         "update-session-stage",
         session_id=session_id,
         stage=stage,
+        add_shedule=add_shedule,
         password=UPDATE_PASSWORD,
         wait_for_response=True
     )
@@ -279,6 +550,106 @@ async def delete_session(session_id: str, really: bool = False):
         session_id=session_id,
         password=UPDATE_PASSWORD,
         really=really,
+        wait_for_response=True
+    )
+
+async def get_session_time_to_next_stage(session_id: str):
+    """Получение времени до следующей стадии сессии"""
+    return await ws_client.send_message(
+        "get-session-time-to-next-stage",
+        session_id=session_id,
+        wait_for_response=True
+    )
+
+async def get_item_price(session_id: str, item_id: str):
+    """Получение цены конкретного товара в сессии"""
+    return await ws_client.send_message(
+        "get-item-price",
+        session_id=session_id,
+        item_id=item_id,
+        wait_for_response=True
+    )
+
+async def get_all_item_prices(session_id: str):
+    """Получение всех цен товаров в сессии"""
+    return await ws_client.send_message(
+        "get-all-item-prices",
+        session_id=session_id,
+        wait_for_response=True
+    )
+
+async def get_session_event(session_id: str):
+    """Получение события сессии"""
+    return await ws_client.send_message(
+        "get-session-event",
+        session_id=session_id,
+        wait_for_response=True
+    )
+
+async def get_session_leaders(session_id: str):
+    """Получение лидеров сессии (топ компаний)
+    
+    Args:
+        session_id: ID сессии
+    """
+    return await ws_client.send_message(
+        "get-session-leaders",
+        session_id=session_id,
+        wait_for_response=True
+    )
+
+# Функции для работы с городами
+async def get_cities(session_id: Optional[str] = None):
+    """Получение списка городов"""
+    return await ws_client.send_message(
+        "get-cities",
+        session_id=session_id,
+        wait_for_response=True
+    )
+
+async def get_city(id: Optional[int] = None, session_id: Optional[str] = None, 
+                   cell_position: Optional[str] = None, branch: Optional[str] = None):
+    """Получение города
+    
+    Args:
+        id: ID города
+        session_id: ID сессии
+        cell_position: Позиция ячейки
+        branch: Отрасль города
+    """
+    return await ws_client.send_message(
+        "get-city",
+        id=id,
+        session_id=session_id,
+        cell_position=cell_position,
+        branch=branch,
+        wait_for_response=True
+    )
+
+async def sell_to_city(city_id: int, company_id: int, resource_id: str, amount: int):
+    """Продажа ресурса городу
+    
+    Args:
+        city_id: ID города
+        company_id: ID компании
+        resource_id: ID ресурса
+        amount: Количество ресурса
+    """
+    return await ws_client.send_message(
+        "sell-to-city",
+        city_id=city_id,
+        company_id=company_id,
+        resource_id=resource_id,
+        amount=amount,
+        password=UPDATE_PASSWORD,
+        wait_for_response=True
+    )
+
+async def get_city_demands(city_id: int):
+    """Получение спроса города на товары"""
+    return await ws_client.send_message(
+        "get-city-demands",
+        city_id=city_id,
         wait_for_response=True
     )
 
@@ -331,6 +702,109 @@ async def delete_user(user_id: int):
     return await ws_client.send_message(
         "delete-user",
         user_id=user_id,
+        password=UPDATE_PASSWORD,
+        wait_for_response=True
+    )
+
+# Функции биржи (Exchange)
+async def get_exchanges(session_id: Optional[str] = None, company_id: Optional[int] = None, 
+                       sell_resource: Optional[str] = None, offer_type: Optional[str] = None):
+    """Получить список предложений биржи с фильтрацией"""
+    return await ws_client.send_message(
+        "get-exchanges",
+        session_id=session_id,
+        company_id=company_id,
+        sell_resource=sell_resource,
+        offer_type=offer_type,
+        wait_for_response=True
+    )
+
+async def get_exchange(id: int):
+    """Получить информацию о конкретном предложении биржи"""
+    return await ws_client.send_message(
+        "get-exchange",
+        id=id,
+        wait_for_response=True
+    )
+
+async def create_exchange_offer(
+    company_id: int,
+    session_id: str,
+    sell_resource: str,
+    sell_amount_per_trade: int,
+    count_offers: int,
+    offer_type: Literal['money', 'barter'],
+    price: Optional[int] = None,
+    barter_resource: Optional[str] = None,
+    barter_amount: Optional[int] = None
+):
+    """Создать предложение на бирже
+    
+    Args:
+        company_id: ID компании
+        session_id: ID сессии
+        sell_resource: Ресурс для продажи
+        sell_amount_per_trade: Количество ресурса за сделку
+        count_offers: Количество предложений
+        offer_type: Тип предложения ('money' или 'barter')
+        price: Цена (для offer_type='money')
+        barter_resource: Ресурс бартера (для offer_type='barter')
+        barter_amount: Количество ресурса бартера (для offer_type='barter')
+    """
+    return await ws_client.send_message(
+        "create-exchange-offer",
+        company_id=company_id,
+        session_id=session_id,
+        sell_resource=sell_resource,
+        sell_amount_per_trade=sell_amount_per_trade,
+        count_offers=count_offers,
+        offer_type=offer_type,
+        price=price,
+        barter_resource=barter_resource,
+        barter_amount=barter_amount,
+        password=UPDATE_PASSWORD,
+        wait_for_response=True
+    )
+
+async def update_exchange_offer(
+    offer_id: int,
+    sell_amount_per_trade: Optional[int] = None,
+    price: Optional[int] = None,
+    barter_amount: Optional[int] = None
+):
+    """Обновить параметры предложения биржи"""
+    return await ws_client.send_message(
+        "update-exchange-offer",
+        offer_id=offer_id,
+        sell_amount_per_trade=sell_amount_per_trade,
+        price=price,
+        barter_amount=barter_amount,
+        password=UPDATE_PASSWORD,
+        wait_for_response=True
+    )
+
+async def cancel_exchange_offer(offer_id: int):
+    """Отменить предложение биржи (возврат товара)"""
+    return await ws_client.send_message(
+        "cancel-exchange-offer",
+        offer_id=offer_id,
+        password=UPDATE_PASSWORD,
+        wait_for_response=True
+    )
+
+async def buy_exchange_offer(offer_id: int, buyer_company_id: int, quantity: int):
+    """Купить предложение с биржи
+    
+    Args:
+        offer_id: ID предложения
+        buyer_company_id: ID компании-покупателя
+        quantity: Количество для покупки
+    """
+    return await ws_client.send_message(
+        "buy-exchange-offer",
+        offer_id=offer_id,
+        buyer_company_id=buyer_company_id,
+        quantity=quantity,
         password=UPDATE_PASSWORD,
         wait_for_response=True
     )

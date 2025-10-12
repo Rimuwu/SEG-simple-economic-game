@@ -55,10 +55,13 @@ class SceneManager:
             user_id=user_id,
             bot_instance=bot_instance
         )
+        
+        # ВАЖНО: создаём глубокую копию data для каждого пользователя!
+        import copy
         cls._instances[user_id].__dict__.update({
             'page': page,
             'message_id': message_id,
-            'data': data
+            'data': copy.deepcopy(data)
         })
 
         if update_message:

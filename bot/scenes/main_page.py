@@ -10,20 +10,19 @@ class MainPage(Page):
         """ Генерация контента для главной страницы
         """
         scene_data = self.scene.get_data('scene')
-        company_data = scene_data.get('company', {})
+        company_id = scene_data.get('company_id')
         session_id = scene_data.get('session')
-
-        # ALARM! Тут вернётся первая компания, она никак не связана с пользователем
-        if not company_data and session_id:
-            # Пытаемся получить данные компании пользователя
-            user_company = await get_company(session_id=session_id)
-            if user_company:
-                company_data = user_company
-                # Обновляем данные в сцене
-                self.scene.set_data('scene', {
-                    **scene_data,
-                    'company': company_data
-                })
+        
+        # Получаем данные компании по company_id
+        company_data = None
+        if company_id:
+            company_data = await get_company(id=company_id)
+        elif session_id:
+            # Если нет company_id, пытаемся получить первую компанию в сессии
+            company_data = await get_company(session_id=session_id)
+            if company_data:
+                # Обновляем company_id в сцене
+                await self.scene.update_key('scene', 'company_id', company_data.get('id'))
 
         if company_data:
             company_name = company_data.get('name', 'Неизвестная компания')

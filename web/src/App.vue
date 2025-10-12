@@ -103,9 +103,9 @@ function handleAdminLeave() {
 function getWebSocketUrl() {
   const hostname = window.location.hostname
   const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:'
-  
-  // Use the same hostname as the web page with port 8000
-  return `${protocol}//${hostname}:8000/ws/connect`
+
+  // Use the same hostname as the web page with port 81
+  return `${protocol}//${hostname}:81/ws/connect`
 }
 
 /**

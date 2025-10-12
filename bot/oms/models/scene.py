@@ -39,8 +39,10 @@ class Scene:
         self.scene: SceneModel = scenes_loader.get_scene(
             self.__scene_name__) # type: ignore
 
+        # ВАЖНО: создаём глубокую копию standart_data для каждого пользователя!
+        import copy
         self.data: dict = {
-            'scene': self.scene.standart_data
+            'scene': copy.deepcopy(self.scene.standart_data)
         }
 
         if not self.scene:
@@ -290,9 +292,11 @@ class Scene:
         }
 
     def update_from_data(self, data: dict) -> None:
+        import copy
         self.page = data.get('page', self.start_page)
         self.message_id = data.get('message_id', 0)
-        self.data = data.get('data', {'scene': {}})
+        # ВАЖНО: создаём глубокую копию data для каждого пользователя!
+        self.data = copy.deepcopy(data.get('data', {'scene': {}}))
         self.scene: SceneModel = scenes_loader.get_scene(
             self.__scene_name__) # type: ignore
 

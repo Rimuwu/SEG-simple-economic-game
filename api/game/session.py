@@ -94,6 +94,7 @@ class Session(BaseClass):
 
         elif new_stage == SessionStages.Game:
             from game.company import Company
+            from game.logistics import Logistics
 
             if self.step == 0:
                 for company in self.companies:
@@ -125,6 +126,12 @@ class Session(BaseClass):
             # Обновляем города
             for city in self.cities:
                 city.on_new_game_stage()
+
+            # Обновляем логистику
+            logistics_list: list[Logistics] = just_db.find(Logistics.__tablename__,
+                                          to_class=Logistics, session_id=self.session_id) # type: ignore
+            for logistics in logistics_list:
+                logistics.on_new_turn()
 
             # Генерируем события каждые 5 этапов
             self.events_generator()
@@ -443,6 +450,9 @@ class Session(BaseClass):
         for user in self.users: user.delete()
         for city in self.cities: city.delete()
         for item_price in self.item_prices: item_price.delete()
+
+        just_db.delete('logistics', 
+                       session_id=self.session_id)
 
         just_db.delete("step_schedule", 
                        session_id=self.session_id)
