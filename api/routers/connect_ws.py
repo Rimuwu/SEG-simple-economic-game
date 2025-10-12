@@ -1,11 +1,10 @@
 from fastapi import APIRouter, WebSocket, WebSocketDisconnect, Query, HTTPException
 from fastapi.responses import JSONResponse
-from typing import List, Dict, Callable
 import json
 
 from modules.ws_hadnler import get_registered_handlers, handle_message
 from modules.websocket_manager import websocket_manager
-from global_modules.logs import main_logger
+from modules.logs import websocket_logger
 
 router = APIRouter(prefix="/ws", tags=["WebSocket"])
 
@@ -34,7 +33,7 @@ async def websocket_endpoint(
             try:
                 # Ожидаем сообщение от клиента
                 data = await websocket.receive_text()
-                main_logger.info(f"Получено сообщение от {client_id}: {data}")
+                websocket_logger.info(f"Получено сообщение от {client_id}: {data}")
 
                 try:
                     # Пытаемся распарсить JSON
@@ -47,11 +46,11 @@ async def websocket_endpoint(
                 await handle_message(client_id, message)
 
             except WebSocketDisconnect:
-                main_logger.info(f"Клиент {client_id} отключился")
+                websocket_logger.info(f"Клиент {client_id} отключился")
                 break
 
             except Exception as e:
-                main_logger.error(f"Ошибка при обработке сообщения от {client_id}: {e}")
+                websocket_logger.error(f"Ошибка при обработке сообщения от {client_id}: {e}")
                 error_message = {
                     "type": "error",
                     "message": f"Ошибка обработки сообщения: {str(e)}"
@@ -103,5 +102,5 @@ async def get_websocket_status():
         })
     
     except Exception as e:
-        main_logger.error(f"Ошибка при получении статуса WebSocket: {e}")
+        websocket_logger.error(f"Ошибка при получении статуса WebSocket: {e}")
         raise HTTPException(status_code=500, detail=f"Ошибка сервера: {str(e)}")
