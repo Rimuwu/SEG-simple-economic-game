@@ -11,6 +11,7 @@ from game.session import SessionStages, session_manager
 from global_modules.load_config import ALL_CONFIGS, Resources, Improvements, Settings, Capital, Reputation
 from global_modules.bank import calc_credit, get_credit_conditions, check_max_credit_steps, calc_deposit, get_deposit_conditions, check_max_deposit_steps
 from game.factory import Factory
+from modules.logs import game_logger
 
 RESOURCES: Resources = ALL_CONFIGS["resources"]
 CELLS: Cells = ALL_CONFIGS['cells']
@@ -58,12 +59,15 @@ class Company(BaseClass):
 
     def set_owner(self, user_id: int):
         if self.owner != 0:
+            game_logger.warning(f"Попытка установить владельца компании {self.name} ({self.id}), но владелец уже установлен: {self.owner}.")
             raise ValueError("Владелец уже установлен.")
         if user_id in [user.id for user in self.users] is False:
+            game_logger.warning(f"Пользователь {user_id} не является членом компании {self.name} ({self.id}) при попытке назначения владельцем.")
             raise ValueError("Пользователь не является членом компании.")
 
         self.owner = user_id
         self.save_to_base()
+        game_logger.info(f"Пользователь {user_id} назначен владельцем компании {self.name} ({self.id}).")
 
     def create(self, name: str, session_id: str):
         self.name = name
@@ -73,10 +77,12 @@ class Company(BaseClass):
         with_this_name = just_db.find_one(
             self.__tablename__, name=name, session_id=session_id)
         if with_this_name:
+            game_logger.warning(f"Попытка создать компанию с уже существующим именем '{name}' в сессии {session_id}.")
             raise ValueError(f"Компания с именем '{name}' уже существует.")
 
         session = session_manager.get_session(session_id)
         if not session or not session.can_add_company():
+            game_logger.warning(f"Попытка создать компанию '{name}' в недействительной или неактивной сессии {session_id}.")
             raise ValueError("Недействительная или неактивная сессия для добавления компании.")
         self.session_id = session_id
 
@@ -98,6 +104,8 @@ class Company(BaseClass):
 
         self.save_to_base()
         self.reupdate()
+
+        game_logger.info(f"Создана новая компания '{self.name}' ({self.id}) в сессии {self.session_id} с секретным кодом {self.secret_code}.")
 
         asyncio.create_task(websocket_manager.broadcast({
             "type": "api-create_company",
@@ -133,12 +141,15 @@ class Company(BaseClass):
 
         session = session_manager.get_session(self.session_id)
         if not session or not session.can_select_cell(x, y):
+            game_logger.warning(f"Компания {self.name} ({self.id}) не может выбрать клетку ({x}, {y}) в сессии {self.session_id}.")
             return False
 
         old_position = self.cell_position
         self.cell_position = f"{x}.{y}"
         self.save_to_base()
         self.reupdate()
+
+        game_logger.info(f"Компания {self.name} ({self.id}) установила позицию на клетку ({x}, {y}).")
 
         # Если все компании выбрали клетки, переходим к следующему этапу
         if session.all_companies_have_cells():
@@ -186,6 +197,8 @@ class Company(BaseClass):
         for exchange in self.exchanges: exchange.delete()
         for contract in self.get_contracts(): contract.delete()
 
+        game_logger.info(f"Компания {self.name} ({self.id}) удалена из сессии {self.session_id}.")
+
         asyncio.create_task(websocket_manager.broadcast({
             "type": "api-company_deleted",
             "data": {
@@ -208,10 +221,13 @@ class Company(BaseClass):
     def add_resource(self, resource: str, amount: int, 
                      ignore_space: bool = False):
         if RESOURCES.get_resource(resource) is None:
+            game_logger.warning(f"Попытка добавить несуществующий ресурс '{resource}' компании {self.name} ({self.id}).")
             raise ValueError(f"Ресурс '{resource}' не существует.")
         if amount <= 0:
+            game_logger.warning(f"Попытка добавить отрицательное количество ресурса '{resource}' ({amount}) компании {self.name} ({self.id}).")
             raise ValueError("Количество должно быть положительным целым числом.")
         if self.get_resources_amount() + amount > self.get_max_warehouse_size() and not ignore_space:
+            game_logger.warning(f"Недостаточно места на складе компании {self.name} ({self.id}) для добавления {amount} единиц '{resource}'. Свободно: {self.get_warehouse_free_size()}")
             raise ValueError("Недостаточно места на складе.")
 
         if resource in self.warehouses:
@@ -221,6 +237,8 @@ class Company(BaseClass):
 
         self.save_to_base()
         self.reupdate()
+
+        game_logger.info(f"Компания {self.name} ({self.id}) получила {amount} единиц ресурса '{resource}'. Всего на складе: {self.warehouses[resource]}")
 
         asyncio.create_task(websocket_manager.broadcast({
             "type": "api-company_resource_added",
@@ -234,10 +252,13 @@ class Company(BaseClass):
 
     def remove_resource(self, resource: str, amount: int):
         if RESOURCES.get_resource(resource) is None:
+            game_logger.warning(f"Попытка удалить несуществующий ресурс '{resource}' у компании {self.name} ({self.id}).")
             raise ValueError(f"Ресурс '{resource}' не существует.")
         if amount <= 0:
+            game_logger.warning(f"Попытка удалить отрицательное количество ресурса '{resource}' ({amount}) у компании {self.name} ({self.id}).")
             raise ValueError("Количество должно быть положительным целым числом.")
         if resource not in self.warehouses or self.warehouses[resource] < amount:
+            game_logger.warning(f"Недостаточно ресурса '{resource}' у компании {self.name} ({self.id}) для удаления {amount} единиц. Доступно: {self.warehouses.get(resource, 0)}")
             raise ValueError(f"Недостаточно ресурса '{resource}' для удаления.")
 
         self.warehouses[resource] -= amount
@@ -246,6 +267,8 @@ class Company(BaseClass):
 
         self.save_to_base()
         self.reupdate()
+
+        game_logger.info(f"Компания {self.name} ({self.id}) потратила {amount} единиц ресурса '{resource}'. Осталось: {self.warehouses.get(resource, 0)}")
 
         asyncio.create_task(websocket_manager.broadcast({
             "type": "api-company_resource_removed",
@@ -475,12 +498,15 @@ class Company(BaseClass):
         self.in_prison_check()
 
         if not isinstance(c_sum, int) or not isinstance(steps, int):
+            game_logger.warning(f"Компания {self.name} ({self.id}) пытается взять кредит с неверными типами данных: сумма={type(c_sum)}, шаги={type(steps)}")
             raise ValueError("Сумма и шаги должны быть целыми числами.")
         if c_sum <= 0 or steps <= 0:
+            game_logger.warning(f"Компания {self.name} ({self.id}) пытается взять кредит с неположительными значениями: сумма={c_sum}, шаги={steps}")
             raise ValueError("Сумма и шаги должны быть положительными целыми числами.")
 
         credit_condition = get_credit_conditions(self.reputation)
         if not credit_condition.possible:
+            game_logger.warning(f"Компания {self.name} ({self.id}) не может взять кредит с текущей репутацией {self.reputation}")
             raise ValueError("Кредит невозможен с текущей репутацией.")
 
         total, pay_per_turn, extra = calc_credit(
@@ -489,20 +515,25 @@ class Company(BaseClass):
 
         session = session_manager.get_session(self.session_id)
         if not session:
+            game_logger.error(f"Сессия {self.session_id} не найдена при попытке взять кредит компанией {self.name} ({self.id})")
             raise ValueError("Сессия не найдена.")
 
         if not check_max_credit_steps(steps, 
                                       session.step, 
                                       session.max_steps):
+            game_logger.warning(f"Компания {self.name} ({self.id}) пытается взять кредит на {steps} шагов, что превышает оставшееся время игры")
             raise ValueError("Срок кредита превышает максимальное количество шагов игры.")
 
         if len(self.credits) >= SETTINGS.max_credits_per_company:
+            game_logger.warning(f"Компания {self.name} ({self.id}) достигла максимального количества кредитов ({SETTINGS.max_credits_per_company})")
             raise ValueError("Достигнуто максимальное количество активных кредитов для этой компании.")
 
         if c_sum > CAPITAL.bank.credit.max:
+            game_logger.warning(f"Компания {self.name} ({self.id}) пытается взять кредит {c_sum}, превышающий максимум {CAPITAL.bank.credit.max}")
             raise ValueError(f"Сумма кредита превышает максимальный лимит {CAPITAL.bank.credit.max}.")
 
         elif c_sum < CAPITAL.bank.credit.min:
+            game_logger.warning(f"Компания {self.name} ({self.id}) пытается взять кредит {c_sum}, меньше минимума {CAPITAL.bank.credit.min}")
             raise ValueError(f"Сумма кредита ниже минимального лимита {CAPITAL.bank.credit.min}.")
 
         credit_data = {
@@ -517,6 +548,8 @@ class Company(BaseClass):
 
         self.save_to_base()
         self.add_balance(c_sum, 0.0) # деньги без процентов в доход
+
+        game_logger.info(f"Компания {self.name} ({self.id}) взяла кредит на сумму {c_sum} на {steps} шагов. К доплате: {total}")
 
         asyncio.create_task(websocket_manager.broadcast({
             "type": "api-company_credit_taken",
@@ -637,6 +670,7 @@ class Company(BaseClass):
 
         session = session_manager.get_session(self.session_id)
         if not session:
+            game_logger.error(f"Сессия {self.session_id} не найдена при попытке посадить компанию {self.name} ({self.id}) в тюрьму")
             raise ValueError("Сессия не найдена.")
 
         end_step = session.step + REPUTATION.prison.stages
@@ -672,6 +706,8 @@ class Company(BaseClass):
             company_id=self.id
         )
 
+        game_logger.info(f"Компания {self.name} ({self.id}) отправлена в тюрьму до шага {end_step} в сессии {self.session_id}")
+
         asyncio.create_task(websocket_manager.broadcast({
             "type": "api-company_to_prison",
             "data": {
@@ -691,6 +727,8 @@ class Company(BaseClass):
         self.prison_end_step = None
         self.save_to_base()
         self.reupdate()
+
+        game_logger.info(f"Компания {self.name} ({self.id}) освобождена из тюрьмы в сессии {self.session_id}")
 
         asyncio.create_task(websocket_manager.broadcast({
             "type": "api-company_left_prison",
@@ -735,8 +773,10 @@ class Company(BaseClass):
         if self.tax_debt > 0:
             self.overdue_steps += 1
             self.remove_reputation(REPUTATION.tax.late)
+            game_logger.warning(f"Компания {self.name} ({self.id}) имеет просроченный налоговый долг. Просрочка: {self.overdue_steps} шагов")
 
         if self.overdue_steps > REPUTATION.tax.not_paid_stages:
+            game_logger.warning(f"Компания {self.name} ({self.id}) превысила максимальную просрочку по налогам ({self.overdue_steps} > {REPUTATION.tax.not_paid_stages}). Отправляется в тюрьму")
             self.overdue_steps = 0
             self.tax_debt = 0
 
@@ -751,7 +791,6 @@ class Company(BaseClass):
         self.tax_debt += tax_amount
         self.save_to_base()
         self.reupdate()
-
 
     def pay_taxes(self, amount: int):
         """ Платит указанную сумму по налогам.
@@ -1077,10 +1116,12 @@ class Company(BaseClass):
             if resource_id and raw_col > 0:
                 try:
                     self.add_resource(resource_id, raw_col)
+                    game_logger.info(f"Компания {self.name} ({self.id}) добыла {raw_col} единиц ресурса '{resource_id}' на шаге {step}")
                 except Exception as e: 
                     max_col = self.get_warehouse_free_size()
                     if max_col > 0:
                         self.add_resource(resource_id, max_col)
+                        game_logger.warning(f"Компания {self.name} ({self.id}) добыла только {max_col} единиц ресурса '{resource_id}' из-за нехватки места на складе")
 
         factories = self.get_factories()
         for factory in factories:
