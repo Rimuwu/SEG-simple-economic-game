@@ -2,9 +2,11 @@ from .oneuser_page import OneUserPage as Page
 from aiogram.types import CallbackQuery
 from modules.ws_client import get_company, company_pay_taxes
 from oms.utils import callback_generator
+from oneuser_page import OneUserPage
 
-class BankPage(Page):
-    
+
+class BankPage(OneUserPage):
+
     __page_name__ = "bank-menu"
     
     async def content_worker(self):

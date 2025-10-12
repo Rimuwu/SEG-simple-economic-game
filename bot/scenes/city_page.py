@@ -6,12 +6,13 @@ from modules.ws_client import get_cities, get_city, get_company, sell_to_city
 from oms.utils import callback_generator
 from global_modules.load_config import ALL_CONFIGS, Resources
 from modules.utils import xy_into_cell
+from oneuser_page import OneUserPage
 
 
 RESOURCES: Resources = ALL_CONFIGS["resources"]
 
 
-class City(Page):
+class City(OneUserPage):
     __page_name__ = "city-page"
 
     async def data_preparate(self):
