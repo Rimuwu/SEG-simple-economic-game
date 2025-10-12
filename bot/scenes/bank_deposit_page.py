@@ -4,7 +4,7 @@ from modules.ws_client import get_company, company_take_deposit, company_withdra
 from oms.utils import callback_generator
 from global_modules.bank import get_deposit_conditions, calc_deposit, CAPITAL, check_max_deposit_steps
 from global_modules.logs import Logger
-from oneuser_page import OneUserPage
+from .oneuser_page import OneUserPage
 
 bot_logger = Logger.get_logger("bot")
 

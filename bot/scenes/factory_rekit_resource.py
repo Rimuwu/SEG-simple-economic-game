@@ -3,7 +3,7 @@ from aiogram.types import Message, CallbackQuery
 from oms.utils import callback_generator
 from global_modules.logs import Logger
 from global_modules.load_config import ALL_CONFIGS, Resources
-from oneuser_page import OneUserPage
+from .oneuser_page import OneUserPage
 
 bot_logger = Logger.get_logger("bot")
 RESOURCES: Resources = ALL_CONFIGS["resources"]
