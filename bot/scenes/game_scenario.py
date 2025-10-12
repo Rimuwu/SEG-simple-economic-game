@@ -15,6 +15,7 @@ from scenes.bank_credit_page import BankCreditPage
 from scenes.bank_deposit_page import BankDepositPage
 from scenes.contract_main_page import ContractMainPage
 from scenes.city_page import City
+from scenes.upgrade_menu import UpgradeMenu
 from scenes.factory_menu_page import FactoryMenu
 from scenes.factory_rekit_groups import FactoryRekitGroups
 from scenes.factory_rekit_count import FactoryRekitCount
@@ -51,6 +52,7 @@ class GameManager(AdminScene):
         BankCreditPage,
         BankDepositPage,
         ContractMainPage,
+    UpgradeMenu,
         FactoryMenu,
         FactoryRekitGroups,
         FactoryRekitCount,

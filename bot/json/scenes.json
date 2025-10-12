@@ -149,6 +149,13 @@
                     "main-page": "↪️ Назад"
                 }
             },
+            "upgrade-menu": {
+                "title": "",
+                "content": "",
+                "to_pages": {
+                    "main-page": "↪️ Назад"
+                }
+            },
             "factory-menu": {
                 "title": "",
                 "content": "",

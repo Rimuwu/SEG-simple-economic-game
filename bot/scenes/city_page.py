@@ -280,7 +280,7 @@ class City(Page):
         await callback.answer()
 
     @Page.on_text('int')
-    async def handle_numeric_input(self, _message: Message, value: int):
+    async def handle_numeric_input(self, message: Message, value: int):
         page_data = self.scene.get_data("city-page")
         if page_data.get("stage") != "sell_product":
             return
@@ -289,6 +289,8 @@ class City(Page):
             await self._set_status("Количество должно быть больше нуля", level="error")
             await self.scene.update_message()
             return
+
+        _ = message  # OMS требует параметр message; логика использует статусные сообщения
 
         scene_data = self.scene.get_data("scene")
         session_id = scene_data.get("session")
