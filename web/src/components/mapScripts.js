@@ -79,8 +79,26 @@ function setTile(row, col, tileType, text) {
     tile.style.backgroundColor = tileStyles[tileType].color
     tile.style.color = tileStyles[tileType].fontColor
   }
-  if (text !== undefined) {
+  
+  // Handle icon display for CITY and BANK tiles
+  if (tileType === TileTypes.CITY || tileType === TileTypes.BANK) {
+    // Clear existing content
+    tile.innerHTML = ''
+    
+    // Create image element
+    const img = document.createElement('img')
+    img.src = tileType === TileTypes.CITY ? '/city.svg' : '/bank.svg'
+    img.alt = tileType === TileTypes.CITY ? 'City' : 'Bank'
+    img.style.width = '60%'
+    img.style.height = '60%'
+    img.style.objectFit = 'contain'
+    img.style.filter = 'brightness(0)' // Make icon black/dark
+    
+    tile.appendChild(img)
+  } else if (text !== undefined) {
+    // For other tiles with custom text (like companies)
     tile.textContent = text
   }
+  // Otherwise, keep the default coordinate label
 }
 export { tiles, tileRefs, TileTypes, tileStyles, setTile, rows, cols }
