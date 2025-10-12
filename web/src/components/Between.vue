@@ -172,7 +172,7 @@ onMounted(() => {
           <p class="title">ТОВАРЫ</p>
           <div class="content">
             <section v-for="product in products" :key="product.id">
-              <p class="name">{{ product.name }} — {{ product.price }} ₽</p>
+              <p class="name">{{ product.name }} — {{ product.price }}</p>
             </section>
             <section v-if="products.length === 0">
               <p class="desc">Цены на товары загружаются...</p>
@@ -185,7 +185,7 @@ onMounted(() => {
           <div class="content">
             <section>
               <p class="name">ПО КАПИТАЛУ</p>
-              <p class="desc" v-if="leaders.capital">{{ leaders.capital.name }} ({{ formatNumber(leaders.capital.balance) }} ₽)</p>
+              <p class="desc" v-if="leaders.capital">{{ leaders.capital.name }} ({{ formatNumber(leaders.capital.balance) }})</p>
               <p class="desc" v-else>—</p>
             </section>
             <section>

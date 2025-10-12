@@ -29,7 +29,7 @@ const letters = "ABCDEFGHIJKLMNOPQRSTUVWXYZ"
  */
 const tiles = Array.from({ length: total }, (_, i) => ({
   id: `t-${i}`,
-  label: letters[i % rows] + (Math.floor(i / cols) + 1),
+  label: letters[Math.floor(i / cols)] + ((i % cols) + 1),
 }))
 /**
  * References to tile DOM elements.
