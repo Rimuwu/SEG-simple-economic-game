@@ -82,21 +82,12 @@ class Session(BaseClass):
         elif new_stage == SessionStages.CellSelect:
             self.generate_cells()
 
-            if not whitout_shedule:
-                sh_id = scheduler.schedule_task(
-                    stage_game_updater, 
-                    datetime.now() + timedelta(
-                        seconds=TURN_CELL_TIME
-                        ),
-                    kwargs={"session_id": self.session_id}
-                )
-                self.change_turn_schedule_id = sh_id
-
         elif new_stage == SessionStages.Game:
             from game.company import Company
             from game.logistics import Logistics
 
             if self.step == 0:
+
                 for company in self.companies:
                     company: Company
 
@@ -119,6 +110,9 @@ class Session(BaseClass):
                         company.save_to_base()
                         company.reupdate()
                         game_logger.info(f"Assigned cell {company.cell_position} to company {company.name}")
+
+                if not whitout_shedule:
+                    stage_game_updater(self.session_id)
 
             for company in self.companies:
                 company.on_new_game_stage(self.step + 1)
