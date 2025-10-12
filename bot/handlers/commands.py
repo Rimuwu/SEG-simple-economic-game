@@ -256,28 +256,10 @@ async def go_previous_page(message: Message):
     """Возвращает пользователя на предыдущую страницу сцены."""
     user_id = message.from_user.id
 
-    if not scene_manager.has_scene(user_id):
-        await message.answer("Сцена не найдена, попробуйте подключиться к игре снова.")
-        return
-
     scene = scene_manager.get_scene(user_id)
     scene_data = scene.get_data('scene') or {}
-    last_page = scene_data.get('last_page')
-
-    if not last_page:
-        await message.answer("Предыдущая страница не найдена.")
-        return
-
-    if last_page not in scene.pages:
-        await message.answer("Не удалось открыть предыдущую страницу.")
-        return
-
-    if scene.page == last_page:
-        await message.answer("Вы уже на предыдущей странице.")
-        return
-
     try:
-        await scene.update_page(last_page)
+        await scene.update_page("main-page")
     except Exception as exc:  # noqa: BLE001
         await message.answer(f"Не удалось переключиться: {exc}")
 
