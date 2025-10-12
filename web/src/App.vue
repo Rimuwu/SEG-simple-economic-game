@@ -168,15 +168,28 @@ globalThis.getGameState = () => {
 }
 
 /**
+ * Helper function to download a file
+ */
+function downloadFile(content, fileName, contentType) {
+    var a = document.createElement("a");
+    var file = new Blob([content], {type: contentType});
+    a.href = URL.createObjectURL(file);
+    a.download = fileName;
+    a.click();
+}
+
+/**
  * Get detailed game state as JSON
  * Usage: getGameStateJSON()
  */
-globalThis.getGameStateJSON = () => {
+globalThis.saveGameState = () => {
   if (!wsManager || !wsManager.gameState) {
     console.error('❌ GameState not available')
     return null
   }
-  return wsManager.gameState.toJSON()
+  let timestamp = new Date();
+  const formatedTime = `${timestamp.getUTCDay()}_${timestamp.getHours()}.${timestamp.getMinutes()}.${timestamp.getSeconds()}`
+  downloadFile(JSON.stringify(wsManager.gameState.toJSON()), formatedTime + "_gameState.json", "text/plain")
 }
 
 /**
