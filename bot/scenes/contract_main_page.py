@@ -11,4 +11,5 @@ class ContractMainPage(Page):
         data = self.scene.get_data('scene')
         company_id = data.get('company_id')
         session_id = data.get('session')
+        
         return "Test"

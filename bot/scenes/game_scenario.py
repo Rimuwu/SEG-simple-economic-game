@@ -14,6 +14,7 @@ from scenes.bank_page import BankPage
 from scenes.bank_credit_page import BankCreditPage
 from scenes.bank_deposit_page import BankDepositPage
 from scenes.contract_main_page import ContractMainPage
+from scenes.city_page import City
 from scenes.factory_menu_page import FactoryMenu
 from scenes.factory_rekit_groups import FactoryRekitGroups
 from scenes.factory_rekit_count import FactoryRekitCount
@@ -26,6 +27,7 @@ from scenes.prison_page import PrisonPage
 from scenes.end_game_page import EndGamePage
 from scenes.admin_panel_page import AdminPanelPage
 from scenes.base_scene import AdminScene
+from scenes.about_turn_page import AboutTurnPage
 from modules.db import db
 
 
@@ -59,7 +61,9 @@ class GameManager(AdminScene):
         PrisonPage,
         EndGamePage,
         AdminPanelPage,
-        ExchangePage
+        ExchangePage,
+        City,
+        AboutTurnPage
     ]
     
     @staticmethod

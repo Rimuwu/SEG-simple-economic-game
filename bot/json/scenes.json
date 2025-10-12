@@ -18,6 +18,7 @@
                 }
             },
             "company-option": { 
+                "image": "img/main_company.png",
                 "title": "",
                 "content": "Выберите - создать или присоединиться",
                 "to_pages": {
@@ -26,6 +27,7 @@
                 }
             },
             "company-create": {
+                "image": "img/main_company.png",
                 "title": "",
                 "content": "Введите название компании: ",
                 "to_pages": {
@@ -33,6 +35,7 @@
                 }
             },
             "company-join": {
+                "image": "img\\main_company.png",
                 "title": "",
                 "content": "Введите секретный код: ",
                 "to_pages": {
@@ -40,6 +43,7 @@
                 }
             },
             "wait-start-page": {
+                "image": "img\\cellselect_start.png",
                 "title": "",
                 "content": "*Ожидание начала игры...*\n\n",
                 "to_pages": {
@@ -47,21 +51,25 @@
                 }
             },
             "select-cell-page": {
+                "image": "img\\cellselect_start.png",
                 "title": "",
                 "content": "Выберите клетку, на которой будет ваша располагаться ваша компания: ",
                 "to_pages": {}
             },
             "wait-select-cell-page": {
+                "image": "img\\cellselect_start.png",
                 "title": "",
                 "content": "Ожидание выбора клетки владельцем...",
                 "to_pages": {}
             },
             "wait-game-stage-page": {
+                "image": "img\\cellselect_start.png",
                 "title": "",
                 "content": "Вы выбрали клетку. Ожидание начала игрового этапа...",
                 "to_pages": {}
             },
             "main-page":{ 
+                "image": "img/main_company.png",
                 "title": "",
                 "content": "Меню управления компанией",
                 "to_pages": {
@@ -72,7 +80,7 @@
                     "upgrade-cell-menu": "🔧 Улучшение ячейки",
                     "about-info-menu": "👥 Общая информация",
                     "logistics-menu": "🚚 Логистика",
-                    "cities-menu": "🏙️ Города"
+                    "city-page": "🏙️ Города"
                 },
                 "row_width": 2
             },
@@ -80,7 +88,7 @@
                 "title": "",
                 "content": "jh",
                 "to_pages": {
-                    "stage-info-page": "О этапе",
+                    "about-turn-page": "О этапе",
                     "cells-info-page": "О клетке",
                     "inventory-page": "Инвентарь",
                     "main-page": "↪️ Назад"
@@ -186,8 +194,12 @@
             "admin-panel-page": {
                 "title": "",
                 "content": "Админ панель"
+            },
+            "city-page": {
+                "title": "",
+                "content": ""
             }
-    }
+        }
     },
     "start-scene-manager": {
         "settings": {
