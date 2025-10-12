@@ -97,12 +97,26 @@ function handleAdminLeave() {
 }
 
 /**
+ * Determine WebSocket URL based on current page location
+ * @returns {string} WebSocket URL
+ */
+function getWebSocketUrl() {
+  const hostname = window.location.hostname
+  const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:'
+  
+  // Use the same hostname as the web page with port 8000
+  return `${protocol}//${hostname}:8000/ws/connect`
+}
+
+/**
  * WebSocketManager instance for global WebSocket communication.
  * Provided to child components and exposed globally.
  * @type {WebSocketManager}
  */
 let wsManager = null
-wsManager = new WebSocketManager('ws://localhost:8000/ws/connect', globalThis.console)
+const wsUrl = getWebSocketUrl()
+console.log(`🔌 Connecting to WebSocket: ${wsUrl}`)
+wsManager = new WebSocketManager(wsUrl, globalThis.console)
 wsManager.connect()
 globalThis.wsManager = wsManager
 
