@@ -196,13 +196,16 @@ class Citie(BaseClass):
                 amount = int(base_amount * branch_modifier * rand_demand * amount_variation)
 
                 # Ограничение: минимум зависит от massModifier
-                min_min = random.randint(0, 1)
+                min_min = 0
+                branch_modifier = 1.0
                 if resource.branch == self.branch:
-                    min_min = 1
+                    min_min = random.randint(0, 1)
+                    branch_modifier = 1.5
 
-                min_amount = max(min_min, int(resource.massModifier * 0.5))
-                max_amount = int(resource.massModifier * users_count * 2 * mod_count)
+                min_amount = random.randint(min_min, max(int(resource.massModifier * 0.5), 2))
+                max_amount = int(resource.massModifier * users_count * 2 * mod_count * branch_modifier)
                 amount = random.randint(min_amount, max(min_amount, max_amount, amount))
+
 
                 # Цена с рандомизацией ±20%
                 current_item_price = session.get_item_price(resource_id)
