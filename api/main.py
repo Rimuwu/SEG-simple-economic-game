@@ -14,9 +14,12 @@ from modules.sheduler import scheduler
 from game.session import session_manager
 from game.exchange import Exchange
 from game.citie import Citie
+from os import getenv
 
 # Импортируем роуты
 from routers import connect_ws
+
+debug = getenv("DEBUG", "False").lower() == "true"
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
@@ -45,7 +48,8 @@ async def lifespan(app: FastAPI):
     main_logger.info("Starting task scheduler...")
 
     asyncio.create_task(scheduler.start())
-    asyncio.create_task(test1())
+    if debug:
+        asyncio.create_task(test1())
 
     yield
 
