@@ -3,6 +3,7 @@ from global_modules.db.baseclass import BaseClass
 from modules.json_database import just_db
 from modules.websocket_manager import websocket_manager
 from modules.validation import validate_username
+from modules.logs import game_logger
 
 class User(BaseClass):
 
@@ -23,6 +24,7 @@ class User(BaseClass):
         session = session_manager.get_session(session_id)
 
         if not session or not session.can_user_connect():
+            game_logger.warning(f"Попытка создания пользователя в неверной сессии ({session_id}) или на неверном этапе.")
             raise ValueError("Неверная сессия или регистрация запрещена на данном этапе.")
 
         self.id = _id
@@ -31,6 +33,7 @@ class User(BaseClass):
                                           username=username, 
                                           session_id=session_id)
         if with_this_name:
+            game_logger.warning(f"Попытка создать пользователя с занятым именем '{username}' в сессии {session_id}.")
             raise ValueError(f"Имя пользователя '{username}' уже занято в этой сессии.")
 
         username = validate_username(username)
@@ -40,6 +43,8 @@ class User(BaseClass):
 
         self.save_to_base()
         self.reupdate()
+
+        game_logger.info(f"Создан новый пользователь: {self.username} ({self.id}) в сессии {self.session_id}.")
 
         asyncio.create_task(websocket_manager.broadcast({
             "type": "api-create_user",
@@ -56,39 +61,49 @@ class User(BaseClass):
         session = session_manager.get_session(self.session_id)
 
         if self.company_id != 0:
+            game_logger.warning(f"Пользователь {self.username} ({self.id}) уже в компании, но пытается создать новую.")
             raise ValueError("Пользователь уже находится в компании.")
 
         if not session: 
+            game_logger.error(f"Пользователь {self.username} ({self.id}) не в действительной сессии при попытке создать компанию.")
             raise ValueError("Пользователь не в действительной сессии.")
+
+        if not session.can_add_company():
+            game_logger.warning(f"Пользователь {self.username} ({self.id}) не может создать компанию на данном этапе в сессии {self.session_id}.")
+            raise ValueError("Невозможно добавить компанию на данном этапе.")
 
         company = Company().create(name=name, 
                                    session_id=self.session_id)
-        if not session.can_add_company():
-            raise ValueError("Невозможно добавить компанию на данном этапе.")
 
         self.company_id = company.id
 
         self.save_to_base()
         self.reupdate()
+        game_logger.info(f"Пользователь {self.username} ({self.id}) создал компанию '{name}' ({company.id}) в сессии {self.session_id}.")
         return company
 
     def add_to_company(self, secret_code: int):
         from game.company import Company
         if self.company_id != 0:
+            game_logger.warning(f"Пользователь {self.username} ({self.id}) уже в компании, но пытается войти в другую.")
             raise ValueError("Пользователь уже находится в компании.")
 
         company: Company = just_db.find_one("companies", 
                     to_class=Company, 
                     secret_code=secret_code) # type: ignore
         if not company: 
+            game_logger.warning(f"Пользователь {self.username} ({self.id}) не смог найти компанию с кодом {secret_code}.")
             raise ValueError("Компания с этим секретным кодом не найдена.")
 
         if company.can_user_enter() is False:
+            game_logger.warning(f"Компания '{company.name}' ({company.id}) закрыта для входа, но пользователь {self.username} ({self.id}) пытается войти.")
             raise ValueError("Компания в данный момент не принимает новых пользователей.")
 
         self.company_id = company.id
         self.save_to_base()
         self.reupdate()
+
+        game_logger.info(f"Пользователь {self.username} ({self.id}) присоединился к компании '{company.name}' ({company.id}).")
 
         asyncio.create_task(websocket_manager.broadcast({
             "type": "api-user_added_to_company",
@@ -106,6 +121,8 @@ class User(BaseClass):
             self.leave_from_company()
         except Exception: pass
 
+        game_logger.info(f"Пользователь {self.username} ({self.id}) удален.")
+
         asyncio.create_task(websocket_manager.broadcast({
             "type": "api-user_deleted",
             "data": {
@@ -117,6 +134,7 @@ class User(BaseClass):
     def leave_from_company(self):
         from game.company import Company
         if self.company_id == 0:
+            game_logger.warning(f"Пользователь {self.username} ({self.id}) пытается покинуть компанию, не находясь в ней.")
             raise ValueError("Пользователь не находится в компании.")
 
         old_company_id = self.company_id
@@ -125,6 +143,7 @@ class User(BaseClass):
         self.reupdate()
 
         company = Company(_id=old_company_id).reupdate()
+        game_logger.info(f"Пользователь {self.username} ({self.id}) покинул компанию {old_company_id}.")
 
         asyncio.create_task(websocket_manager.broadcast({
             "type": "api-user_left_company",
