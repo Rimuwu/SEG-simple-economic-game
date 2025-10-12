@@ -15,7 +15,7 @@ async def stage_game_updater(session_id: str):
     session = session_manager.get_session(session_id)
 
     if not session: return 0
-    if session.stage == SessionStages.CellSelect.value or session.stage == SessionStages.ChangeTurn.value:
+    if session.stage != SessionStages.Game.value:
         session.update_stage(SessionStages.Game)
         sh_id = scheduler.schedule_task(
             stage_game_updater, 
