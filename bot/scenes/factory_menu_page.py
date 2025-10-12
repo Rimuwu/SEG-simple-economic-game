@@ -13,7 +13,7 @@ Page = OneUserPage
 
 class FactoryMenu(Page):
     
-    __for_blocked_pages__ = ['factory-start-groups', 'factory-rekit-groups', 'factory-rekit-count', 'factory-rekit-resource', 'factory-rekit-produce', "factory-select-mode"]
+    __for_blocked_pages__ = ['factory-start-groups', 'factory-rekit-groups', 'factory-rekit-count', 'factory-rekit-resource', 'factory-rekit-produce', 'factory-select-mode', 'factory-change-mode']
     __page_name__ = "factory-menu"
     
     def get_resource_name(self, resource_key: str) -> str:
@@ -137,17 +137,17 @@ class FactoryMenu(Page):
                 )
             },
             {
-                'text': '🛒 Купить заводы',
-                'callback_data': callback_generator(
-                    self.scene.__scene_name__,
-                    'buy_factories'
-                )
-            },
-            {
                 'text': '🔄 Перекомплектовать',
                 'callback_data': callback_generator(
                     self.scene.__scene_name__,
                     'rekit'
+                )
+            },
+            {
+                'text': '🔀 Изменить режим',
+                'callback_data': callback_generator(
+                    self.scene.__scene_name__,
+                    'change_mode'
                 )
             }
         ]
@@ -167,6 +167,12 @@ class FactoryMenu(Page):
         # TODO: Реализовать страницу покупки заводов
         await callback.answer("🚧 Страница покупки заводов в разработке", show_alert=True)
         # await self.scene.update_page('factory-buy')
+    
+    @Page.on_callback('change_mode')
+    async def show_change_mode_menu(self, callback: CallbackQuery, args: list):
+        """Переход на страницу изменения режима производства"""
+        await self.scene.update_page('factory-change-mode')
+        await callback.answer()
     
     @Page.on_callback('rekit')
     async def show_rekit_menu(self, callback: CallbackQuery, args: list):

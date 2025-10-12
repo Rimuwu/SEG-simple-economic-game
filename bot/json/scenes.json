@@ -161,6 +161,10 @@
                     "main-page": "↪️ Назад"
                 }
             },
+            "factory-change-mode": {
+                "image": "img/main_company.png",
+                "content": ""
+            },
             "factory-rekit-groups": {
                 "image": "img/main_company.png",
                 "content": ""
