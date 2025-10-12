@@ -18,7 +18,7 @@ ws_client = create_client(
 )
 
 # Функции для работы с компаниями
-async def get_companies(session_id: Optional[int] = None, in_prison: Optional[bool] = None, cell_position: Optional[str] = None):
+async def get_companies(session_id: Optional[str] = None, in_prison: Optional[bool] = None, cell_position: Optional[str] = None):
     """Получение списка компаний"""
     return await ws_client.send_message(
         "get-companies",
