@@ -16,10 +16,8 @@
       <button @click="testWebSocket">Test WebSocket</button>
     </div>
     <div class="panel-section">
-      <h3>Session & Map Test</h3>
-      <button @click="testSessionJoin">Test Session Join</button>
-      <button @click="testMapRefresh">Refresh Map</button>
-      <button @click="debugMapInfo">Debug Map Info</button>
+      <h3>Preparation State</h3>
+      <button @click="togglePrepState">Toggle Preparation State</button>
     </div>
   </div>
 </template>
@@ -27,98 +25,27 @@
 <script setup>
 import { inject } from 'vue'
 
+// Toggle prepState between 0 and 1 using the global window.prepState
+function togglePrepState() {
+  if (window.prepState && typeof window.prepState.value === 'number') {
+    window.prepState.value = window.prepState.value === 0 ? 1 : 0;
+  }
+}
+
 const wsManager = inject('wsManager', null)
 
 function testLog() {
 }
 
 function testError() {
-  if (typeof window.error === 'function') {
-    window.error('This is a test error message from Admin Panel')
-  } else {
-    console.error('Error function not available yet')
-  }
+  console.error('This is a test error message from Admin Panel')
 }
 
 function testWebSocket() {
   if (wsManager) {
     wsManager.ping()
   } else {
-    if (typeof window.error === 'function') {
-      window.error('WebSocket manager not available')
-    }
-  }
-}
-
-function testSessionJoin() {
-  if (wsManager) {
-    const testSessionId = 'test_session_123'
-    wsManager.join_session(testSessionId, (result) => {
-      if (result.success) {
-        if (typeof window.log === 'function') {
-          window.log('Test session join successful: ' + JSON.stringify(result.data))
-        }
-      } else {
-        if (typeof window.error === 'function') {
-          window.error('Test session join failed: ' + result.error)
-        }
-      }
-    })
-  } else {
-    if (typeof window.error === 'function') {
-      window.error('WebSocket manager not available')
-    }
-  }
-}
-
-function testMapRefresh() {
-  if (wsManager) {
-    if (wsManager.map) {
-      wsManager.refreshMap()
-      if (typeof window.log === 'function') {
-        window.log('Map refresh requested - check current page for updates')
-      }
-    } else {
-      if (typeof window.error === 'function') {
-        window.error('No map data available to refresh')
-      }
-    }
-  } else {
-    if (typeof window.error === 'function') {
-      window.error('WebSocket manager not available')
-    }
-  }
-}
-
-function debugMapInfo() {
-  if (wsManager) {
-    const mapElement = document.getElementById('map');
-    if (mapElement) {
-      const computedStyle = window.getComputedStyle(mapElement);
-      const info = {
-        mapData: wsManager.map,
-        elementSize: {
-          width: mapElement.offsetWidth + 'px',
-          height: mapElement.offsetHeight + 'px',
-          computedWidth: computedStyle.width,
-          computedHeight: computedStyle.height
-        },
-        gridColumns: computedStyle.gridTemplateColumns,
-        tiles: mapElement.children.length
-      };
-      
-      if (typeof window.log === 'function') {
-        window.log('Map debug info: ' + JSON.stringify(info, null, 2));
-      }
-    } else {
-      if (typeof window.error === 'function') {
-        window.error('No #map element found on current page');
-      }
-    }
-  } else {
-    if (typeof window.error === 'function') {
-      window.error('WebSocket manager not available');
-    }
+    console.error('WebSocket manager not available')
   }
 }
 </script>

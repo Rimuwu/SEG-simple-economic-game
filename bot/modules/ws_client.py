@@ -13,7 +13,7 @@ bot_logger = Logger.get_logger("bot")
 # Создаем WebSocket клиента
 ws_client = create_client(
     client_id=f"bot_client_{int(time.time())}", 
-    uri=os.getenv("WS_SERVER_URI", "ws://localhost:8000/ws/connect"),
+    uri=os.getenv("WS_SERVER_URI", "ws://localhost:81/ws/connect"),
     logger=bot_logger
 )
 

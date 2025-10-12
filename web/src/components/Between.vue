@@ -1,244 +1,391 @@
 <script setup>
 import Map from './Map.vue'
-import { onMounted, onUnmounted, ref } from 'vue'
-import { gsap } from 'gsap'
-import { animationConfig, getDuration, getDelay } from '../animationConfig.js'
+import { onMounted, ref, inject, computed } from 'vue'
 
 const pageRef = ref(null)
+const wsManager = inject('wsManager', null)
 
-function playEntranceAnimation() {
-  // Set initial positions (elements start off-screen)
-  gsap.set('#map-title', { y: -100, opacity: 0 })
-  gsap.set('#round-info', { y: 100, opacity: 0 })
-  gsap.set('#column-right-header', { y: -80, opacity: 0 })
-  gsap.set('#column-right-content-top .column:first-child', { x: -200, opacity: 0 })
-  gsap.set('#column-right-content-top .column:last-child', { x: 200, opacity: 0 })
-  gsap.set('#column-right-content-bottom', { y: 150, opacity: 0 })
-
-  gsap.set('#map', { scale: 0.5, opacity: 0 })
-
-
-  // Create entrance animation timeline
-  const tl = gsap.timeline({ delay: getDelay(animationConfig.durations.delay) })
-
-  tl.to('#map-title', { y: 0, opacity: 1, duration: getDuration(animationConfig.durations.entrance), ease: animationConfig.ease.bounce })
-    .to('#map', { scale: 1, opacity: 1, duration: getDuration(animationConfig.durations.map), ease: animationConfig.ease.mapBounce }, '-=0.4')
-    .to('#round-info', { y: 0, opacity: 1, duration: getDuration(animationConfig.durations.entrance), ease: animationConfig.ease.bounce }, '-=0.6')
-    .to('#column-right-header', { y: 0, opacity: 1, duration: getDuration(animationConfig.durations.slide), ease: animationConfig.ease.smooth }, '-=0.5')
-    .to('#column-right-content-top .column:first-child', { x: 0, opacity: 1, duration: getDuration(animationConfig.durations.slide), ease: animationConfig.ease.smooth }, '-=0.4')
-    .to('#column-right-content-top .column:last-child', { x: 0, opacity: 1, duration: getDuration(animationConfig.durations.slide), ease: animationConfig.ease.smooth }, '-=0.6')
-    .to('#column-right-content-bottom', { y: 0, opacity: 1, duration: getDuration(0.6), ease: animationConfig.ease.smooth }, '-=0.4')
-    .to('.list-item', { y: 0, opacity: 1, duration: getDuration(animationConfig.durations.listItem), ease: animationConfig.ease.smooth, stagger: getDuration(animationConfig.durations.stagger) }, '-=0.3')
-}
-
-function playExitAnimation() {
-  const tl = gsap.timeline()
-
-  tl.to('.list-item', { y: 20, opacity: 0, duration: getDuration(animationConfig.durations.listItemExit), ease: animationConfig.ease.exitSmooth, stagger: getDuration(0.02) })
-    .to('#column-right-content-bottom', { y: 75, opacity: 0, duration: getDuration(animationConfig.durations.exit), ease: animationConfig.ease.exitSmooth }, '-=0.1')
-    .to('#column-right-content-top .column:first-child', { x: -100, opacity: 0, duration: getDuration(animationConfig.durations.exit), ease: animationConfig.ease.exitSmooth }, '-=0.3')
-    .to('#column-right-content-top .column:last-child', { x: 100, opacity: 0, duration: getDuration(animationConfig.durations.exit), ease: animationConfig.ease.exitSmooth }, '-=0.4')
-    .to('#column-right-header', { y: -40, opacity: 0, duration: getDuration(animationConfig.durations.exit), ease: animationConfig.ease.exitSmooth }, '-=0.3')
-    .to('#map-title', { y: -50, opacity: 0, duration: getDuration(animationConfig.durations.exit), ease: animationConfig.ease.exitSmooth }, '-=0.4')
-    .to('#round-info', { y: 50, opacity: 0, duration: getDuration(animationConfig.durations.exit), ease: animationConfig.ease.exitSmooth }, '-=0.4')
-    .to('#map', { scale: 0.8, opacity: 0, duration: getDuration(animationConfig.durations.exit), ease: animationConfig.ease.exitSmooth }, '-=0.3')
-}
-
-onMounted(() => {
-  playEntranceAnimation()
-
-  // Listen for exit animation trigger
-  pageRef.value?.addEventListener('triggerExit', playExitAnimation)
+// Computed properties for time and turn display
+const timeToNextStage = computed(() => {
+  return wsManager?.gameState?.getFormattedTimeToNextStage() || '--:--'
 })
 
-onUnmounted(() => {
-  pageRef.value?.removeEventListener('triggerExit', playExitAnimation)
+const turnInfo = computed(() => {
+  const step = wsManager?.gameState?.state?.session?.step || 0
+  const maxSteps = wsManager?.gameState?.state?.session?.max_steps || 0
+  return `${step}/${maxSteps}`
+})
+
+// Store randomly selected product IDs
+const randomProductIds = ref([])
+
+// Products computed property
+const products = computed(() => {
+  if (!wsManager || !wsManager.gameState) return []
+  
+  const prices = wsManager.gameState.state.itemPrices || {}
+  const allIds = Object.keys(prices)
+  
+  // If we don't have random IDs yet, or if products changed significantly, pick new ones
+  if (randomProductIds.value.length === 0 || randomProductIds.value.length > allIds.length) {
+    const shuffled = [...allIds].sort(() => Math.random() - 0.5)
+    randomProductIds.value = shuffled.slice(0, Math.min(10, allIds.length))
+  }
+  
+  // Map the selected IDs to product objects with localized names
+  return randomProductIds.value
+    .filter(itemId => prices[itemId] !== undefined) // Ensure item still exists
+    .map(itemId => {
+      const price = prices[itemId]
+      // Get localized name from GameState
+      const localizedName = wsManager.gameState.getResourceName(itemId) || itemId
+      
+      console.log(`[Between.vue] Product: ${itemId} -> ${localizedName}, Price: ${price}`)
+      
+      return {
+        id: itemId,
+        name: localizedName,
+        price: price
+      }
+    })
+})
+
+// Leaders computed property
+const leaders = computed(() => {
+  // Try to get session ID from session object
+  let sessionId = wsManager?.gameState?.state?.session?.id
+  
+  // If no session ID, try to get all companies and use the first company's session_id
+  const allCompanies = wsManager?.gameState?.state?.companies || []
+  
+  console.log('[Between.vue] Leaders - Session ID from session:', sessionId)
+  console.log('[Between.vue] Leaders - All companies:', allCompanies)
+  console.log('[Between.vue] Leaders - All companies count:', allCompanies.length)
+  
+  // If sessionId is null but we have companies, use the first company's session_id
+  if (!sessionId && allCompanies.length > 0) {
+    sessionId = allCompanies[0].session_id
+    console.log('[Between.vue] Leaders - Using session_id from first company:', sessionId)
+  }
+  
+  if (!sessionId) {
+    console.log('[Between.vue] Leaders - No sessionId found anywhere')
+    return { capital: null, reputation: null, economic: null }
+  }
+  
+  const companies = wsManager?.gameState?.getCompaniesBySession(sessionId) || []
+  console.log('[Between.vue] Leaders - Filtered companies:', companies)
+  console.log('[Between.vue] Leaders - Filtered companies count:', companies.length)
+  
+  if (companies.length === 0) {
+    console.log('[Between.vue] Leaders - No companies found for session:', sessionId)
+    // Try using all companies as fallback
+    if (allCompanies.length > 0) {
+      console.log('[Between.vue] Leaders - Using all companies as fallback')
+      const byCapital = [...allCompanies].sort((a, b) => (b.balance || 0) - (a.balance || 0))[0]
+      const byReputation = [...allCompanies].sort((a, b) => (b.reputation || 0) - (a.reputation || 0))[0]
+      const byEconomic = [...allCompanies].sort((a, b) => (b.economic_power || 0) - (a.economic_power || 0))[0]
+      
+      console.log('[Between.vue] Leaders - byCapital (fallback):', byCapital)
+      console.log('[Between.vue] Leaders - byReputation (fallback):', byReputation)
+      console.log('[Between.vue] Leaders - byEconomic (fallback):', byEconomic)
+      
+      return {
+        capital: byCapital,
+        reputation: byReputation,
+        economic: byEconomic
+      }
+    }
+    return { capital: null, reputation: null, economic: null }
+  }
+  
+  // Find top companies
+  const byCapital = [...companies].sort((a, b) => (b.balance || 0) - (a.balance || 0))[0]
+  const byReputation = [...companies].sort((a, b) => (b.reputation || 0) - (a.reputation || 0))[0]
+  const byEconomic = [...companies].sort((a, b) => (b.economic_power || 0) - (a.economic_power || 0))[0]
+  
+  console.log('[Between.vue] Leaders - byCapital:', byCapital)
+  console.log('[Between.vue] Leaders - byReputation:', byReputation)
+  console.log('[Between.vue] Leaders - byEconomic:', byEconomic)
+  
+  const result = {
+    capital: byCapital,
+    reputation: byReputation,
+    economic: byEconomic
+  }
+  
+  console.log('[Between.vue] Leaders - result:', result)
+  
+  return result
+})
+
+// Helper to format numbers with thousand separators
+const formatNumber = (num) => {
+  return num?.toLocaleString('ru-RU') || '0'
+}
+
+// Event computed property
+const currentEvent = computed(() => {
+  return wsManager?.gameState?.getEvent() || null
+})
+
+// Helper to get event status text
+const eventStatusText = computed(() => {
+  const event = currentEvent.value
+  if (!event || !event.id) return null
+  
+  if (event.is_active) {
+    return 'Действует сейчас'
+  } else if (event.starts_next_turn) {
+    return 'Начнётся на следующем ходу'
+  } else if (event.predictable) {
+  const stepsUntil = event.start_step - wsManager?.gameState?.state?.session?.step
+    return `Начнётся через ${stepsUntil} ход${stepsUntil === 1 ? '' : stepsUntil < 5 ? 'а' : 'ов'}`
+  }
+  return null
+})
+
+onMounted(() => {
+  // Component mounted
 })
 </script>
 
+
 <template>
+  <!--
+    Preparation page layout.
+    Left column: title, map, session key.
+    Right columns: alternating company slots (left/right).
+  -->
   <div id="page" ref="pageRef">
-    <div id="column-left">
-      <div id="map-title">
-        Карта мира
+    <div class="left">
+      <Map class="map" />
+      <div class="footer">
+        <div>До конца этапа {{ timeToNextStage }}</div>
+        <div>{{ turnInfo }}</div>
       </div>
-
-      <Map />
-
-      <div id="round-info">
-        <div id="timer">
-          Время до конца этапа: 00:00
-        </div>
-        <div id="teams-ready">
-          4/10
-        </div>
-      </div>
-
     </div>
+    <div class="right">
+      <div class="grid">
 
-    <div id="column-right">
-      <div id="column-right-header">
-        <p class="column-title"> Лучшие Результаты </p>
-        <p class="column-title"> Топ компании </p>
-      </div>
-      <div id="column-right-content-top">
-        <div id="list-col-left" class="column">
-          <div v-for="n in 3" :key="n" class="list-item" :id="'demand-' + n">
-            Результат {{ n }}
+        <div class="products grid-item">
+          <p class="title">ТОВАРЫ</p>
+          <div class="content">
+            <section v-for="product in products" :key="product.id">
+              <p class="name">{{ product.name }} — {{ product.price }} ₽</p>
+            </section>
+            <section v-if="products.length === 0">
+              <p class="desc">Цены на товары загружаются...</p>
+            </section>
           </div>
         </div>
-        <div id="list-col-right" class="column">
-          <div v-for="n in 3" :key="n" class="list-item" :id="'stock-' + n">
-            Топовая компания {{ n }}
+
+        <div class="leaders grid-item">
+          <p class="title">ЛИДЕРЫ</p>
+          <div class="content">
+            <section>
+              <p class="name">ПО КАПИТАЛУ</p>
+              <p class="desc" v-if="leaders.capital">{{ leaders.capital.name }} ({{ formatNumber(leaders.capital.balance) }} ₽)</p>
+              <p class="desc" v-else>—</p>
+            </section>
+            <section>
+              <p class="name">ПО РЕПУТАЦИИ</p>
+              <p class="desc" v-if="leaders.reputation">{{ leaders.reputation.name }} ({{ leaders.reputation.reputation }})</p>
+              <p class="desc" v-else>—</p>
+            </section>
+            <section>
+              <p class="name">ПО ЭКОНОМИЧЕСКОМУ УРОВНЮ</p>
+              <p class="desc" v-if="leaders.economic">{{ leaders.economic.name }} ({{ leaders.economic.economic_power }})</p>
+              <p class="desc" v-else>—</p>
+            </section>
           </div>
         </div>
       </div>
-      <div id="column-right-content-bottom">
-        Информация о событии
+
+      <div class="events">
+        <div v-if="currentEvent && currentEvent.id" class="event-content">
+          <div class="event-name">{{ currentEvent.name }}</div>
+          <div class="event-status" v-if="eventStatusText">{{ eventStatusText }}</div>
+          <div class="event-description">{{ currentEvent.description }}</div>
+        </div>
+        <span v-else>Нет событий</span>
       </div>
+
     </div>
   </div>
-
 </template>
 
 <style scoped>
 #page {
   display: flex;
+  height: 100vh;
+  background-color: #3D8C00;
+  font-family: "Inter", sans-serif;
+  padding: 0;
   margin: 0;
-  padding: var(--spacing-sm);
-
-  gap: var(--spacing-lg);
-  width: calc(100vw - var(--spacing-sm) * 2);
-  height: calc(100vh - var(--spacing-sm) * 2);
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
 }
 
-#column-left {
-  flex: 1;
-  height: 100%;
-  width: 100%;
+.left,
+.right {
+  width: 50%;
+  padding: 40px;
+}
+
+
+.left {
+  background-color: #3D8C00;
   display: flex;
   flex-direction: column;
   align-items: center;
-  justify-content: space-between;
-  gap: var(--spacing-sm);
+  justify-content: center;
 }
 
-#column-right {
-  flex: 1;
-  display: flex;
-  flex-direction: column;
-}
+.right {
+  background-color: #0C6892;
 
-#column-right-content-top {
-  flex: 1;
-  display: flex;
-  gap: var(--spacing-sm);
-}
-
-#column-right-content-bottom {
-  min-height: 100px;
-  background-color: lightgray;
   color: black;
-  border: var(--border-width) solid gray;
-  border-radius: var(--border-radius);
-  padding: var(--spacing-sm) 0;
-  font-size: var(--text-md);
-
-  text-align: center;
-  margin-top: var(--spacing-sm);
+  padding: 90px 50px;
 }
 
-#column-right-header {
+.grid {
+  margin: auto;
   display: flex;
   flex-direction: row;
+  gap: 5%;
+  padding: 0;
+  margin: 0;
+
+  width: 100%;
+
+  justify-items: stretch;
+  align-items: stretch;
+  align-content: stretch;
+  justify-content: space-between;
+  margin-bottom: 40px;
 }
 
-.column-title {
-  flex: 1;
-  font-size: var(--text-xl);
-  font-weight: 700;
-  text-align: center;
-  margin-bottom: var(--spacing-sm);
+.grid-item {
+  width: 100%;
+  height: 100%;
+  /* background: #0f0; */
+}
+
+.content {
+  font-size: 2.25rem;
   color: white;
-  text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.3);
+  font-weight: 400;
 }
 
-.column {
-  flex: 1;
+.title {
+  font-size: 4rem;
+  margin: 0;
+  margin-bottom: 10px;
+  text-transform: uppercase;
+  margin-bottom: 20px;
+  color: white;
+  text-align: center;
+}
+
+.products .content,
+.leaders .content {
   display: flex;
   flex-direction: column;
-  gap: var(--spacing-sm);
-  margin: var(--spacing-sm);
+  gap: 36px;
 }
 
-.list-item {
-  background: rgba(255, 255, 255, 0.95);
-  color: #333;
-  border: var(--border-width) solid rgba(255, 255, 255, 0.3);
-  border-radius: var(--border-radius);
-  padding: var(--spacing-sm);
-  font-size: var(--text-md);
+.products .content {
+  gap: 10px;
+}
+
+.products section,
+.leaders section {
+  background: #3D8C00;
+  padding: 5px 10px;
+}
+
+.content {
+  font-family: "Ubuntu Mono", monospace;
   text-align: center;
-  flex: 1;
-  font-weight: 600;
-  transition: all 0.2s ease;
-  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.15);
-  backdrop-filter: blur(10px);
-  /* Initial state for animation */
-  transform: translateY(20px);
-  opacity: 0;
 }
 
-.list-item:hover {
-  background: rgba(255, 255, 255, 1);
-  transform: translateY(-2px);
-  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.2);
+.name {
+  font-size: 3rem;
+  text-transform: uppercase;
+  margin: 0;
 }
 
-#map-title {
-  font-size: var(--text-xl);
-  font-weight: 700;
-  text-align: center;
-  margin: var(--spacing-sm) 0;
-  padding: var(--spacing-sm) 0;
-  width: 90%;
-  color: white;
-  text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.3);
+.products .name {
+  font-size: 2rem;
 }
 
-#round-info {
-  display: flex;
-  align-items: stretch;
-  justify-content: stretch;
-  gap: var(--spacing-sm);
+.desc {
+  opacity: 80%;
+  margin: 0;
+
 }
 
-#timer,
-#teams-ready {
-  font-size: var(--text-lg);
+.events {
+  font-size: 5rem;
+  text-transform: uppercase;
+
   text-align: center;
   justify-content: center;
-  padding: var(--spacing-md);
-  background: rgba(255, 255, 255, 0.95);
-  color: #333;
-  border-radius: var(--border-radius);
-  border: var(--border-width) solid rgba(255, 255, 255, 0.3);
-  font-weight: 700;
-  backdrop-filter: blur(10px);
-  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
-  transition: all 0.2s ease;
+
+  padding: 40px 0;
+
+  background-color: #3D8C00;
+
+  color: white;
+  font-family: "Ubuntu Mono", monospace;
 }
 
-#timer:hover,
-#teams-ready:hover {
-  background: rgba(255, 255, 255, 1);
-  transform: translateY(-2px);
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+.event-content {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
 }
 
+.event-name {
+  font-size: 5rem;
+  font-weight: bold;
+}
 
-Map {
+.event-status {
+  font-size: 2.5rem;
+  opacity: 0.8;
+  font-style: italic;
+}
+
+.event-description {
+  font-size: 3rem;
+  opacity: 0.9;
+  margin-top: 10px;
+}
+
+.footer {
+  width: 90%;
+
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  justify-content: space-between;
+
+  font-weight: normal;
+  font-size: 4rem;
+
+  gap: 5%;
+
+  color: white;
+}
+
+.footer div {
+  background: #0C6792;
+  padding: 25px 50px;
+}
+
+.map {
+  width: 90%;
   margin: 0;
+  padding: 0;
 }
 </style>

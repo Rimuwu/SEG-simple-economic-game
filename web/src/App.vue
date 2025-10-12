@@ -1,6 +1,5 @@
-globalThis.wsManager = wsManager
 <script setup>
-import { ref, reactive, provide } from 'vue'
+import { ref, reactive, provide, watch, computed } from 'vue'
 
 /**
  * Shared map state for singleton Map component.
@@ -21,7 +20,6 @@ import Game from './components/Game.vue'
 import Between from './components/Between.vue'
 import Endgame from './components/Endgame.vue'
 import AdminPanel from './components/AdminPanel.vue'
-import OutputConsole from './components/OutputConsole.vue'
 
 import { WebSocketManager } from './ws'
 
@@ -35,18 +33,50 @@ const currentView = ref('Introduction')
  * @type {import('vue').Ref<boolean>}
  */
 const showAdmin = ref(false)
-/**
- * Ref to the OutputConsole component instance.
- * @type {import('vue').Ref<InstanceType<typeof OutputConsole>>}
- */
-const outputConsole = ref(null)
 
 /**
- * Changes the current view/page.
+ * Controls the transition animation state
+ * @type {import('vue').Ref<boolean>}
+ */
+const isTransitioning = ref(false)
+
+/**
+ * Changes the current view/page with transition animation.
  * @param {string} view - The view name to show.
  */
 function handleShow(view) {
-  currentView.value = view
+  isTransitioning.value = true
+  
+  // Wait for animation to reach middle (screen covered), then change view
+  setTimeout(() => {
+    currentView.value = view
+  }, 400) // Half of the 800ms animation
+  
+  // Reset transitioning state after animation completes
+  setTimeout(() => {
+    isTransitioning.value = false
+  }, 800)
+}
+
+/**
+ * Map session stage to view component name
+ * @param {string} stage - Session stage from API
+ * @returns {string} - Component name
+ */
+function stageToView(stage) {
+  switch (stage) {
+    case 'FreeUserConnect':
+    case 'CellSelect':
+      return 'Preparation'
+    case 'Game':
+      return 'Game'
+    case 'ChangeTurn':
+      return 'Between'
+    case 'End':
+      return 'Endgame'
+    default:
+      return currentView.value // Keep current view if unknown stage
+  }
 }
 
 /**
@@ -67,20 +97,15 @@ function handleAdminLeave() {
 }
 
 /**
- * Triggers exit animation for the leaving component.
- * @param {HTMLElement} el
+ * Determine WebSocket URL based on current page location
+ * @returns {string} WebSocket URL
  */
-function handleBeforeLeave(el) {
-  const exitEvent = new CustomEvent('triggerExit')
-  el.dispatchEvent(exitEvent)
-}
+function getWebSocketUrl() {
+  const hostname = window.location.hostname
+  const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:'
 
-/**
- * Placeholder for enter animation logic (handled in child components).
- * @param {HTMLElement} el
- */
-function handleEnter(el) {
-  // The enter animation is handled by each component's onMounted
+  // Use the same hostname as the web page with port 81
+  return `${protocol}//${hostname}:81/ws/connect`
 }
 
 /**
@@ -89,9 +114,28 @@ function handleEnter(el) {
  * @type {WebSocketManager}
  */
 let wsManager = null
-wsManager = new WebSocketManager('ws://localhost:8000/ws/connect', globalThis.console)
+const wsUrl = getWebSocketUrl()
+console.log(`🔌 Connecting to WebSocket: ${wsUrl}`)
+wsManager = new WebSocketManager(wsUrl)
 wsManager.connect()
 globalThis.wsManager = wsManager
+
+/**
+ * Watch for session stage changes and automatically navigate to appropriate view
+ */
+watch(
+  () => wsManager.gameState?.state?.session?.stage,
+  (newStage, oldStage) => {
+    if (newStage && newStage !== oldStage) {
+      const targetView = stageToView(newStage)
+      if (targetView !== currentView.value && targetView !== 'Introduction') {
+        console.log(`🎮 Stage changed: ${oldStage} → ${newStage}, navigating to ${targetView}`)
+        handleShow(targetView)
+      }
+    }
+  },
+  { immediate: false }
+)
 
 /**
  * Globally available function to refresh the map from session data.
@@ -99,18 +143,220 @@ globalThis.wsManager = wsManager
 globalThis.refreshMap = () => {
   if (wsManager && wsManager.map) {
     wsManager.refreshMap()
-    if (typeof window.log === 'function') {
-      window.log('Global map refresh called')
-    }
+    console.log('Global map refresh called')
   } else {
-    if (typeof window.error === 'function') {
-      window.error('No map data available for global refresh')
-    }
+    console.error('No map data available for global refresh')
   }
 }
 
+// ==================== DEBUG FUNCTIONS ====================
+// These functions are available in DevTools console for debugging
+
+/**
+ * Get the current game state for debugging
+ * Usage in console: getGameState()
+ */
+globalThis.getGameState = () => {
+  if (!wsManager || !wsManager.gameState) {
+    console.error('❌ GameState not available')
+    return null
+  }
+  const state = wsManager.gameState.toJSON()
+  console.log('🎮 Current Game State:')
+  console.table({
+    'Session ID': state.session.id || 'None',
+    'Stage': state.session.stage || 'None',
+    'Step': `${state.session.step}/${state.session.max_steps}`,
+    'Connected': state.connected ? '✅' : '❌',
+    'Companies': state.companies.length,
+    'Users': state.users.length,
+    'Factories': state.factories.length,
+    'Exchanges': state.exchanges.length,
+    'Map Loaded': state.map.loaded ? '✅' : '❌'
+  })
+  return state
+}
+
+/**
+ * Helper function to download a file
+ */
+function downloadFile(content, fileName, contentType) {
+    var a = document.createElement("a");
+    var file = new Blob([content], {type: contentType});
+    a.href = URL.createObjectURL(file);
+    a.download = fileName;
+    a.click();
+}
+
+/**
+ * Get detailed game state as JSON
+ * Usage: getGameStateJSON()
+ */
+globalThis.saveGameState = () => {
+  if (!wsManager || !wsManager.gameState) {
+    console.error('❌ GameState not available')
+    return null
+  }
+  let timestamp = new Date();
+  const formatedTime = `${timestamp.getHours()}.${timestamp.getMinutes()}.${timestamp.getSeconds()}`
+  downloadFile(JSON.stringify(wsManager.gameState.toJSON()), formatedTime + "_gameState.json", "text/plain")
+}
+
+/**
+ * Log current game state to console
+ * Usage: logGameState()
+ */
+globalThis.logGameState = () => {
+  if (!wsManager || !wsManager.gameState) {
+    console.error('❌ GameState not available')
+    return
+  }
+  wsManager.gameState.logState()
+}
+
+/**
+ * Get all companies
+ * Usage: getCompanies()
+ */
+globalThis.getCompanies = () => {
+  if (!wsManager) return []
+  console.table(wsManager.gameState.state.companies)
+  return wsManager.gameState.state.companies
+}
+
+/**
+ * Get all users
+ * Usage: getUsers()
+ */
+globalThis.getUsers = () => {
+  if (!wsManager) return []
+  console.table(wsManager.gameState.state.users)
+  return wsManager.gameState.state.users
+}
+
+/**
+ * Get session info
+ * Usage: getSession()
+ */
+globalThis.getSession = () => {
+  if (!wsManager) return null
+  const session = wsManager.gameState.state.session
+  console.log('📍 Session Info:', session)
+  return session
+}
+
+/**
+ * Get map data
+ * Usage: getMap()
+ */
+globalThis.getMap = () => {
+  if (!wsManager) return null
+  const map = wsManager.gameState.getMapData()
+  console.log('🗺️ Map Data:', {
+    size: map.size,
+    cellCount: map.cells.length,
+    loaded: map.loaded,
+    pattern: map.pattern
+  })
+  return map
+}
+
+/**
+ * Get exchange offers
+ * Usage: getExchanges()
+ */
+globalThis.getExchanges = () => {
+  if (!wsManager) return []
+  console.table(wsManager.gameState.state.exchanges)
+  return wsManager.gameState.state.exchanges
+}
+
+/**
+ * Get factories
+ * Usage: getFactories()
+ */
+globalThis.getFactories = () => {
+  if (!wsManager) return []
+  console.table(wsManager.gameState.state.factories)
+  return wsManager.gameState.state.factories
+}
+
+/**
+ * Get winners (if game ended)
+ * Usage: getWinners()
+ */
+globalThis.getWinners = () => {
+  if (!wsManager) return null
+  const winners = wsManager.gameState.getWinners()
+  console.log('🏆 Winners:', winners)
+  return winners
+}
+
+/**
+ * Get current user info
+ * Usage: getCurrentUser()
+ */
+globalThis.getCurrentUser = () => {
+  if (!wsManager) return null
+  const user = wsManager.gameState.state.currentUser
+  console.log('👤 Current User:', user)
+  return user
+}
+
+/**
+ * Refresh all game data
+ * Usage: refreshGameData()
+ */
+globalThis.refreshGameData = () => {
+  if (!wsManager) {
+    console.error('❌ WebSocket manager not available')
+    return
+  }
+  console.log('🔄 Refreshing all game data...')
+  wsManager.fetchAllGameData()
+}
+
+/**
+ * Show available debug commands
+ * Usage: debugHelp()
+ */
+globalThis.debugHelp = () => {
+  console.log(`
+🎮 Available Debug Commands:
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+📊 State Access:
+  getGameState()      - Get formatted game state overview
+  getGameStateJSON()  - Get raw game state as JSON
+  logGameState()      - Log detailed state to console
+
+🎯 Specific Data:
+  getSession()        - Get session information
+  getCompanies()      - Get all companies (table format)
+  getUsers()          - Get all users (table format)
+  getMap()            - Get map data
+  getExchanges()      - Get exchange offers
+  getFactories()      - Get factories
+  getWinners()        - Get game winners (if ended)
+  getCurrentUser()    - Get current user info
+
+🔧 Actions:
+  refreshGameData()   - Refresh all game data from server
+  refreshMap()        - Refresh map display
+
+💡 Direct Access:
+  wsManager           - WebSocketManager instance
+  wsManager.gameState - GameState instance
+  wsManager.state     - Reactive state object
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  `)
+}
+
+// Log available debug commands on load
+console.log('🎮 Game loaded! Type debugHelp() for available commands.')
+
 provide('wsManager', wsManager)
-provide('outputConsole', outputConsole)
 </script>
 
 <template>
@@ -122,32 +368,62 @@ provide('outputConsole', outputConsole)
     <!-- Admin panel overlay, shown when mouse is in top-left corner -->
     <AdminPanel v-if="showAdmin" @show="handleShow" @mouseleave="handleAdminLeave"
       style="position: fixed; left: 0; top: 0; width: 320px; z-index: 1000;" />
-    <!-- Floating output console for logs and errors -->
-    <OutputConsole ref="outputConsole" />
-    <!-- Page transition wrapper for animated navigation between views -->
-    <component :is="currentView === 'Introduction' ? Introduction :
-        currentView === 'Preparation' ? Preparation :
-          currentView === 'Between' ? Between :
-            currentView === 'Endgame' ? Endgame :
-              Game
-      " :key="currentView" @navigateTo="handleShow" />
+
+
+      <component :is="currentView === 'Introduction' ? Introduction :
+          currentView === 'Preparation' ? Preparation :
+            currentView === 'Between' ? Between :
+              currentView === 'Endgame' ? Endgame :
+                Game
+        " :key="currentView" @navigateTo="handleShow" />
+
+    <!-- Black transition overlay -->
+    <div class="transition-overlay" :class="{ 'transitioning': isTransitioning }"></div>
   </div>
 </template>
 
 <style scoped>
 /*
-  Page transition styles for fade-in/fade-out between views.
+  Black rectangle sliding transition overlay.
 */
-.page-enter-active {
-  transition: opacity 0.1s ease;
+.transition-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100vh;
+  background-color: #1E1E1E;
+  z-index: 999;
+  transform: translateY(-100%);
+  pointer-events: none;
 }
 
+/*
+  Page transition styles with sliding black rectangle effect.
+  The overlay slides down from top, covers the screen, then slides down to bottom.
+*/
 .page-leave-active {
-  transition: opacity 0.3s ease;
+  transition-delay: 0s;
 }
 
-.page-enter-from,
-.page-leave-to {
-  opacity: 0;
+.page-enter-active {
+  transition-delay: 0.4s;
+}
+
+/* Animation for the black overlay */
+@keyframes slideDown {
+  0% {
+    transform: translateY(-100%);
+  }
+  50% {
+    transform: translateY(0);
+  }
+  100% {
+    transform: translateY(100%);
+  }
+}
+
+.transitioning {
+  animation: slideDown 0.8s ease-in-out;
 }
 </style>
