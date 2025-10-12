@@ -5,7 +5,7 @@ from oms.utils import callback_generator
 from global_modules.bank import get_credit_conditions, calc_credit, CAPITAL
 from global_modules.load_config import ALL_CONFIGS
 from pprint import pprint
-from oneuser_page import OneUserPage
+from .oneuser_page import OneUserPage
 
 class BankCreditPage(OneUserPage):
     

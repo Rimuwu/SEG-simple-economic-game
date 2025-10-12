@@ -4,7 +4,7 @@ from oms.utils import callback_generator
 from global_modules.logs import Logger
 from global_modules.load_config import ALL_CONFIGS, Resources
 from modules.ws_client import company_complete_free_factories, get_factories, factory_set_auto, factory_recomplectation
-from oneuser_page import OneUserPage
+from .oneuser_page import OneUserPage
 
 bot_logger = Logger.get_logger("bot")
 RESOURCES: Resources = ALL_CONFIGS["resources"]
