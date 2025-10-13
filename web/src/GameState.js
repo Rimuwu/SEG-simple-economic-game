@@ -350,6 +350,15 @@ export class GameState {
     }
     this.state.cities = cities;
     console.log('[GameState] Cities updated:', cities.length);
+    
+    // Log demands for debugging
+    cities.forEach(city => {
+      console.log(`[GameState] City ${city.id} (${city.name}):`, 
+        city.demands ? Object.keys(city.demands).length + ' demands' : 'NO DEMANDS');
+      if (city.demands) {
+        console.log(`[GameState] City ${city.id} demands:`, city.demands);
+      }
+    });
   }
 
   /**
@@ -669,11 +678,16 @@ export class GameState {
    * @param {number} seconds
    */
   updateTimeToNextStage(seconds) {
+    console.log('[GameState] updateTimeToNextStage called with:', seconds);
     // Ensure we have a valid number
     if (typeof seconds === 'number' && !isNaN(seconds)) {
       this.state.timeToNextStage = Math.max(0, seconds);
+      console.log('[GameState] Time updated to:', this.state.timeToNextStage);
     } else if (seconds === null || seconds === undefined) {
       this.state.timeToNextStage = null;
+      console.log('[GameState] Time set to null');
+    } else {
+      console.warn('[GameState] Invalid time value:', seconds);
     }
   }
 

@@ -35,17 +35,27 @@ const city4 = computed(() => {
 
 // Helper function to format city demands
 const formatCityDemands = (city) => {
-  if (!city || !city.demands) return []
+  console.log('[Game.vue] formatCityDemands called for city:', city);
+  
+  if (!city || !city.demands) {
+    console.log('[Game.vue] No city or no demands:', { city: !!city, demands: !!city?.demands });
+    return []
+  }
+  
+  console.log('[Game.vue] City demands object:', city.demands);
   
   // Filter demands with amount > 0 and get only 2
-  return Object.entries(city.demands)
+  const formatted = Object.entries(city.demands)
     .filter(([_, demand]) => demand.amount > 0)
     .slice(0, 2)
     .map(([resourceId, demand]) => ({
       resourceId,
       amount: demand.amount,
       price: demand.price
-    }))
+    }));
+  
+  console.log('[Game.vue] Formatted demands:', formatted);
+  return formatted;
 }
 
 // Computed property for exchanges (latest 4, newest first)
