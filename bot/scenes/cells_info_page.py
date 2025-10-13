@@ -29,14 +29,16 @@ class CellsInfo(Page):
         cell_type = company_data.get('cell_type', 'unknown')
         cell_info = company_data.get('cell_info', {})
         position_coords = company_data.get('position_coords', [0, 0])
-        
-        
+        resource_data = RESOURCES.get_resource(cell_info["resource_id"])
+        text_res = f"{resource_data.emoji} {resource_data.label}"
         # Преобразуем координаты в буквенный формат
         cell_position = xy_into_cell(position_coords[1], position_coords[0])
         # Формируем текст
-        text = f"""{cell_info["label"]}, {cell_position}, {position_coords}, {cell_type}
-        Информация о клетке
+        text = f"""Информация о клетке
         
-        Тип клетки: {cell_info["label"]}"""
+Тип клетки: {cell_info["label"]}
+Ресурс: {text_res}
+Расположение: {cell_position}
+        """
         
         return text
