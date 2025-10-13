@@ -48,13 +48,14 @@ const formatCityDemands = (city) => {
     }))
 }
 
-// Computed property for exchanges (latest 4)
+// Computed property for exchanges (latest 4, newest first)
 const latestExchanges = computed(() => {
   const exchanges = wsManager?.gameState?.state?.exchanges || []
   const sessionExchanges = exchanges.filter(e => 
     e.session_id === wsManager?.gameState?.state?.session?.id
   )
-  return sessionExchanges.slice(0, 4)
+  // Get the last 4 exchanges (most recent) and reverse to show newest first
+  return sessionExchanges.slice(-4).reverse()
 })
 
 // Helper function to get company name by ID
@@ -77,7 +78,7 @@ const formatExchangeText = (exchange) => {
   return `${companyName} выставила на продажу ${resourceName}`
 }
 
-// Computed property for contracts (latest 2)
+// Computed property for contracts (latest 2, newest first)
 const latestContracts = computed(() => {
   const contracts = wsManager?.gameState?.state?.contracts || []
   const sessionContracts = contracts.filter(c => 
@@ -85,7 +86,8 @@ const latestContracts = computed(() => {
   )
   // Show pending contracts first (not yet accepted)
   const pendingContracts = sessionContracts.filter(c => !c.accepted)
-  return pendingContracts.slice(0, 2)
+  // Get the last 2 contracts (most recent) and reverse to show newest first
+  return pendingContracts.slice(-2).reverse()
 })
 
 // Helper function to format contract text (matching the existing format)
