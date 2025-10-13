@@ -905,6 +905,11 @@ class Company(BaseClass):
             Начисляет доход по вкладам на баланс вклада (не на счёт компании).
             Автоматически снимает депозиты по окончании срока.
         """
+        from game.session import session_manager
+        
+        session = session_manager.get_session(self.session_id)
+        if not session:
+            return False
 
         for index, deposit in enumerate(self.deposits):
             if deposit["steps_now"] < deposit["steps_total"]:
@@ -915,10 +920,10 @@ class Company(BaseClass):
             deposit["steps_now"] += 1
 
             # Если срок депозита истек, то снимаем
-            if deposit["steps_now"] >= deposit["steps_total"]:
-
-                if self.in_prison is False:
+            if self.in_prison is False:
+                try:
                     self.withdraw_deposit(index)
+                except: pass
 
         self.save_to_base()
         self.reupdate()
