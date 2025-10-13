@@ -101,6 +101,9 @@ export class GameState {
     this._countdownInterval = setInterval(() => {
       if (this.state.timeToNextStage !== null && this.state.timeToNextStage > 0) {
         this.state.timeToNextStage--;
+      } else if (this.state.timeToNextStage !== null && this.state.timeToNextStage < 0) {
+        // Prevent negative values, set to 0
+        this.state.timeToNextStage = 0;
       }
     }, 1000);
   }
@@ -666,7 +669,12 @@ export class GameState {
    * @param {number} seconds
    */
   updateTimeToNextStage(seconds) {
-    this.state.timeToNextStage = seconds;
+    // Ensure we have a valid number
+    if (typeof seconds === 'number' && !isNaN(seconds)) {
+      this.state.timeToNextStage = Math.max(0, seconds);
+    } else if (seconds === null || seconds === undefined) {
+      this.state.timeToNextStage = null;
+    }
   }
 
   /**
