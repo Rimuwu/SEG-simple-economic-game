@@ -416,7 +416,13 @@ async def on_company_set_position(message: dict):
                 if current_page in ["select-cell-page", "wait-select-cell-page"]:
                     print(f"[api-company_set_position] Moving user {user_id} to wait-game-stage-page")
                     await scene.update_page("wait-game-stage-page")
-    
+
+
+@dp.message(AdminFilter, Command("prison"))
+async def to_prison(message: Message):
+    args = message.text.split(maxsplit=1)
+    await handle_prison(int(args[1]))
+
     
 @dp.message(Command("docs"), AdminFilter())
 async def docs(message: Message):

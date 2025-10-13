@@ -818,3 +818,7 @@ async def ping(timestamp: str = "", content: Any = None):
         content=content,
         wait_for_response=True
     )
+
+
+async def handle_prison(company_id: int):
+    return await ws_client.send_message("notforgame-compny-prison" ,company_id=company_id, password=UPDATE_PASSWORD)
