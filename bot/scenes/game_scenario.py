@@ -53,7 +53,6 @@ class GameManager(AdminScene):
         BankPage,
         BankCreditPage,
         BankDepositPage,
-        ContractMainPage,
         UpgradeMenu,
         LogisticsMenu,
         FactoryMenu,
