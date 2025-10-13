@@ -452,6 +452,9 @@ export class WebSocketManager {
     if (callback && typeof callback === "function") {
       this.pendingCallbacks.set(request_id, callback);
     }
+    
+    console.log('[WS] Sending get-session-time-to-next-stage request');
+    
     this.socket.send(
       JSON.stringify({
         type: "get-session-time-to-next-stage",
@@ -479,10 +482,10 @@ export class WebSocketManager {
    * Fetch all necessary game data in the correct order
    */
   fetchAllGameData() {
-    // 1. Session state and map
+    // 1. Session state and map (includes time_to_next_stage)
     this.get_session();
     
-    // 2. Time to next stage
+    // 2. Explicitly fetch time to ensure it's always fresh
     this.get_time_to_next_stage();
     
     // 3. Event data
@@ -592,6 +595,11 @@ export class WebSocketManager {
       // Update game state with session data
       this.gameState.updateSession(message.data);
       
+      // Update time to next stage if provided in session data
+      if (message.data.time_to_next_stage !== undefined) {
+        this.gameState.updateTimeToNextStage(message.data.time_to_next_stage);
+      }
+      
       // Load map if available
       if (message.data.cells && message.data.map_size) {
         this.loadMapToDOM();
@@ -610,9 +618,7 @@ export class WebSocketManager {
     if (callback) {
       this.pendingCallbacks.delete(requestId);
     }
-  }
-
-  handleSessionsListResponse(message) {
+  }  handleSessionsListResponse(message) {
     const requestId = message.request_id;
     const callback = this.pendingCallbacks.get(requestId);
     
@@ -912,9 +918,11 @@ export class WebSocketManager {
   handleTimeResponse(message) {
     const requestId = message.request_id;
     const callback = this.pendingCallbacks.get(requestId);
+    console.log('[WS] Time response received:', message);
     
     if (message.data && message.data.time_to_next_stage !== undefined) {
       this.gameState.updateTimeToNextStage(message.data.time_to_next_stage);
+      console.log('[WS] Time updated:', message.data.time_to_next_stage);
       
       // Also update session step if provided
       if (message.data.step !== undefined) {
@@ -1039,9 +1047,9 @@ export class WebSocketManager {
         break;
         
       case 'api-update_session_stage':
-        // Refresh session
+        // Refresh session (includes time_to_next_stage)
         this.get_session();
-        
+
         // If stage changed, reload map
         if (message.data && message.data.new_stage) {
           this.loadMapToDOM();
