@@ -12,7 +12,7 @@ class BankCreditPage(Page):
     async def content_worker(self):
         scene_data = self.scene.get_data('scene')
         company_id = scene_data.get('company_id')
-        session_id = scene_data.get('session_id')
+        session_id = scene_data.get('session')
         
         if not company_id:
             return "❌ Ошибка: компания не найдена"
@@ -485,7 +485,7 @@ class BankCreditPage(Page):
         scene_data = self.scene.get_data('scene')
         credit_state = scene_data.get('credit_state', 'main')
         company_id = scene_data.get('company_id')
-        session_id = scene_data.get('session_id')
+        session_id = scene_data.get('session')
         
         # Ввод срока кредита
         if credit_state == 'input_period':

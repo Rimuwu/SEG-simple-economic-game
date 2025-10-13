@@ -1,15 +1,26 @@
-from oms import Page
-from aiogram.types import Message, CallbackQuery
-from modules.ws_client import *
-from oms.utils import callback_generator
+from .oneuser_page import OneUserPage
+from modules.ws_client import get_contracts, create_contract, accept_contract,execute_contract, cancel_contract
+
+
+Page = OneUserPage
 
 
 class ContractMainPage(Page):
     __page_name__ = "contract-main-page"
     
     async def content_worker(self):
-        data = self.scene.get_data('scene')
-        company_id = data.get('company_id')
-        session_id = data.get('session')
-        
-        return "Test"
+        await create_contract(
+            supplier_company_id = 7,
+        customer_company_id = 8,
+        session_id = "коток",
+        resource = "oil",
+        amount_per_turn = 2,
+        duration_turns = 3,
+        payment_amount = 1000,
+        who_creator = 7 
+        )
+        print(await get_contracts())
+        await accept_contract(4, 8)
+        await execute_contract(4)
+        await cancel_contract(4, 8)
+        return "Блять"

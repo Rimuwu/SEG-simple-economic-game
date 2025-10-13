@@ -401,7 +401,7 @@ class ExchangePage(OneUserPage):
         """Генерация кнопок"""
         scene_data = self.scene.get_data('scene')
         company_id = scene_data.get('company_id')
-        session_id = scene_data.get('session_id')
+        session_id = scene_data.get('session')
         exchange_state = scene_data.get('exchange_state', 'list')
         
         buttons = []
@@ -853,7 +853,7 @@ class ExchangePage(OneUserPage):
         
         resource_id = args[1]
         scene_data = self.scene.get_data('scene')
-        session_id = scene_data.get('session_id')
+        session_id = scene_data.get('session')
         
         # Проверяем существование ресурса
         if not self.item_filter.resource_exists(resource_id):
