@@ -127,7 +127,7 @@ class BankCreditPage(Page):
 *Шаг 1: Введите срок кредита*
 
 На какое количество ходов хотите взять кредит?
-Минимум: 1 ход
+Минимум: 2 ход
 Максимум: {max_period} ход(ов)
 (Текущий ход: {current_step}, до конца игры: {max_period})"""
         
@@ -492,8 +492,8 @@ class BankCreditPage(Page):
             # Очищаем предыдущую ошибку
             scene_data['error_message'] = ''
             
-            if value < 1:
-                scene_data['error_message'] = 'Срок должен быть не менее 1 хода'
+            if value < 2:
+                scene_data['error_message'] = 'Срок должен быть не менее 2 хода'
                 await self.scene.set_data('scene', scene_data)
                 await self.scene.update_message()
                 return
