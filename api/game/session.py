@@ -66,18 +66,24 @@ class Session(BaseClass):
         self.save_to_base()
         self.reupdate()
 
+        game_logger.info(f"Сессия {self.session_id} запущена.")
         return self
 
     def update_stage(self, new_stage: SessionStages, 
                      whitout_shedule: bool = False):
         if not isinstance(new_stage, SessionStages):
+            game_logger.error(f"Неверный тип новой стадии: {new_stage}")
             raise ValueError("new_stage должен быть экземпляром SessionStages Enum")
 
         if self.stage == SessionStages.End.value:
+            game_logger.warning(f"Попытка изменить стадию из завершающей стадии в сессии {self.session_id}.")
             raise ValueError("Нельзя изменить стадию из завершающей стадии.")
 
         elif self.step >= self.max_steps:
+            game_logger.info(f"Достигнуто максимальное количество шагов. Завершение игры в сессии {self.session_id}.")
             new_stage = SessionStages.End
+            self.end_game()
+            return
 
         elif new_stage == SessionStages.CellSelect:
             self.generate_cells()
@@ -93,7 +99,7 @@ class Session(BaseClass):
 
                     if len(company.users) == 0:
                         company.delete()
-                        game_logger.warning(f"Company {company.name} has no users and has been deleted.")
+                        game_logger.warning(f"Компания {company.name} в сессии {self.session_id} не имеет пользователей и была удалена.")
                         continue
 
                     elif not company.cell_position:
@@ -101,7 +107,7 @@ class Session(BaseClass):
 
                         if not free_cells: 
                             company.delete()
-                            game_logger.warning(f"No free cells available to assign to company {company.name}. Company has been deleted.")
+                            game_logger.warning(f"Нет свободных клеток для компании {company.name} в сессии {self.session_id}. Компания удалена.")
                             continue
 
                         cell = random.choice(free_cells)
@@ -109,7 +115,7 @@ class Session(BaseClass):
 
                         company.save_to_base()
                         company.reupdate()
-                        game_logger.info(f"Assigned cell {company.cell_position} to company {company.name}")
+                        game_logger.info(f"Компании {company.name} в сессии {self.session_id} назначена клетка {company.cell_position}.")
 
                 if not whitout_shedule:
 
@@ -149,6 +155,8 @@ class Session(BaseClass):
         self.save_to_base()
         self.reupdate()
 
+        game_logger.info(f"В сессии {self.session_id} изменена стадия с {old_stage} на {self.stage}.")
+
         asyncio.create_task(websocket_manager.broadcast({
             "type": "api-update_session_stage",
             "data": {
@@ -170,6 +178,8 @@ class Session(BaseClass):
 
         for schedule in schedules:
             asyncio.create_task(schedule.execute())
+        
+        game_logger.info(f"В сессии {self.session_id} выполнено {len(schedules)} запланированных задач для шага {step}.")
         return True
 
     def create_step_schedule(self, in_step: int, 
@@ -177,12 +187,14 @@ class Session(BaseClass):
         from game.step_shedule import StepSchedule
 
         if in_step < 0:
+            game_logger.error(f"Попытка создать задачу с отрицательным шагом ({in_step}) в сессии {self.session_id}.")
             raise ValueError("in_step должен быть неотрицательным целым числом.")
 
         schedule = StepSchedule().create(
             session_id=self.session_id, in_step=in_step)
         schedule.add_function(function, **kwargs)
 
+        game_logger.info(f"В сессии {self.session_id} создана задача для шага {in_step} с функцией {function.__name__}.")
         return schedule
 
     def can_user_connect(self):
@@ -291,6 +303,7 @@ class Session(BaseClass):
 
     def generate_cells(self):
         if self.cells:
+            game_logger.warning(f"Попытка повторной генерации клеток в сессии {self.session_id}.")
             raise ValueError("Клетки уже были сгенерированы для этой сессии.")
 
         # Ограничения на размер карты
@@ -332,7 +345,7 @@ class Session(BaseClass):
 
         # Подсчёт каждого типа клетки
         self.cell_counts = dict(Counter(self.cells))
-        game_logger.info(f"Cell counts: {self.cell_counts}")
+        game_logger.info(f"В сессии {self.session_id} сгенерированы клетки. Распределение: {self.cell_counts}")
 
         self.save_to_base()
         
@@ -368,7 +381,7 @@ class Session(BaseClass):
                                         )
                     city_index += 1
 
-                    game_logger.info(f"Created city at position {x}.{y} with branch {city.branch}")
+                    game_logger.info(f"В сессии {self.session_id} создан город в позиции {x}.{y} с отраслью {city.branch}.")
 
     def can_select_cell(self, x: int, y: int):
         """ Проверяет, можно ли выбрать клетку с координатами (x, y) для компании.
@@ -467,6 +480,8 @@ class Session(BaseClass):
         just_db.delete(self.__tablename__, session_id=self.session_id)
         session_manager.remove_session(self.session_id)
 
+        game_logger.info(f"Сессия {self.session_id} и все связанные с ней данные удалены.")
+
         asyncio.create_task(websocket_manager.broadcast({
             "type": "api-session_deleted",
             "data": {
@@ -506,15 +521,47 @@ class Session(BaseClass):
         }
 
     def end_game(self):
+        from game.company import Company
+
+        for company in self.companies:
+            company: Company
+
+            minus_balance = 0
+            minus_rep = 0
+            for credit in company.credits:
+                minus_balance += credit['total_to_pay'] - credit['paid']
+                minus_rep += 20
+
+            if company.overdue_steps > 0:
+                minus_rep += company.overdue_steps * 10
+            minus_balance += company.tax_debt
+
+            company.balance -= minus_balance
+            company.reputation -= minus_rep
+            company.save_to_base()
+
+            game_logger.info(f'Компания {company.name} в сессии {self.session_id} завершила игру с балансом {company.balance} и репутацией {company.reputation}. Штрафы: {minus_balance} (баланс), {minus_rep} (репутация) за {company.overdue_steps} просроченных шагов оплаты налогов, {company.tax_debt} (налоги), {len(company.credits)} (количество кредитов)')
+
         leaders = self.leaders()
 
         # Объявление победителей
         if leaders["capital"]:
-            game_logger.info(f"Capital winner: {leaders['capital'].name} with {leaders['capital'].balance}")
+            game_logger.info(f"Победитель по капиталу в сессии {self.session_id}: {leaders['capital'].name} с {leaders['capital'].balance}")
         if leaders["reputation"]:
-            game_logger.info(f"Reputation winner: {leaders['reputation'].name} with {leaders['reputation'].reputation}")
+            game_logger.info(f"Победитель по репутации в сессии {self.session_id}: {leaders['reputation'].name} с {leaders['reputation'].reputation}")
         if leaders["economic"]:
-            game_logger.info(f"Economic winner: {leaders['economic'].name} with {leaders['economic'].economic_power}")
+            game_logger.info(f"Победитель по экономической мощи в сессии {self.session_id}: {leaders['economic'].name} с {leaders['economic'].economic_power}")
+
+        try:
+            for user_id in [leaders['capital'].users, 
+                            leaders['reputation'].users, 
+                            leaders['economic'].users]:
+                for uid in user_id:
+                    user = just_db.find_one("users", id=uid)
+                    if user:
+                        game_logger.info(f"Пользователь {user['username']} ({user['id']}) - победитель в сессии {self.session_id}")
+        except Exception as e: 
+            game_logger.error(f"Ошибка при логировании пользователей-победителей в сессии {self.session_id}: {e}")
 
         asyncio.create_task(websocket_manager.broadcast({
             "type": "api-game_ended",
@@ -553,6 +600,7 @@ class Session(BaseClass):
         
         # Проверяем, что событие существует в конфиге
         if not EVENTS or event_id not in EVENTS.events:
+            game_logger.error(f"Попытка установить несуществующее событие '{event_id}' в сессии {self.session_id}.")
             raise ValueError(f"Событие '{event_id}' не найдено в конфигурации")
             
         self.event_type = event_id
@@ -561,7 +609,7 @@ class Session(BaseClass):
 
         self.save_to_base()
 
-        game_logger.info(f"Event '{event_id}' set for session {self.session_id} from step {start_step} to {end_step}")
+        game_logger.info(f"В сессии {self.session_id} установлено событие '{event_id}' с шага {start_step} по {end_step}.")
 
         # Запускаем шедулер для удаления события
         self.create_step_schedule(
@@ -705,7 +753,7 @@ class Session(BaseClass):
         # Устанавливаем событие
         self.set_event(event.id, start_step, end_step)
         
-        game_logger.info(f"Generated event '{event.id}' for session {self.session_id}")
+        game_logger.info(f"В сессии {self.session_id} сгенерировано событие '{event.id}'.")
         
         # Отправляем уведомление
         asyncio.create_task(websocket_manager.broadcast({
@@ -749,8 +797,10 @@ class SessionsManager():
     def create_session(self, session_id: str = ""):
         session = Session(session_id=session_id).start()
         if session.session_id in self.sessions:
+            game_logger.error(f"Попытка создать сессию с уже существующим ID: {session.session_id}")
             raise ValueError("Сессия с этим ID уже существует в памяти.")
         self.sessions[session.session_id] = session
+        game_logger.info(f"Менеджер создал новую сессию: {session.session_id}")
         return session
 
     def get_session(self, session_id) -> Session | None:
@@ -768,5 +818,6 @@ class SessionsManager():
             session = Session(s['session_id'])
             session.load_from_base(s)
             self.sessions[session.session_id] = session
+        game_logger.info(f"Загружено {len(ss)} сессий из базы данных.")
 
 session_manager = SessionsManager()

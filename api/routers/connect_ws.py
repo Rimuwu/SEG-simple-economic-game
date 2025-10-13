@@ -100,6 +100,24 @@ async def get_websocket_status():
             "server_status": "running",
             "supported_message_types": available_types
         })
+
+    except Exception as e:
+        websocket_logger.error(f"Ошибка при получении статуса WebSocket: {e}")
+        raise HTTPException(status_code=500, detail=f"Ошибка сервера: {str(e)}")
+
+
+@router.get("/connections")
+async def get_connections():
+    try:
+        connected_clients = websocket_manager.get_connected_clients()
+        connection_count = websocket_manager.get_connection_count()
+
+        return JSONResponse({
+            "status": "ok",
+            "total_connections": connection_count,
+            "connected_clients": connected_clients,
+            "server_status": "running",
+        })
     
     except Exception as e:
         websocket_logger.error(f"Ошибка при получении статуса WebSocket: {e}")
