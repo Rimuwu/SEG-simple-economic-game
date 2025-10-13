@@ -39,9 +39,13 @@ class MainPage(Page):
                     participants_count = 1
 
             content = (
-                f"🏢 **{company_name}**\n\n"
-                f"👥 Участников: {participants_count}\n"
-                f"🔑 Код для присоединения: {secret_code}\n\n"
+                f"🏢 *{company_name}*\n\n"
+                f"🏦 Банковская информация:\n"
+                f"- Налог: {company_data.get('tax_debt')}\n"
+                f"- Кредит: {len(company_data['credits'])}\n"
+                f"- Баланс: {company_data['balance']}\n\n"
+                f"⭐️ Репутация: {company_data['reputation']}\n"
+                f"💼 Осталось места в инвентаре: {company_data['warehouse_free_size']}/{company_data['warehouse_capacity']}\n"
                 f"Выберите действие из меню ниже:"
             )
         else:

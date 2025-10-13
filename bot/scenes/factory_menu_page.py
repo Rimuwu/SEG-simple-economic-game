@@ -97,7 +97,7 @@ class FactoryMenu(Page):
                 for resource_key, factories_list in manual_factories.items():
                     resource_display = self.get_resource_name(resource_key)
                     # Считаем работающие и остановленные
-                    working = sum(1 for f in factories_list if f.get('is_working', False))
+                    working = sum(1 for f in factories_list if f.get('produce', False))
                     stopped = len(factories_list) - working
                     
                     status_text = ""

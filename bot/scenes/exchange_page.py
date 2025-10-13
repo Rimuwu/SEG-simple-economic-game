@@ -1,6 +1,6 @@
 from oms import Page
 from aiogram.types import CallbackQuery, Message
-from modules.ws_client import get_exchanges, get_exchange, buy_exchange_offer, get_company, create_exchange_offer, get_item_price
+from modules.ws_client import get_exchanges, get_exchange, buy_exchange_offer, get_company, create_exchange_offer, get_item_price, cancel_exchange_offer
 from oms.utils import callback_generator
 from global_modules.load_config import ALL_CONFIGS, Resources
 from .filters.item_filter import ItemFilter
@@ -429,6 +429,7 @@ class ExchangePage(OneUserPage):
                 exchanges = await get_exchanges(session_id=session_id)
             
             if isinstance(exchanges, list) and len(exchanges) > 0:
+                self.row_width = 3
                 # Пагинация
                 items_per_page = 5
                 current_page = scene_data.get('list_page', 0)
@@ -465,7 +466,8 @@ class ExchangePage(OneUserPage):
                             self.scene.__scene_name__,
                             'view_exchange',
                             str(exchange.get('id'))
-                        )
+                        ),
+                        "ignore_row": True
                     })
                 
                 # Навигация между страницами (если страниц больше одной)
@@ -574,12 +576,7 @@ class ExchangePage(OneUserPage):
             # Используем кеш, если доступен
             cache_key = f'exchange_details_{exchange_id}'
             cached_data = scene_data.get(cache_key)
-            
-            if cached_data:
-                exchange = cached_data.get('exchange')
-            else:
-                # Если кеш недоступен, делаем запрос
-                exchange = await get_exchange(id=exchange_id)
+            exchange = await get_exchange(id=exchange_id)
             
             # Проверяем, не является ли это предложением текущей компании
             if isinstance(exchange, dict):
@@ -598,12 +595,14 @@ class ExchangePage(OneUserPage):
                 else:
                     # Информация о том, что это наше предложение
                     buttons.append({
-                        'text': '⚠️ Ваше предложение',
+                        'text': '❌ Отменить предложение',
                         'callback_data': callback_generator(
                             self.scene.__scene_name__,
-                            'own_offer'
+                            'own_offer',
+                            exchange_id
                         )
                     })
+                    
             
             # Кнопка "Назад к списку"
             buttons.append({
@@ -981,8 +980,23 @@ class ExchangePage(OneUserPage):
     @Page.on_callback('own_offer')
     async def own_offer_handler(self, callback: CallbackQuery, args: list):
         """Обработка нажатия на своё предложение"""
+        await cancel_exchange_offer(args[1])
+        scene_data = self.scene.get_data('scene')
+        
+        # Очищаем кеш деталей предложения
+        exchange_id = scene_data.get('selected_exchange_id')
+        if exchange_id:
+            cache_key = f'exchange_details_{exchange_id}'
+            if cache_key in scene_data:
+                del scene_data[cache_key]
+        
+        scene_data['exchange_state'] = 'list'
+        scene_data['selected_exchange_id'] = None
+        await self.scene.set_data('scene', scene_data)
+        
+        await self.scene.update_message()
         await callback.answer(
-            "ℹ️ Это ваше предложение. Вы не можете купить его.",
+            "Ресурсы вам возвращены!",
             show_alert=False
         )
     
@@ -1071,9 +1085,6 @@ class ExchangePage(OneUserPage):
             scene_data['exchange_state'] = 'create_confirm'
             await self.scene.set_data('scene', scene_data)
             await self.scene.update_message()
-        else:
-            # Если состояние не поддерживает ввод текста
-            await message.answer("❌ Ввод текста не поддерживается в текущем состоянии")
     
     @Page.on_callback('create_barter_res')
     async def create_barter_res_handler(self, callback: CallbackQuery, args: list):
