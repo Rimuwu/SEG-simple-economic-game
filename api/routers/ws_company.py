@@ -664,3 +664,37 @@ async def handle_notforgame_update_company_name(
     except ValueError as e:
         return {"error": str(e)}
 
+
+@message_handler(
+    "notforgame-compny-prison", 
+    doc="Обработчик jnghfdktn rjvgfyb. d n.hmvw. Требуется пароль для взаимодействия.",
+    datatypes=[
+        "company_id: int",
+        "password: str"
+    ]
+)
+async def handle_notforgame_to_prison(
+    client_id: str, message: dict):
+    """Обработчик обновления названия компании"""
+
+    password = message.get("password", 0)
+    company_id = message.get("company_id", 0)
+
+    for i in [company_id, password]:
+        if i is None: 
+            return {"error": "Missing required fields."}
+
+
+    try:
+        check_password(password)
+
+        company = Company(_id=company_id).reupdate()
+        if not company: raise ValueError("Компания не найдена.")
+
+        company.to_prison()
+
+    except ValueError as e:
+        return {"error": str(e)}
+
+
+
