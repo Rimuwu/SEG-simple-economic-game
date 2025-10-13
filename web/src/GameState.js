@@ -716,7 +716,7 @@ export class GameState {
       companyId: upgradeData.company_id,
       companyName: upgradeData.company_name,
       improvementType: upgradeData.improvement_type,
-      level: upgradeData.level,
+      level: upgradeData.new_1level,
       timestamp: Date.now()
     };
     
@@ -882,14 +882,37 @@ export class GameState {
    */
   getImprovementName(improvementType) {
     const names = {
-      'warehouse': 'Хранилище',
-      'logistics': 'Логистика',
-      'production': 'Производство',
-      'marketing': 'Маркетинг',
-      'research': 'Исследования',
-      'security': 'Безопасность',
-      'quality': 'Качество',
-      'automation': 'Автоматизация',
+      // Company-wide improvements
+      'warehouse': 'Склад',
+      'contracts': 'Контракты',
+      
+      // Mountain improvements
+      'mountain.station': 'Горная станция добычи',
+      'mountain.factory': 'Горная фабрика',
+      'mountain_station': 'Горная станция добычи',
+      'mountain_factory': 'Горная фабрика',
+      
+      // Forest improvements
+      'forest.station': 'Лесная станция добычи',
+      'forest.factory': 'Лесная фабрика',
+      'forest_station': 'Лесная станция добычи',
+      'forest_factory': 'Лесная фабрика',
+      
+      // Water improvements
+      'water.station': 'Водная станция добычи',
+      'water.factory': 'Водная фабрика',
+      'water_station': 'Водная станция добычи',
+      'water_factory': 'Водная фабрика',
+      
+      // Field improvements
+      'field.station': 'Полевая станция добычи',
+      'field.factory': 'Полевая фабрика',
+      'field_station': 'Полевая станция добычи',
+      'field_factory': 'Полевая фабрика',
+      
+      // Generic terms
+      'station': 'Станция добычи',
+      'factory': 'Фабрика',
     };
     return names[improvementType] || improvementType;
   }
