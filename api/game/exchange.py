@@ -83,7 +83,7 @@ class Exchange(BaseClass):
         
         # Проверяем, есть ли у компании достаточно товара
         if company.warehouses.get(sell_resource, 0) < total_stock:
-            raise ValueError(f"У компании недостаточно '{sell_resource}' на складе.")
+            raise ValueError(f"У компании недостаточно ресурса {RESOURCES.get_resource(sell_resource).emoji} {RESOURCES.get_resource(sell_resource).label} на складе.")
         
         # Валидация типа сделки
         if offer_type == 'money':
