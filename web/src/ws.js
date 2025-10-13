@@ -1018,7 +1018,15 @@ export class WebSocketManager {
       case 'api-user_added_to_company':
       case 'api-user_left_company':
       case 'api-company_set_position':
+        // Refresh companies
+        this.get_companies();
+        break;
+      
       case 'api-company_improvement_upgraded':
+        // Add upgrade to recent upgrades list
+        if (message.data) {
+          this.gameState.addUpgrade(message.data);
+        }
         // Refresh companies
         this.get_companies();
         break;

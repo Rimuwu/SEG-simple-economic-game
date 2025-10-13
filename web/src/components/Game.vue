@@ -48,13 +48,14 @@ const formatCityDemands = (city) => {
     }))
 }
 
-// Computed property for exchanges (latest 4)
+// Computed property for exchanges (latest 4, newest first)
 const latestExchanges = computed(() => {
   const exchanges = wsManager?.gameState?.state?.exchanges || []
   const sessionExchanges = exchanges.filter(e => 
     e.session_id === wsManager?.gameState?.state?.session?.id
   )
-  return sessionExchanges.slice(0, 4)
+  // Get the last 4 exchanges (most recent) and reverse to show newest first
+  return sessionExchanges.slice(-4).reverse()
 })
 
 // Helper function to get company name by ID
@@ -77,7 +78,7 @@ const formatExchangeText = (exchange) => {
   return `${companyName} выставила на продажу ${resourceName}`
 }
 
-// Computed property for contracts (latest 2)
+// Computed property for contracts (latest 2, newest first)
 const latestContracts = computed(() => {
   const contracts = wsManager?.gameState?.state?.contracts || []
   const sessionContracts = contracts.filter(c => 
@@ -85,7 +86,8 @@ const latestContracts = computed(() => {
   )
   // Show pending contracts first (not yet accepted)
   const pendingContracts = sessionContracts.filter(c => !c.accepted)
-  return pendingContracts.slice(0, 2)
+  // Get the last 2 contracts (most recent) and reverse to show newest first
+  return pendingContracts.slice(-2).reverse()
 })
 
 // Helper function to format contract text (matching the existing format)
@@ -101,6 +103,18 @@ const formatContractText = (contract) => {
     const supplierName = getCompanyName(contract.supplier_company_id)
     return `${customerName} создала контракт с ${supplierName} на ${resourceName} на ${contract.duration_turns} ходов`
   }
+}
+
+// Computed property for recent upgrades (latest 4)
+const recentUpgrades = computed(() => {
+  return wsManager?.gameState?.getRecentUpgrades(4) || []
+})
+
+// Helper function to format upgrade text
+const formatUpgradeText = (upgrade) => {
+  const companyName = upgrade.companyName || getCompanyName(upgrade.companyId)
+  const improvementName = wsManager?.gameState?.getImprovementName(upgrade.improvementType)
+  return `${companyName} улучшила ${improvementName} до уровня ${upgrade.level}`
 }
 
 onMounted(() => {
@@ -197,10 +211,14 @@ onMounted(() => {
         <div class="upgrades grid-item">
           <p class="title">УЛУЧШЕНИЯ</p>
           <div class="content">
-            <span>Компания А улучшила своё хранилище до уровня 2</span>
-            <span>Компания А улучшила своё хранилище до уровня 2</span>
-            <span>Компания А улучшила своё хранилище до уровня 2</span>
-            <span>Компания А улучшила своё хранилище до уровня 2</span>
+            <template v-if="recentUpgrades.length > 0">
+              <span v-for="upgrade in recentUpgrades" :key="upgrade.id">
+                {{ formatUpgradeText(upgrade) }}
+              </span>
+            </template>
+            <template v-else>
+              <span>Никаких улучшений за последнее время не происходило</span>
+            </template>
           </div>
         </div>
         <div class="contracts grid-item">
