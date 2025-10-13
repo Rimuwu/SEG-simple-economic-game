@@ -500,9 +500,13 @@ class Company(BaseClass):
         if not isinstance(c_sum, int) or not isinstance(steps, int):
             game_logger.warning(f"Компания {self.name} ({self.id}) пытается взять кредит с неверными типами данных: сумма={type(c_sum)}, шаги={type(steps)}")
             raise ValueError("Сумма и шаги должны быть целыми числами.")
+
         if c_sum <= 0 or steps <= 0:
             game_logger.warning(f"Компания {self.name} ({self.id}) пытается взять кредит с неположительными значениями: сумма={c_sum}, шаги={steps}")
             raise ValueError("Сумма и шаги должны быть положительными целыми числами.")
+
+        if steps <= 1:
+            raise ValueError("Нельзя взять кредит на 1 ход")
 
         credit_condition = get_credit_conditions(self.reputation)
         if not credit_condition.possible:
