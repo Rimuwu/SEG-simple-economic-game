@@ -269,16 +269,6 @@ onMounted(() => {
         </div>
 
       </div>
-      
-      <div class="events">
-        <div v-if="currentEvent && currentEvent.id" class="event-content">
-          <div class="event-name">{{ currentEvent.name }}</div>
-          <div class="event-status" v-if="eventStatusText">{{ eventStatusText }}</div>
-          <div class="event-description">{{ currentEvent.description }}</div>
-        </div>
-        <span v-else>Нет событий</span>
-      </div>
-      
     </div>
   </div>
 </template>
