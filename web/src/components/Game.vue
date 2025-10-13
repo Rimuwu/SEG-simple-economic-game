@@ -103,6 +103,18 @@ const formatContractText = (contract) => {
   }
 }
 
+// Computed property for recent upgrades (latest 4)
+const recentUpgrades = computed(() => {
+  return wsManager?.gameState?.getRecentUpgrades(4) || []
+})
+
+// Helper function to format upgrade text
+const formatUpgradeText = (upgrade) => {
+  const companyName = upgrade.companyName || getCompanyName(upgrade.companyId)
+  const improvementName = wsManager?.gameState?.getImprovementName(upgrade.improvementType)
+  return `${companyName} улучшила ${improvementName} до уровня ${upgrade.level}`
+}
+
 onMounted(() => {
   // Component mounted
 })
@@ -197,10 +209,14 @@ onMounted(() => {
         <div class="upgrades grid-item">
           <p class="title">УЛУЧШЕНИЯ</p>
           <div class="content">
-            <span>Компания А улучшила своё хранилище до уровня 2</span>
-            <span>Компания А улучшила своё хранилище до уровня 2</span>
-            <span>Компания А улучшила своё хранилище до уровня 2</span>
-            <span>Компания А улучшила своё хранилище до уровня 2</span>
+            <template v-if="recentUpgrades.length > 0">
+              <span v-for="upgrade in recentUpgrades" :key="upgrade.id">
+                {{ formatUpgradeText(upgrade) }}
+              </span>
+            </template>
+            <template v-else>
+              <span>Никаких улучшений за последнее время не происходило</span>
+            </template>
           </div>
         </div>
         <div class="contracts grid-item">

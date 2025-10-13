@@ -40,6 +40,9 @@ export class GameState {
       // Item prices data
       itemPrices: {},
 
+      // Recent upgrades/improvements
+      recentUpgrades: [],
+
       // Event data
       event: {
         id: null,
@@ -677,6 +680,51 @@ export class GameState {
     return `${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`;
   }
 
+  // ==================== UPGRADE METHODS ====================
+
+  /**
+   * Add a recent upgrade to the list
+   * @param {Object} upgradeData - Upgrade information
+   */
+  addUpgrade(upgradeData) {
+    if (!upgradeData) return;
+    
+    const upgrade = {
+      id: `upgrade_${Date.now()}_${Math.random()}`,
+      companyId: upgradeData.company_id,
+      companyName: upgradeData.company_name,
+      improvementType: upgradeData.improvement_type,
+      level: upgradeData.level,
+      timestamp: Date.now()
+    };
+    
+    // Add to beginning of array
+    this.state.recentUpgrades.unshift(upgrade);
+    
+    // Keep only last 10 upgrades
+    if (this.state.recentUpgrades.length > 10) {
+      this.state.recentUpgrades = this.state.recentUpgrades.slice(0, 10);
+    }
+    
+    console.log('[GameState] Upgrade added:', upgrade);
+  }
+
+  /**
+   * Get recent upgrades (limited to specified count)
+   * @param {number} limit - Maximum number of upgrades to return
+   * @returns {Array}
+   */
+  getRecentUpgrades(limit = 4) {
+    return this.state.recentUpgrades.slice(0, limit);
+  }
+
+  /**
+   * Clear all upgrades
+   */
+  clearUpgrades() {
+    this.state.recentUpgrades = [];
+  }
+
   // ==================== WINNER METHODS ====================
 
   /**
@@ -806,6 +854,25 @@ export class GameState {
   }
 
   /**
+   * Get localized improvement display name
+   * @param {string} improvementType - Improvement type
+   * @returns {string} - Localized display name
+   */
+  getImprovementName(improvementType) {
+    const names = {
+      'warehouse': 'Хранилище',
+      'logistics': 'Логистика',
+      'production': 'Производство',
+      'marketing': 'Маркетинг',
+      'research': 'Исследования',
+      'security': 'Безопасность',
+      'quality': 'Качество',
+      'automation': 'Автоматизация',
+    };
+    return names[improvementType] || improvementType;
+  }
+
+  /**
    * Reset all state
    */
   reset() {
@@ -817,6 +884,7 @@ export class GameState {
     this.state.cities = [];
     this.state.contracts = [];
     this.state.itemPrices = {};
+    this.state.recentUpgrades = [];
     this.clearEvent();
     this.state.map = {
       cells: [],
