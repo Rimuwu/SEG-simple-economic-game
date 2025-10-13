@@ -636,15 +636,32 @@ export class WebSocketManager {
     const requestId = message.request_id;
     const callback = this.pendingCallbacks.get(requestId);
     
-    if (message.success && message.data && message.data.event) {
-      // Update event in game state
-      this.gameState.updateEvent(message.data.event);
+    console.log('[WS] Event response received:', message);
+    
+    if (message.data && message.data.event !== undefined) {
+      // Check if event has data
+      const eventData = message.data.event;
       
-      if (callback) {
-        callback({ success: true, data: message.data.event });
+      if (eventData && Object.keys(eventData).length > 0) {
+        // Update event in game state
+        console.log('[WS] Updating event:', eventData);
+        this.gameState.updateEvent(eventData);
+        
+        if (callback) {
+          callback({ success: true, data: eventData });
+        }
+      } else {
+        // Empty event object - clear it
+        console.log('[WS] Empty event data, clearing event');
+        this.gameState.clearEvent();
+        
+        if (callback) {
+          callback({ success: true, data: null });
+        }
       }
     } else {
-      // No event or empty event data - clear it
+      // No event data - clear it
+      console.log('[WS] No event data in response, clearing event');
       this.gameState.clearEvent();
       
       if (callback) {
@@ -1049,6 +1066,9 @@ export class WebSocketManager {
       case 'api-update_session_stage':
         // Refresh session (includes time_to_next_stage)
         this.get_session();
+        
+        // Refresh event data (might have changed)
+        this.get_session_event();
 
         // If stage changed, reload map
         if (message.data && message.data.new_stage) {
@@ -1118,6 +1138,11 @@ export class WebSocketManager {
         // Refresh contracts and companies
         this.get_contracts();
         this.get_companies();
+        break;
+      
+      case 'api-event_generated':
+        // Refresh event data when a new event is generated
+        this.get_session_event();
         break;
     }
     

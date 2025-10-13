@@ -127,6 +127,29 @@ const formatUpgradeText = (upgrade) => {
   return `${companyName} улучшила ${improvementName} до уровня ${upgrade.level}`
 }
 
+// Event computed property
+const currentEvent = computed(() => {
+  const event = wsManager?.gameState?.getEvent() || null
+  console.log('[Game.vue] Current event:', event)
+  return event
+})
+
+// Helper to get event status text
+const eventStatusText = computed(() => {
+  const event = currentEvent.value
+  if (!event || !event.id) return null
+  
+  if (event.is_active) {
+    return 'Действует сейчас'
+  } else if (event.starts_next_turn) {
+    return 'Начнётся на следующем ходу'
+  } else if (event.predictable) {
+    const stepsUntil = event.start_step - wsManager?.gameState?.state?.session?.step
+    return `Начнётся через ${stepsUntil} ход${stepsUntil === 1 ? '' : stepsUntil < 5 ? 'а' : 'ов'}`
+  }
+  return null
+})
+
 onMounted(() => {
   // Component mounted
 })
@@ -245,7 +268,6 @@ onMounted(() => {
           </div>
         </div>
 
-
       </div>
     </div>
   </div>
@@ -341,6 +363,45 @@ onMounted(() => {
 .stock span, .upgrades span, .contracts span {
   background: #3D8C00;
   padding: 5px 10px;
+}
+
+.events {
+  font-size: 5rem;
+  text-transform: uppercase;
+
+  text-align: center;
+  justify-content: center;
+
+  padding: 40px 0;
+  margin-top: 40px;
+
+  background-color: #3D8C00;
+
+  color: white;
+  font-family: "Ubuntu Mono", monospace;
+}
+
+.event-content {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.event-name {
+  font-size: 5rem;
+  font-weight: bold;
+}
+
+.event-status {
+  font-size: 2.5rem;
+  opacity: 0.8;
+  font-style: italic;
+}
+
+.event-description {
+  font-size: 3rem;
+  opacity: 0.9;
+  margin-top: 10px;
 }
 
 .footer {
