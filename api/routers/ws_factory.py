@@ -1,6 +1,6 @@
 
 from modules.ws_hadnler import message_handler
-from modules.json_database import just_db
+from modules.db import just_db
 from game.factory import Factory
 from modules.check_password import check_password
 

@@ -4,7 +4,7 @@ from typing import Optional, Literal
 from global_modules.models.cells import Cells
 from global_modules.db.baseclass import BaseClass
 from global_modules.models.resources import Production, Resource
-from modules.json_database import just_db
+from modules.db import just_db
 from global_modules.load_config import ALL_CONFIGS, Resources, Improvements, Settings, Capital, Reputation
 from modules.function_way import *
 from modules.websocket_manager import websocket_manager
@@ -25,7 +25,7 @@ class Exchange(BaseClass):
     """
 
     __tablename__ = "exchanges"
-    __unique_id__ = "id"
+    __unique_id__ = "_id"
     __db_object__ = just_db
 
     def __init__(self, id: int = 0):
@@ -48,7 +48,7 @@ class Exchange(BaseClass):
 
         self.created_at: int = 0  # Время создания (игровой ход)
 
-    def create(self, company_id: int, session_id: str, 
+    async def create(self, company_id: int, session_id: str, 
                sell_resource: str, sell_amount_per_trade: int, count_offers: int,
                offer_type: Literal['money', 'barter'] = 'money',
                price: int = 0, barter_resource: str = "", barter_amount: int = 0):
@@ -98,13 +98,11 @@ class Exchange(BaseClass):
         else:
             raise ValueError("Недействительный тип предложения.")
         
-        session = session_manager.get_session(session_id)
+        session = await session_manager.get_session(session_id)
         if not session:
             raise ValueError("Сессия не найдена.")
         
         # Создаём предложение
-        self.id = just_db.max_id_in_table(
-            self.__tablename__) + 1
         self.company_id = company_id
         self.session_id = session_id
         self.sell_resource = sell_resource
@@ -116,15 +114,14 @@ class Exchange(BaseClass):
         self.barter_amount = barter_amount
         self.created_at = session.step if hasattr(session, 'step') else 0
 
-        self.save_to_base()
-        self.reupdate()
+        await self.insert()
 
         # Списываем товар со склада компании только после успешного создания
         try:
-            company.remove_resource(sell_resource, total_stock)
+            await company.remove_resource(sell_resource, total_stock)
         except ValueError as e:
             # Если не удалось списать товар, удаляем предложение
-            self.delete()
+            await self.delete()
             raise ValueError(f"Не удалось зарезервировать ресурсы: {str(e)}")
 
         asyncio.create_task(websocket_manager.broadcast({
@@ -137,7 +134,7 @@ class Exchange(BaseClass):
 
         return self
 
-    def update_offer(self, 
+    async def update_offer(self, 
                     sell_amount_per_trade: Optional[int] = None,
                     price: Optional[int] = None, 
                     barter_amount: Optional[int] = None
@@ -168,8 +165,7 @@ class Exchange(BaseClass):
                 raise ValueError("Количество для бартера должно быть положительным.")
             self.barter_amount = barter_amount
         
-        self.save_to_base()
-        self.reupdate()
+        await self.save_to_base()
         
         asyncio.create_task(websocket_manager.broadcast({
             "type": "api-exchange_offer_updated",
@@ -182,7 +178,7 @@ class Exchange(BaseClass):
         
         return self
 
-    def cancel_offer(self):
+    async def cancel_offer(self):
         """ Отмена предложения (возврат товара компании) """
         from game.company import Company
 
@@ -191,17 +187,16 @@ class Exchange(BaseClass):
             raise ValueError("Компания не найдена.")
 
         # Проверяем, есть ли место на складе для возврата товара
-        current_resources = company.get_resources_amount()
-        max_capacity = company.get_max_warehouse_size()
+        current_resources = await company.get_resources_amount()
+        max_capacity = await company.get_max_warehouse_size()
 
         if current_resources + self.total_stock > max_capacity:
             raise ValueError(f"Недостаточно места на складе для возврата ресурсов. Требуется: {self.total_stock}, доступно: {max_capacity - current_resources}")
 
         # Возвращаем оставшийся товар на склад компании
-        company.add_resource(self.sell_resource, self.total_stock)
+        await company.add_resource(self.sell_resource, self.total_stock)
 
-        self.save_to_base()
-        self.reupdate()
+        await self.save_to_base()
         
         asyncio.create_task(websocket_manager.broadcast({
             "type": "api-exchange_offer_cancelled",
@@ -214,7 +209,7 @@ class Exchange(BaseClass):
         
         self.delete()
 
-    def buy(self, buyer_company_id: int, quantity: int = 1):
+    async def buy(self, buyer_company_id: int, quantity: int = 1):
         """ Покупка товара по предложению
         
         Args:
@@ -231,8 +226,8 @@ class Exchange(BaseClass):
         if buyer_company_id == self.company_id:
             raise ValueError("Нельзя покупать у своего собственного предложения.")
         
-        buyer = Company(_id=buyer_company_id).reupdate()
-        seller = Company(_id=self.company_id).reupdate()
+        buyer = await Company(_id=buyer_company_id).reupdate()
+        seller = await Company(_id=self.company_id).reupdate()
         
         if not buyer or not seller:
             raise ValueError("Компания покупателя или продавца не найдена.")
@@ -241,7 +236,7 @@ class Exchange(BaseClass):
             raise ValueError("Покупатель должен быть в той же сессии.")
 
         # Получаем сессию для обновления цен
-        session = session_manager.get_session(self.session_id)
+        session = await session_manager.get_session(self.session_id)
         if not session:
             raise ValueError("Сессия не найдена.")
 
@@ -266,8 +261,8 @@ class Exchange(BaseClass):
             buyer.balance -= total_price
             seller.balance += total_price
 
-            buyer.save_to_base()
-            seller.save_to_base()
+            await buyer.save_to_base()
+            await seller.save_to_base()
 
         elif self.offer_type == 'barter':
             total_barter_amount = self.barter_amount * quantity
@@ -276,20 +271,10 @@ class Exchange(BaseClass):
                 raise ValueError(f"Недостаточно '{self.barter_resource}' для бартера. Требуется: {total_barter_amount}")
 
             # Для бартера вычисляем условную цену на основе текущих цен предметов
-            barter_resource_price = session.get_item_price(self.barter_resource)
+            barter_resource_price = await session.get_item_price(self.barter_resource)
             unit_price = (barter_resource_price * self.barter_amount) // self.sell_amount_per_trade
 
-            # # Выполняем бартерную сделку
-            # buyer.remove_resource(self.barter_resource, total_barter_amount)
-            
-            # try:
-            #     seller.add_resource(self.barter_resource, total_barter_amount)
-            # except ValueError:
-            #     # Если у продавца не хватает места, возвращаем покупателю
-            #     buyer.add_resource(self.barter_resource, total_barter_amount)
-            #     raise ValueError("У продавца недостаточно места на складе для бартерного ресурса.")
-            
-            Logistics().create(
+            await Logistics().create(
                 from_company_id=buyer.id,
                 to_company_id=seller.id,
                 resource_type=self.barter_resource,
@@ -297,17 +282,7 @@ class Exchange(BaseClass):
                 session_id=self.session_id
             )
 
-        # # Передаём товар покупателю
-        # try:
-        #     buyer.add_resource(self.sell_resource, total_sell_amount)
-        # except ValueError as e:
-        #     free_space = buyer.get_warehouse_free_size()
-        #     if free_space > 0:
-        #         buyer.add_resource(self.sell_resource, 
-        #             min(free_space, total_sell_amount)
-        #             )
-
-        Logistics().create(
+        await Logistics().create(
             sender_no_delete=True, # Потому что товар уже списан с продавца при создании предложения
             from_company_id=seller.id,
             to_company_id=buyer.id,
@@ -317,7 +292,7 @@ class Exchange(BaseClass):
         )
 
         if unit_price > 0:
-            session.update_item_price(self.sell_resource, unit_price)
+            await session.update_item_price(self.sell_resource, unit_price)
 
         seller.set_economic_power(
             total_sell_amount, self.sell_resource, 'exchange'
@@ -330,8 +305,7 @@ class Exchange(BaseClass):
             self.delete()
         else:
 
-            self.save_to_base()
-            self.reupdate()
+            await self.save_to_base()
 
         asyncio.create_task(websocket_manager.broadcast({
             "type": "api-exchange_trade_completed",
@@ -371,7 +345,7 @@ class Exchange(BaseClass):
 
     def delete(self):
         """ Удаление предложения из базы данных """
-        just_db.delete(self.__tablename__, **{self.__unique_id__: self.id})
+        await just_db.delete(self.__tablename__, **{self.__unique_id__: self.id})
 
         asyncio.create_task(websocket_manager.broadcast({
             "type": "api-exchange_offer_deleted",

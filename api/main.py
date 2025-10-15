@@ -9,7 +9,7 @@ from game.logistics import Logistics
 from game.stages import stage_game_updater
 from global_modules.api_configurate import get_fastapi_app
 from modules.logs import *
-from modules.json_database import just_db
+from modules.db import just_db
 from modules.sheduler import scheduler
 from game.session import session_manager
 from game.exchange import Exchange
@@ -34,28 +34,28 @@ async def lifespan(app: FastAPI):
     websocket_logger.info("Creating missing tables on startup...")
     # just_db.drop_all() # Тестово
 
-    just_db.create_table('sessions') # Таблица сессий
-    just_db.create_table('users') # Таблица пользователей
-    just_db.create_table('companies') # Таблица компаний
-    just_db.create_table('game_history') # Таблица c историей ходов
-    just_db.create_table('time_schedule') # Таблица с задачами по времени
-    just_db.create_table('step_schedule') # Таблица с задачами по шагам
-    just_db.create_table('contracts') # Таблица с контрактами
-    just_db.create_table('cities') # Таблица с городами
-    just_db.create_table('exchanges') # Таблица с биржей
-    just_db.create_table('factories') # Таблица с заводами
-    just_db.create_table('item_price') # Таблица с ценами на товары
-    just_db.create_table('logistics') # Таблица с логистикой
+    await just_db.create_table('sessions') # Таблица сессий
+    await just_db.create_table('users') # Таблица пользователей
+    await just_db.create_table('companies') # Таблица компаний
+    await just_db.create_table('game_history') # Таблица c историей ходов
+    await just_db.create_table('time_schedule') # Таблица с задачами по времени
+    await just_db.create_table('step_schedule') # Таблица с задачами по шагам
+    await just_db.create_table('contracts') # Таблица с контрактами
+    await just_db.create_table('cities') # Таблица с городами
+    await just_db.create_table('exchanges') # Таблица с биржей
+    await just_db.create_table('factories') # Таблица с заводами
+    await just_db.create_table('item_price') # Таблица с ценами на товары
+    await just_db.create_table('logistics') # Таблица с логистикой
 
     websocket_logger.info("Loading sessions from database...")
-    session_manager.load_from_base()
+    await session_manager.load_from_base()
 
     await sleep(5)
     websocket_logger.info("Starting task scheduler...")
 
     asyncio.create_task(scheduler.start())
-    if debug:
-        asyncio.create_task(test1())
+    # if debug:
+    #     asyncio.create_task(test1())
 
     yield
 
@@ -97,7 +97,7 @@ async def test1():
     # Очистка и создание сессии
     if session_manager.get_session('AFRIKA'):
         session = session_manager.get_session('AFRIKA')
-        session.delete()
+        if session: session.delete()
 
     session = session_manager.create_session('AFRIKA')
     
@@ -116,7 +116,7 @@ async def test1():
 
     session.update_stage(SessionStages.CellSelect, True)
     for company in [supplier, customer]:
-        company.reupdate()
+        await company.reupdate()
     
     # Размещение компаний на карте
     supplier.set_position(0, 0)
@@ -124,7 +124,7 @@ async def test1():
     
     session.update_stage(SessionStages.Game, True)
     for company in [supplier, customer]:
-        company.reupdate()
+        await company.reupdate()
     
     # ПОЛНАЯ ОЧИСТКА ИНВЕНТАРЯ
     print("🧹 Полностью очищаем инвентарь...")
@@ -135,8 +135,8 @@ async def test1():
     
     supplier.reputation = 100
     customer.reputation = 100
-    supplier.save_to_base()
-    customer.save_to_base()
+    await supplier.save_to_base()
+    await customer.save_to_base()
 
     print("💰")
 

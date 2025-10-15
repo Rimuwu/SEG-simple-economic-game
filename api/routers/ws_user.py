@@ -2,7 +2,7 @@ from modules.websocket_manager import websocket_manager
 from game.user import User
 from modules.check_password import check_password
 from modules.ws_hadnler import message_handler
-from modules.json_database import just_db
+from modules.db import just_db
 from game.session import Session, session_manager
 
 @message_handler(

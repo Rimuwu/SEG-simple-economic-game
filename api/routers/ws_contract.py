@@ -2,7 +2,7 @@ from game.contract import Contract
 from modules.websocket_manager import websocket_manager
 from modules.check_password import check_password
 from modules.ws_hadnler import message_handler
-from modules.json_database import just_db
+from modules.db import just_db
 
 @message_handler(
     "get-contracts", 

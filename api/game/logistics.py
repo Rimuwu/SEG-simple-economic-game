@@ -1,10 +1,8 @@
-
-
 import asyncio
 from typing import Optional, cast
 from global_modules.models.cells import Cells
 from global_modules.db.baseclass import BaseClass
-from modules.json_database import just_db
+from modules.db import just_db
 from global_modules.load_config import ALL_CONFIGS, Resources, Improvements, Settings, Capital, Reputation
 from modules.function_way import *
 from modules.websocket_manager import websocket_manager
@@ -47,20 +45,20 @@ class Logistics(BaseClass):
         self.city_price: int = 0  # Цена за единицу при доставке в город
         self.created_step: int = 0  # На каком ходу была создана логистика
 
-    def get_delivery_speed(self) -> float:
+    async def get_delivery_speed(self) -> float:
         """Возвращает скорость доставки в клетках за ход"""
         from game.session import session_manager
-        session = session_manager.get_session(self.session_id)
+        session = await session_manager.get_session(self.session_id)
         if not session:
             mod = 1.0
         else:
-            mod = session.get_event_effects().get(
+            mod = await session.get_event_effects().get(
                 'cell_logistics', 1.0
             )
         
         return SETTINGS.logistics_speed * mod
 
-    def create(self, session_id: str, resource_type: str, 
+    async def create(self, session_id: str, resource_type: str, 
                amount: int, from_company_id: int, 
                to_company_id: Optional[int] = None,
                to_city_id: Optional[int] = None,
@@ -93,7 +91,7 @@ class Logistics(BaseClass):
                 raise ValueError("Недостаточно ресурсов у компании отправителя")
         
         # Получаем информацию о сессии
-        session = session_manager.get_session(session_id)
+        session = await session_manager.get_session(session_id)
         if not session:
             raise ValueError("Сессия не найдена")
         
@@ -145,8 +143,7 @@ class Logistics(BaseClass):
             sender_company.remove_resource(resource_type, amount)
 
         # Сохраняем в базу
-        self.id = just_db.max_id_in_table(self.__tablename__) + 1
-        self.save_to_base()
+        await self.insert()
 
         # Отправляем уведомление
         asyncio.create_task(websocket_manager.broadcast({
@@ -171,7 +168,7 @@ class Logistics(BaseClass):
         
         return float(distance)
 
-    def move_next_step(self) -> bool:
+    async def move_next_step(self) -> bool:
         """Перемещает груз на следующий шаг по маршруту"""
         
         if self.status != "in_transit":
@@ -179,10 +176,10 @@ class Logistics(BaseClass):
         
         # Если уже на месте
         if self.distance_left <= 0:
-            return self._attempt_delivery()
+            return await self._attempt_delivery()
         
         # Перемещаемся с учетом скорости
-        speed = self.get_delivery_speed()
+        speed = await self.get_delivery_speed()
         self.distance_left = max(0, self.distance_left - speed)
         
         # Обновляем текущую позицию (приближаемся к цели)
@@ -190,9 +187,9 @@ class Logistics(BaseClass):
         
         # Проверяем, дошли ли до цели
         if self.distance_left <= 0:
-            return self._attempt_delivery()
+            return await self._attempt_delivery()
         
-        self.save_to_base()
+        await self.save_to_base()
         
         # Отправляем уведомление о движении
         asyncio.create_task(websocket_manager.broadcast({
@@ -230,28 +227,31 @@ class Logistics(BaseClass):
         
         self.current_position = f"{current_pos[0]}.{current_pos[1]}"
     
-    def _attempt_delivery(self) -> bool:
+    async def _attempt_delivery(self) -> bool:
         """Пытается доставить груз получателю"""
         
         if self.destination_type == "company":
-            return self._deliver_to_company()
+            return await self._deliver_to_company()
         elif self.destination_type == "city":
-            return self._deliver_to_city()
+            return await self._deliver_to_city()
         else:
             # Неизвестный тип назначения, помечаем как неудачу
             self.status = "failed"
-            self.save_to_base()
+            await self.save_to_base()
             return False
     
-    def _deliver_to_company(self) -> bool:
+    async def _deliver_to_company(self) -> bool:
         """Доставляет груз компании"""
         
         from game.company import Company
-        
-        target_company = cast(Company, just_db.find_one("companies", id=self.to_company_id, to_class=Company))
+
+        target_company = cast(Company, 
+                              await just_db.find_one("companies", id=self.to_company_id, 
+                                                     to_class=Company)
+                              )
         if not target_company:
             self.status = "failed"
-            self.save_to_base()
+            await self.save_to_base()
             return False
         
         # Проверяем, есть ли место на складе
@@ -261,7 +261,7 @@ class Logistics(BaseClass):
             # Полная доставка
             target_company.add_resource(self.resource_type, self.amount)
             self.status = "delivered"
-            self.save_to_base()
+            await self.save_to_base()
             
             asyncio.create_task(websocket_manager.broadcast({
                 "type": "api-logistics_delivered",
@@ -278,7 +278,7 @@ class Logistics(BaseClass):
             # Недостаточно места, ждем
             self.status = "waiting_pickup"
             self.waiting_turns = 0
-            self.save_to_base()
+            await self.save_to_base()
             
             asyncio.create_task(websocket_manager.broadcast({
                 "type": "api-logistics_waiting",
@@ -290,7 +290,7 @@ class Logistics(BaseClass):
             
             return False
     
-    def _deliver_to_city(self) -> bool:
+    async def _deliver_to_city(self) -> bool:
         """Доставляет груз городу"""
         
         from game.company import Company
@@ -299,7 +299,7 @@ class Logistics(BaseClass):
         sender_company = cast(Company, just_db.find_one("companies", id=self.from_company_id, to_class=Company))
         if not sender_company:
             self.status = "failed"
-            self.save_to_base()
+            await self.save_to_base()
             return False
         
         # Зачисляем деньги компании за проданный товар
@@ -313,13 +313,13 @@ class Logistics(BaseClass):
         
         # Помечаем логистику как доставленную
         self.status = "delivered"
-        self.save_to_base()
+        await self.save_to_base()
         
         # Обновляем цену ресурса в сессии
         from game.session import session_manager
-        session = session_manager.get_session(self.session_id)
+        session = await session_manager.get_session(self.session_id)
         if session:
-            session.update_item_price(self.resource_type, self.city_price)
+            await session.update_item_price(self.resource_type, self.city_price)
 
         asyncio.create_task(websocket_manager.broadcast({
             "type": "api-logistics_delivered_to_city",
@@ -335,25 +335,25 @@ class Logistics(BaseClass):
         
         return True
     
-    def on_new_turn(self) -> bool:
+    async def on_new_turn(self) -> bool:
         """Обрабатывает новый ход для логистики"""
 
         if self.status == "in_transit":
-            return self.move_next_step()
+            return await self.move_next_step()
         
         elif self.status == "waiting_pickup":
             self.waiting_turns += 1
 
             # Через 1 ход ожидания пытаемся доставить частично
             if self.waiting_turns >= 1:
-                return self._force_partial_delivery()
+                return await self._force_partial_delivery()
 
         elif self.status in ["delivered", "failed"]:
-            self.delete()
+            await self.delete()
 
         return False
     
-    def _force_partial_delivery(self) -> bool:
+    async def _force_partial_delivery(self) -> bool:
         """Принудительная частичная доставка с удалением излишков"""
         from game.company import Company
         
@@ -361,7 +361,7 @@ class Logistics(BaseClass):
                                 id=self.to_company_id, to_class=Company))
         if not target_company:
             self.status = "failed"
-            self.save_to_base()
+            await self.save_to_base()
             return False
         
         free_space = target_company.get_warehouse_free_size()
@@ -375,7 +375,7 @@ class Logistics(BaseClass):
             lost_amount = self.amount - delivered_amount
             
             self.status = "delivered"
-            self.save_to_base()
+            await self.save_to_base()
             
             asyncio.create_task(websocket_manager.broadcast({
                 "type": "api-logistics_partial_delivery",
@@ -392,7 +392,7 @@ class Logistics(BaseClass):
         else:
             # Весь груз теряется
             self.status = "failed"
-            self.save_to_base()
+            await self.save_to_base()
 
             asyncio.create_task(websocket_manager.broadcast({
                 "type": "api-logistics_failed",
@@ -405,7 +405,7 @@ class Logistics(BaseClass):
             
             return False
 
-    def pick_up(self, company_id: int) -> bool:
+    async def pick_up(self, company_id: int) -> bool:
         """Позволяет компании забрать ожидающий груз"""
         if self.status != "waiting_pickup":
             raise ValueError("Груз не ожидает получения")
@@ -428,7 +428,7 @@ class Logistics(BaseClass):
         company.add_resource(self.resource_type, self.amount)
         
         self.status = "delivered"
-        self.save_to_base()
+        await self.save_to_base()
         
         asyncio.create_task(websocket_manager.broadcast({
             "type": "api-logistics_picked_up",
@@ -442,11 +442,11 @@ class Logistics(BaseClass):
         
         return True
 
-    def delete(self) -> bool:
+    async def delete(self) -> bool:
         """Удаляет логистическую доставку"""
-        
-        just_db.delete(self.__tablename__, **{self.__unique_id__: self.id})
-        
+
+        await just_db.delete(self.__tablename__, **{self.__unique_id__: self.id})
+
         asyncio.create_task(websocket_manager.broadcast({
             "type": "api-logistics_deleted",
             "data": {

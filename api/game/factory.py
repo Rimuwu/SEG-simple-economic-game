@@ -4,7 +4,7 @@ from typing import Optional
 from global_modules.models.cells import Cells
 from global_modules.db.baseclass import BaseClass
 from global_modules.models.resources import Production, Resource
-from modules.json_database import just_db
+from modules.db import just_db
 from global_modules.load_config import ALL_CONFIGS, Resources, Improvements, Settings, Capital, Reputation
 from modules.function_way import *
 from modules.websocket_manager import websocket_manager
@@ -19,7 +19,7 @@ REPUTATION: Reputation = ALL_CONFIGS['reputation']
 class Factory(BaseClass):
 
     __tablename__ = "factories"
-    __unique_id__ = "id"
+    __unique_id__ = "_id"
     __db_object__ = just_db
 
     def __init__(self, id: int = 0):
@@ -36,7 +36,7 @@ class Factory(BaseClass):
 
         self.produced: int = 0  # Сколько всего произведено продукции
 
-    def create(self, company_id: int, 
+    async def create(self, company_id: int, 
                complectation: Optional[str] = None):
         """ Создание новой фабрики
         """
@@ -45,7 +45,6 @@ class Factory(BaseClass):
 
         self.company_id = company_id
         self.complectation = complectation
-        self.id = self.__db_object__.max_id_in_table(self.__tablename__) + 1
 
         if complectation is not None:
             production: Production = RESOURCES.get_resource(complectation).production # type: ignore
@@ -53,8 +52,7 @@ class Factory(BaseClass):
             turns = production.turns if production else 0
             self.progress = [0, turns]
 
-        self.save_to_base()
-        self.reupdate()
+        await self.insert()
 
         asyncio.create_task(websocket_manager.broadcast({
             "type": "api-factory-create",
@@ -67,7 +65,7 @@ class Factory(BaseClass):
         return self
 
     @property
-    def is_working(self) -> bool:
+    async def is_working(self) -> bool:
         """ Проверка, работает ли фабрика
         """
 
@@ -80,12 +78,12 @@ class Factory(BaseClass):
         if not self.produce and not self.is_auto: # Если не производит и не авто
             return False
 
-        if not self.check_materials(): # Если нет материалов
+        if not await self.check_materials(): # Если нет материалов
             return False
 
         return True
 
-    def pere_complete(self, new_complectation: str):
+    async def pere_complete(self, new_complectation: str):
         """ Перекомплектация фабрики
         """
         if new_complectation not in RESOURCES.resources:
@@ -93,6 +91,9 @@ class Factory(BaseClass):
 
         # Проверяем, что ресурс не является сырьем
         new_resource = RESOURCES.get_resource(new_complectation)
+        if new_resource is None:
+            raise ValueError("Ресурс не найден.")
+        
         if new_resource.raw:
             raise ValueError("Невозможно производить сырьевые ресурсы.")
 
@@ -113,7 +114,7 @@ class Factory(BaseClass):
         production: Production = new_resource.production # type: ignore
         self.progress = [0, production.turns]
 
-        self.save_to_base()
+        await self.save_to_base()
 
         asyncio.create_task(websocket_manager.broadcast({
             "type": "api-factory-start-complectation",
@@ -124,22 +125,22 @@ class Factory(BaseClass):
         }))
         return True
 
-    def on_new_game_stage(self):
+    async def on_new_game_stage(self):
         from game.company import Company
         from game.session import Session
 
-        company = Company(self.company_id).reupdate()
+        company = await Company(self.company_id).reupdate()
         if not company:
             return False
-        
-        session = Session(company.session_id).reupdate()
+
+        session = await Session(company.session_id).reupdate()
         if not session:
             return False
 
         # Этап комплектации
         if self.complectation_stages > 0:
             self.complectation_stages -= 1
-            self.save_to_base()
+            await self.save_to_base()
 
             if self.complectation_stages == 0:
                 asyncio.create_task(websocket_manager.broadcast({
@@ -202,25 +203,25 @@ class Factory(BaseClass):
                     }
                 }))
 
-            self.save_to_base()
+            await self.save_to_base()
         return True
 
-    def set_produce(self, produce: bool):
+    async def set_produce(self, produce: bool):
         """ Установка статуса производства фабрики
         """
         if self.progress[0] == 0:
             self.produce = produce
-            self.save_to_base()
+            await self.save_to_base()
         else:
             raise ValueError("Нельзя изменить статус производства во время производства.")
 
-    def set_auto(self, is_auto: bool):
+    async def set_auto(self, is_auto: bool):
         """ Установка статуса автоматического производства фабрики
         """
         self.is_auto = is_auto
-        self.save_to_base()
+        await self.save_to_base()
 
-    def check_materials(self):
+    async def check_materials(self):
         """ Проверка наличия материалов для производства
         """
         from game.company import Company
@@ -233,7 +234,7 @@ class Factory(BaseClass):
 
         materials = resource.production.materials # type: ignore
 
-        company = Company(self.company_id).reupdate()
+        company = await Company(self.company_id).reupdate()
         all_good = True
         for mat, qty in materials.items():
             if company.warehouses.get(mat, 0) < qty:
@@ -257,13 +258,13 @@ class Factory(BaseClass):
             "check_materials": self.check_materials() if self.complectation else False
         }
 
-    def delete(self):
+    async def delete(self):
         """ Удаление фабрики
         """
         company_id = self.company_id
         factory_id = self.id
 
-        self.__db_object__.delete(self.__tablename__, 
+        await self.__db_object__.delete(self.__tablename__, 
                                   **{self.__unique_id__: self.id})
 
         asyncio.create_task(websocket_manager.broadcast({

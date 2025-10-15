@@ -59,7 +59,7 @@ def determine_city_branch(x: int, y: int, session_id: str, cells: list[str],
     Returns:
         Название ветки ('oil', 'metal', 'wood', 'cotton')
     """
-    from modules.json_database import just_db
+    from modules.db import just_db
     
     # Маппинг типов клеток на ветки ресурсов
     cell_to_branch = {

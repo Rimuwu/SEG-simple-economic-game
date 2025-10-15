@@ -1,6 +1,6 @@
 from modules import websocket_manager
 from modules.ws_hadnler import message_handler
-from modules.json_database import just_db
+from modules.db import just_db
 from game.session import session_manager, Session, SessionStages
 from modules.check_password import check_password
 

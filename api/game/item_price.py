@@ -4,7 +4,7 @@ import asyncio
 from typing import cast
 from global_modules.models.cells import Cells
 from global_modules.db.baseclass import BaseClass
-from modules.json_database import just_db
+from modules.db import just_db
 from global_modules.load_config import ALL_CONFIGS, Resources, Improvements, Settings, Capital, Reputation
 from modules.function_way import *
 from modules.websocket_manager import websocket_manager
@@ -21,7 +21,7 @@ RESET = 50
 class ItemPrice(BaseClass):
 
     __tablename__ = "item_price"
-    __unique_id__ = "id"
+    __unique_id__ = "_id"
     __db_object__ = just_db
 
     def __init__(self, id: str = ""):
@@ -32,7 +32,7 @@ class ItemPrice(BaseClass):
         self.material_based_price: int = 0
 
 
-    def create(self, session_id: str, item_id: str):
+    async def create(self, session_id: str, item_id: str):
         self.id = item_id
         self.session_id = session_id
 
@@ -40,13 +40,12 @@ class ItemPrice(BaseClass):
         self.prices = [self.current_price]
         self.material_based_price = self.calculate_material_price()
 
-        self.save_to_base()
-        self.reupdate()
+        await self.insert()
 
         return self
 
-    def delete(self):
-        just_db.delete(self.__tablename__, id=self.id, session_id=self.session_id)
+    async def delete(self):
+        await just_db.delete(self.__tablename__, id=self.id, session_id=self.session_id)
         return True
 
     def to_dict(self):
@@ -86,7 +85,7 @@ class ItemPrice(BaseClass):
 
         return self.current_price
 
-    def add_price(self, new_price: int):
+    async def add_price(self, new_price: int):
         self.prices.append(new_price)
 
         if len(self.prices) % 10 == 0:
@@ -101,7 +100,7 @@ class ItemPrice(BaseClass):
         self.current_price = int(sum(self.prices) / len(self.prices))
 
         self.material_based_price = self.calculate_material_price()
-        self.save_to_base()
+        await self.save_to_base()
 
         asyncio.create_task(websocket_manager.broadcast({
             "type": "api-item_price_updated",

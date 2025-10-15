@@ -1,6 +1,6 @@
 import asyncio
 from global_modules.db.baseclass import BaseClass
-from modules.json_database import just_db
+from modules.db import just_db
 from modules.websocket_manager import websocket_manager
 from modules.validation import validate_username
 
@@ -16,18 +16,18 @@ class User(BaseClass):
         self.company_id: int = 0
         self.session_id: str = ""
 
-    def create(self, _id: int, 
+    async def create(self, _id: int, 
                username: str, 
                session_id: str):
         from game.session import session_manager
         session = session_manager.get_session(session_id)
 
-        if not session or not session.can_user_connect():
+        if not session or not await session.can_user_connect():
             raise ValueError("Неверная сессия или регистрация запрещена на данном этапе.")
 
         self.id = _id
 
-        with_this_name = just_db.find_one("users", 
+        with_this_name = await just_db.find_one("users", 
                                           username=username, 
                                           session_id=session_id)
         if with_this_name:
@@ -38,22 +38,21 @@ class User(BaseClass):
 
         self.session_id = session_id
 
-        self.save_to_base()
-        self.reupdate()
+        await self.insert()
 
-        asyncio.create_task(websocket_manager.broadcast({
+        await websocket_manager.broadcast({
             "type": "api-create_user",
             "data": {
                 'session_id': self.session_id,
                 'user': self.to_dict()
             }
-        }))
+        })
         return self
 
-    def create_company(self, name: str):
+    async def create_company(self, name: str):
         from game.company import Company
         from game.session import session_manager
-        session = session_manager.get_session(self.session_id)
+        session = await session_manager.get_session(self.session_id)
 
         if self.company_id != 0:
             raise ValueError("Пользователь уже находится в компании.")
@@ -61,18 +60,18 @@ class User(BaseClass):
         if not session: 
             raise ValueError("Пользователь не в действительной сессии.")
 
-        company = Company().create(name=name, 
-                                   session_id=self.session_id)
-        if not session.can_add_company():
+        company = await Company().create(name=name, 
+                                   session_id=self.session_id
+                                   )
+        if not await session.can_add_company():
             raise ValueError("Невозможно добавить компанию на данном этапе.")
 
         self.company_id = company.id
 
-        self.save_to_base()
-        self.reupdate()
+        await self.save_to_base()
         return company
 
-    def add_to_company(self, secret_code: int):
+    async def add_to_company(self, secret_code: int):
         from game.company import Company
         if self.company_id != 0:
             raise ValueError("Пользователь уже находится в компании.")
@@ -83,59 +82,57 @@ class User(BaseClass):
         if not company: 
             raise ValueError("Компания с этим секретным кодом не найдена.")
 
-        if company.can_user_enter() is False:
+        if await company.can_user_enter() is False:
             raise ValueError("Компания в данный момент не принимает новых пользователей.")
 
         self.company_id = company.id
-        self.save_to_base()
-        self.reupdate()
+        await self.save_to_base()
 
-        asyncio.create_task(websocket_manager.broadcast({
+        await websocket_manager.broadcast({
             "type": "api-user_added_to_company",
             "data": {
                 "company_id": self.company_id,
                 "user_id": self.id
             }
-        }))
+        })
         return company
 
-    def delete(self):
-        just_db.delete(self.__tablename__, id=self.id)
-        
+    async def delete(self):
+        await just_db.delete(self.__tablename__, id=self.id)
+
         try:
-            self.leave_from_company()
+            await self.leave_from_company()
         except Exception: pass
 
-        asyncio.create_task(websocket_manager.broadcast({
+        await websocket_manager.broadcast({
             "type": "api-user_deleted",
             "data": {
                 "user_id": self.id
             }
-        }))
+        })
         return True
 
-    def leave_from_company(self):
+    async def leave_from_company(self):
         from game.company import Company
         if self.company_id == 0:
             raise ValueError("Пользователь не находится в компании.")
 
         old_company_id = self.company_id
         self.company_id = 0
-        self.save_to_base()
-        self.reupdate()
+        await self.save_to_base()
 
         company = Company(_id=old_company_id).reupdate()
 
-        asyncio.create_task(websocket_manager.broadcast({
+        await websocket_manager.broadcast({
             "type": "api-user_left_company",
             "data": {
                 "company_id": old_company_id,
                 "user_id": self.id
             }
-        }))
+        })
 
-        if company and len(company.users) == 0:
-            company.delete()
+        if company and len(await company.users) == 0:
+            await company.delete()
 
         return True
 

@@ -3,7 +3,7 @@ import asyncio
 from typing import Optional
 from global_modules.db.baseclass import BaseClass
 from global_modules.models.resources import Production, Resource
-from modules.json_database import just_db
+from modules.db import just_db
 from global_modules.load_config import ALL_CONFIGS, Resources, Improvements, Settings, Capital, Reputation
 from modules.function_way import *
 from modules.websocket_manager import websocket_manager

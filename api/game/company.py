@@ -6,7 +6,7 @@ from global_modules.models.cells import Cells
 from modules.generate import generate_number
 from modules.websocket_manager import websocket_manager
 from global_modules.db.baseclass import BaseClass
-from modules.json_database import just_db
+from modules.db import just_db
 from game.session import SessionStages, session_manager
 from global_modules.load_config import ALL_CONFIGS, Resources, Improvements, Settings, Capital, Reputation
 from global_modules.bank import calc_credit, get_credit_conditions, check_max_credit_steps, calc_deposit, get_deposit_conditions, check_max_deposit_steps
@@ -22,7 +22,7 @@ REPUTATION: Reputation = ALL_CONFIGS['reputation']
 class Company(BaseClass):
 
     __tablename__ = "companies"
-    __unique_id__ = "id"
+    __unique_id__ = "_id"
     __db_object__ = just_db
 
     def __init__(self, _id: int = 0):
@@ -56,27 +56,25 @@ class Company(BaseClass):
         self.business_type: str = "small"  # Тип бизнеса: "small" или "big"
         self.owner: int = 0
 
-    def set_owner(self, user_id: int):
+    async def set_owner(self, user_id: int):
         if self.owner != 0:
             raise ValueError("Владелец уже установлен.")
-        if user_id in [user.id for user in self.users] is False:
+        if user_id in [user.id for user in await self.users] is False:
             raise ValueError("Пользователь не является членом компании.")
 
         self.owner = user_id
-        self.save_to_base()
+        await self.save_to_base()
 
-    def create(self, name: str, session_id: str):
+    async def create(self, name: str, session_id: str):
         self.name = name
-        self.id = just_db.max_id_in_table(
-            self.__tablename__) + 1
 
         with_this_name = just_db.find_one(
             self.__tablename__, name=name, session_id=session_id)
         if with_this_name:
             raise ValueError(f"Компания с именем '{name}' уже существует.")
 
-        session = session_manager.get_session(session_id)
-        if not session or not session.can_add_company():
+        session = await session_manager.get_session(session_id)
+        if not session or not await session.can_add_company():
             raise ValueError("Недействительная или неактивная сессия для добавления компании.")
         self.session_id = session_id
 
@@ -96,9 +94,7 @@ class Company(BaseClass):
         self.balance = CAPITAL.start
         self.reputation = REPUTATION.start
 
-        self.save_to_base()
-        self.reupdate()
-
+        await self.insert()
         asyncio.create_task(websocket_manager.broadcast({
             "type": "api-create_company",
             "data": {
@@ -108,42 +104,43 @@ class Company(BaseClass):
         }))
         return self
 
-    def can_user_enter(self):
-        session = session_manager.get_session(self.session_id)
+    async def can_user_enter(self):
+        session = await session_manager.get_session(self.session_id)
         if not session or session.stage != "FreeUserConnect":
             return False
 
-        if len(self.users) >= SETTINGS.max_players_in_company:
+        if len(await self.users) >= SETTINGS.max_players_in_company:
             return False
         return True
 
     @property
-    def users(self) -> list['User']:
+    async def users(self) -> list['User']:
         from game.user import User
 
-        users = just_db.find(
+        users = await just_db.find(
             User.__tablename__, to_class=User, 
             company_id=self.id
         )
         return users
 
-    def set_position(self, x: int, y: int):
+    async def set_position(self, x: int, y: int):
         if isinstance(x, int) is False or isinstance(y, int) is False:
             raise ValueError("Координаты должны быть целыми числами.")
 
-        session = session_manager.get_session(self.session_id)
-        if not session or not session.can_select_cell(x, y):
+        session = await session_manager.get_session(self.session_id)
+        if not session or not await session.can_select_cell(x, y):
             return False
 
         old_position = self.cell_position
         self.cell_position = f"{x}.{y}"
-        self.save_to_base()
-        self.reupdate()
+        await self.save_to_base()
+        await self.reupdate()
 
         # Если все компании выбрали клетки, переходим к следующему этапу
-        if session.all_companies_have_cells():
-            session.update_stage(SessionStages.Game)
-            session.save_to_base()
+        await session.reupdate()
+        if await session.all_companies_have_cells():
+            await session.update_stage(SessionStages.Game)
+            await session.save_to_base()
 
         asyncio.create_task(websocket_manager.broadcast({
             "type": "api-company_set_position",
@@ -154,7 +151,8 @@ class Company(BaseClass):
             }
         }))
 
-        col = self.get_improvements()['factory']['tasksPerTurn']
+        imps = await self.get_improvements()
+        col = imps['factory']['tasksPerTurn']
         col_complect = col // 3
         cell_type: str = self.get_cell_type() # type: ignore
 
@@ -164,7 +162,7 @@ class Company(BaseClass):
             if col_complect > 0:
                 res = SETTINGS.start_complectation.get(cell_type, None)
 
-            Factory().create(self.id, res)
+            await Factory().create(self.id, res)
             col_complect -= 1
 
         return True
@@ -178,13 +176,13 @@ class Company(BaseClass):
         except Exception:
             return None
 
-    def delete(self):
-        just_db.delete(self.__tablename__, **{self.__unique_id__: self.id})
+    async def delete(self):
+        await just_db.delete(self.__tablename__, **{self.__unique_id__: self.id})
 
-        for user in self.users: user.leave_from_company()
-        for factory in self.get_factories(): factory.delete()
-        for exchange in self.exchanges: exchange.delete()
-        for contract in self.get_contracts(): contract.delete()
+        for user in await self.users: await user.leave_from_company()
+        for factory in await self.get_factories(): await factory.delete()
+        for exchange in await self.exchanges: await exchange.delete()
+        for contract in await self.get_contracts(): await contract.delete()
 
         asyncio.create_task(websocket_manager.broadcast({
             "type": "api-company_deleted",
@@ -195,7 +193,7 @@ class Company(BaseClass):
         return True
 
     def get_max_warehouse_size(self) -> int:
-        imps = self.get_improvements()
+        imps = await self.get_improvements()
         if 'warehouse' not in imps:
             return 0
 
@@ -205,7 +203,7 @@ class Company(BaseClass):
     def get_warehouse_free_size(self) -> int:
         return self.get_max_warehouse_size() - self.get_resources_amount()
 
-    def add_resource(self, resource: str, amount: int, 
+    async def add_resource(self, resource: str, amount: int, 
                      ignore_space: bool = False):
         if RESOURCES.get_resource(resource) is None:
             raise ValueError(f"Ресурс '{resource}' не существует.")
@@ -219,8 +217,7 @@ class Company(BaseClass):
         else:
             self.warehouses[resource] = amount
 
-        self.save_to_base()
-        self.reupdate()
+        await self.save_to_base()
 
         asyncio.create_task(websocket_manager.broadcast({
             "type": "api-company_resource_added",
@@ -232,7 +229,7 @@ class Company(BaseClass):
         }))
         return True
 
-    def remove_resource(self, resource: str, amount: int):
+    async def remove_resource(self, resource: str, amount: int):
         if RESOURCES.get_resource(resource) is None:
             raise ValueError(f"Ресурс '{resource}' не существует.")
         if amount <= 0:
@@ -244,8 +241,7 @@ class Company(BaseClass):
         if self.warehouses[resource] == 0:
             del self.warehouses[resource]
 
-        self.save_to_base()
-        self.reupdate()
+        await self.save_to_base()
 
         asyncio.create_task(websocket_manager.broadcast({
             "type": "api-company_resource_removed",
@@ -263,7 +259,7 @@ class Company(BaseClass):
             count += amount
         return count
 
-    def set_economic_power(self, count: int, item: str, e_type: str):
+    async def set_economic_power(self, count: int, item: str, e_type: str):
         mod = 1
 
         if e_type == "production":
@@ -282,21 +278,22 @@ class Company(BaseClass):
             dif = resource.basePrice
 
         self.economic_power += int(count * dif * mod)
-        self.save_to_base()
+        await self.save_to_base()
 
-    def get_my_cell_info(self):
-        cell_type_key = self.get_cell_type()
+    async def get_my_cell_info(self):
+        cell_type_key = await self.get_cell_type()
         if not cell_type_key: return None
 
         result = CELLS.types.get(cell_type_key)
         return result
 
-    def get_cell_type(self):
+    async def get_cell_type(self):
         position = self.get_position()
         if not position:
             return None
         x, y = position
-        session = session_manager.get_session(self.session_id)
+
+        session = await session_manager.get_session(self.session_id)
         if not session:
             return None
         index = x * session.map_size["cols"] + y
@@ -305,10 +302,10 @@ class Company(BaseClass):
             return None
         return session.cells[index]
 
-    def get_improvements(self):
+    async def get_improvements(self):
         """ Возвращает данные улучшений для компании
         """
-        cell_type = self.get_cell_type()
+        cell_type = await self.get_cell_type()
         if cell_type is None: return {}
 
         data = {}
@@ -320,7 +317,7 @@ class Company(BaseClass):
 
         return data
 
-    def add_balance(self, amount: int, income_percent: float = 1.0):
+    async def add_balance(self, amount: int, income_percent: float = 1.0):
         if not isinstance(income_percent, float):
             raise ValueError("Процент дохода должен быть числом с плавающей точкой.")
         if income_percent < 0:
@@ -334,8 +331,7 @@ class Company(BaseClass):
         self.balance += amount
         self.this_turn_income += int(amount * income_percent)
 
-        self.save_to_base()
-        self.reupdate()
+        await self.save_to_base()
 
         asyncio.create_task(websocket_manager.broadcast({
             "type": "api-company_balance_changed",
@@ -347,7 +343,7 @@ class Company(BaseClass):
         }))
         return True
 
-    def remove_balance(self, amount: int):
+    async def remove_balance(self, amount: int):
         if not isinstance(amount, int):
             raise ValueError("Сумма должна быть целым числом.")
         if amount <= 0:
@@ -357,8 +353,8 @@ class Company(BaseClass):
 
         old_balance = self.balance
         self.balance -= amount
-        self.save_to_base()
-        self.reupdate()
+        
+        await self.save_to_base()
 
         asyncio.create_task(websocket_manager.broadcast({
             "type": "api-company_balance_changed",
@@ -370,7 +366,7 @@ class Company(BaseClass):
         }))
         return True
 
-    def improve(self, improvement_type: str):
+    async def improve(self, improvement_type: str):
         """ Улучшает указанное улучшение на 1 уровень, если это возможно.
         """
 
@@ -379,7 +375,7 @@ class Company(BaseClass):
         # my_improvements = self.get_improvements()
         imp_lvl_now = self.improvements.get(
             improvement_type, None)
-        cell_type = self.get_cell_type()
+        cell_type = await self.get_cell_type()
 
         if cell_type is None:
             raise ValueError("Невозможно определить тип клетки для улучшений.")
@@ -396,18 +392,18 @@ class Company(BaseClass):
             raise ValueError(f"Нет следующего уровня для улучшения '{improvement_type}'.")
 
         cost = imp_next_lvl.cost
-        self.remove_balance(cost)
+        await self.remove_balance(cost)
 
         self.improvements[improvement_type] = imp_lvl_now + 1
-        self.save_to_base()
-        self.reupdate()
-        
+        await self.save_to_base()
+
         if improvement_type == 'factory':
-            col_need = self.get_improvements()['factory']['tasksPerTurn']
-            col_now = len(self.get_factories())
+            imp = await self.get_improvements()
+            col_need = imp['factory']['tasksPerTurn']
+            col_now = len(await self.get_factories())
 
             for _ in range(col_need - col_now):
-                Factory().create(self.id)
+                await Factory().create(self.id)
 
         asyncio.create_task(websocket_manager.broadcast({
             "type": "api-company_improvement_upgraded",
@@ -419,7 +415,7 @@ class Company(BaseClass):
         }))
         return True
 
-    def add_reputation(self, amount: int):
+    async def add_reputation(self, amount: int):
         if not isinstance(amount, int):
             raise ValueError("Сумма должна быть целым числом.")
         if amount <= 0:
@@ -427,8 +423,7 @@ class Company(BaseClass):
 
         old_reputation = self.reputation
         self.reputation += amount
-        self.save_to_base()
-        self.reupdate()
+        await self.save_to_base()
 
         asyncio.create_task(websocket_manager.broadcast({
             "type": "api-company_reputation_changed",
@@ -440,7 +435,7 @@ class Company(BaseClass):
         }))
         return True
 
-    def remove_reputation(self, amount: int):
+    async def remove_reputation(self, amount: int):
         if not isinstance(amount, int):
             raise ValueError("Сумма должна быть целым числом.")
         if amount <= 0:
@@ -450,8 +445,7 @@ class Company(BaseClass):
         self.reputation = max(0, self.reputation - amount)
         
         if self.reputation != old_reputation:
-            self.save_to_base()
-            self.reupdate()
+            await self.save_to_base()
 
             asyncio.create_task(websocket_manager.broadcast({
                 "type": "api-company_reputation_changed",
@@ -463,11 +457,11 @@ class Company(BaseClass):
             }))
 
             if self.reputation <= REPUTATION.prison.on_reputation: 
-                self.to_prison()
+                await self.to_prison()
             return True
         return False
 
-    def take_credit(self, c_sum: int, steps: int):
+    async def take_credit(self, c_sum: int, steps: int):
         """ 
             Сумма кредита у нас между минимумом и максимумом
             Количество шагов у нас 
@@ -487,7 +481,7 @@ class Company(BaseClass):
             c_sum, credit_condition.without_interest, credit_condition.percent, steps
             )
 
-        session = session_manager.get_session(self.session_id)
+        session = await session_manager.get_session(self.session_id)
         if not session:
             raise ValueError("Сессия не найдена.")
 
@@ -515,8 +509,8 @@ class Company(BaseClass):
         }
         self.credits.append(credit_data)
 
-        self.save_to_base()
-        self.add_balance(c_sum, 0.0) # деньги без процентов в доход
+        await self.save_to_base()
+        await self.add_balance(c_sum, 0.0) # деньги без процентов в доход
 
         asyncio.create_task(websocket_manager.broadcast({
             "type": "api-company_credit_taken",
@@ -528,7 +522,7 @@ class Company(BaseClass):
         }))
         return credit_data
 
-    def credit_paid_step(self):
+    async def credit_paid_step(self):
         """ Вызывается при каждом шаге игры для компании.
             Начисляет плату по кредитам, если они есть.
         """
@@ -547,15 +541,14 @@ class Company(BaseClass):
 
             elif credit["steps_now"] > credit["steps_total"]:
                 # Просрочка - не увеличиваем steps_now больше, но снижаем репутацию
-                self.remove_reputation(REPUTATION.credit.lost)
+                await self.remove_reputation(REPUTATION.credit.lost)
 
             if credit["steps_now"] - credit["steps_total"] > REPUTATION.credit.max_overdue:
-                self.to_prison()
+                await self.to_prison()
 
-        self.save_to_base()
-        self.reupdate()
+        await self.save_to_base()
 
-    def remove_credit(self, credit_index: int):
+    async def remove_credit(self, credit_index: int):
         """ Удаляет кредит с индексом credit_index.
         """
 
@@ -563,8 +556,7 @@ class Company(BaseClass):
             raise ValueError("Недействительный индекс кредита.")
 
         del self.credits[credit_index]
-        self.save_to_base()
-        self.reupdate()
+        await self.save_to_base()
 
         asyncio.create_task(websocket_manager.broadcast({
             "type": "api-company_credit_removed",
@@ -575,7 +567,7 @@ class Company(BaseClass):
         }))
         return True
 
-    def pay_credit(self, credit_index: int, amount: int):
+    async def pay_credit(self, credit_index: int, amount: int):
         """ Платит указанную сумму по кредиту с индексом credit_index.
         """
 
@@ -601,7 +593,7 @@ class Company(BaseClass):
             amount = remaining_debt
 
         # Снимаем деньги с баланса
-        self.remove_balance(amount)
+        await self.remove_balance(amount)
 
         # Обновляем информацию по кредиту
         credit["paid"] += amount
@@ -609,12 +601,11 @@ class Company(BaseClass):
 
         # Если кредит полностью выплачен, удаляем его
         if credit["paid"] >= credit["total_to_pay"]:
-            self.remove_credit(credit_index)
-            self.add_reputation(REPUTATION.credit.gained)
+            await self.remove_credit(credit_index)
+            await self.add_reputation(REPUTATION.credit.gained)
         else:
             self.credits[credit_index] = credit
-            self.save_to_base()
-            self.reupdate()
+            await self.save_to_base()
 
         remaining = credit["total_to_pay"] - credit["paid"] if credit["paid"] < credit["total_to_pay"] else 0
 
@@ -629,13 +620,13 @@ class Company(BaseClass):
         }))
         return True
 
-    def to_prison(self):
+    async def to_prison(self):
         """ Сажает компанию в тюрьму за неуплату кредитов
         """
 
         # Сажается на Х ходов и после шедулером выкидывается с пустой компанией
 
-        session = session_manager.get_session(self.session_id)
+        session = await session_manager.get_session(self.session_id)
         if not session:
             raise ValueError("Сессия не найдена.")
 
@@ -652,20 +643,19 @@ class Company(BaseClass):
         self.overdue_steps = 0
         self.this_turn_income = 0
 
-        for i in self.get_factories():
+        for i in await self.get_factories():
             i.is_auto = False
-            i.save_to_base()
+            await i.save_to_base()
 
-        for i in self.get_contracts():
-            i.delete()
+        for i in await self.get_contracts():
+            await i.delete()
 
-        for i in self.exchanges:
-            i.delete()
+        for i in await self.exchanges:
+            await i.delete()
 
-        self.save_to_base()
-        self.reupdate()
+        await self.save_to_base()
 
-        session.create_step_schedule(
+        await session.create_step_schedule(
             end_step,
             leave_from_prison,
             session_id=self.session_id,
@@ -680,7 +670,7 @@ class Company(BaseClass):
             }
         }))
 
-    def leave_prison(self):
+    async def leave_prison(self):
         """ Выход из тюрьмы по времени
         """
 
@@ -689,8 +679,7 @@ class Company(BaseClass):
 
         self.in_prison = False
         self.prison_end_step = None
-        self.save_to_base()
-        self.reupdate()
+        await self.save_to_base()
 
         asyncio.create_task(websocket_manager.broadcast({
             "type": "api-company_left_prison",
@@ -708,19 +697,19 @@ class Company(BaseClass):
 
         return self.in_prison
 
-    def business_tax(self):
+    async def business_tax(self):
         """ Определяет налоговую ставку в зависимости от типа бизнеса.
         """
-        
-        session = session_manager.get_session(self.session_id)
+
+        session = await session_manager.get_session(self.session_id)
         if not session:
             raise ValueError("Сессия не найдена.")
 
-        big_mod = session.get_event_effects().get(
+        big_mod = await session.get_event_effects().get(
             'tax_rate_large', CAPITAL.bank.tax.big_on
         )
 
-        small_mod = session.get_event_effects().get(
+        small_mod = await session.get_event_effects().get(
             'tax_rate_small', CAPITAL.bank.tax.small_business
         )
 
@@ -728,32 +717,31 @@ class Company(BaseClass):
             return big_mod
         return small_mod
 
-    def taxate(self):
+    async def taxate(self):
         """ Начисляет налоги в зависимости от типа бизнеса. Вызывается каждый ход.
         """
 
         if self.tax_debt > 0:
             self.overdue_steps += 1
-            self.remove_reputation(REPUTATION.tax.late)
+            await self.remove_reputation(REPUTATION.tax.late)
 
         if self.overdue_steps > REPUTATION.tax.not_paid_stages:
             self.overdue_steps = 0
             self.tax_debt = 0
 
             if self.reputation > 0:
-                self.remove_reputation(self.reputation)
-            self.to_prison()
+                await self.remove_reputation(self.reputation)
+            await self.to_prison()
             return
 
-        percent = self.business_tax()
+        percent = await self.business_tax()
         tax_amount = int(self.last_turn_income * percent)
 
         self.tax_debt += tax_amount
-        self.save_to_base()
-        self.reupdate()
+        await self.save_to_base()
 
 
-    def pay_taxes(self, amount: int):
+    async def pay_taxes(self, amount: int):
         """ Платит указанную сумму по налогам.
         """
 
@@ -771,17 +759,16 @@ class Company(BaseClass):
         if amount > self.tax_debt: amount = self.tax_debt
 
         # Снимаем деньги с баланса
-        self.remove_balance(amount)
+        await self.remove_balance(amount)
 
         # Обновляем информацию по налогам
         self.tax_debt -= amount
         if self.tax_debt <= 0:
             self.tax_debt = 0
             self.overdue_steps = 0
-            self.add_reputation(REPUTATION.tax.paid)
+            await self.add_reputation(REPUTATION.tax.paid)
 
-        self.save_to_base()
-        self.reupdate()
+        await self.save_to_base()
 
         asyncio.create_task(websocket_manager.broadcast({
             "type": "api-company_tax_paid",
@@ -925,12 +912,12 @@ class Company(BaseClass):
         return True
 
 
-    def raw_in_step(self):
+    async def raw_in_step(self):
         """ Вызывается при каждом шаге игры для компании.
             Определеяет сколько сырья выдать компании в ход.
         """
 
-        imps = self.get_improvements()
+        imps = await self.get_improvements()
         if 'station' not in imps:
             return 0
 
@@ -938,10 +925,10 @@ class Company(BaseClass):
         return perturn
 
 
-    def get_factories(self) -> list['Factory']:
+    async def get_factories(self) -> list['Factory']:
         """ Возвращает список фабрик компании.
         """
-        return [factory for factory in just_db.find(
+        return [factory for factory in await just_db.find(
             "factories", to_class=Factory, company_id=self.id)] # type: ignore
 
     def complect_factory(self, factory_id: int, resource: str):
@@ -1006,16 +993,16 @@ class Company(BaseClass):
 
         factory.set_produce(produce)
 
-    def get_contracts(self) -> list['Contract']:
+    async def get_contracts(self) -> list['Contract']:
         """ Получает все контракты компании """
         from game.contract import Contract
 
-        contracts: list[Contract] = just_db.find(
+        contracts: list[Contract] = await just_db.find(
             Contract.__tablename__, to_class=Contract,
             supplier_company_id=self.id
         ) # type: ignore
 
-        contracts += just_db.find(
+        contracts += await just_db.find(
             Contract.__tablename__, to_class=Contract,
             customer_company_id=self.id
         ) # type: ignore
@@ -1092,10 +1079,10 @@ class Company(BaseClass):
             contract.on_new_game_step()
 
     @property
-    def exchanges(self) -> list['Exchange']:
+    async def exchanges(self) -> list['Exchange']:
         from game.exchange import Exchange
 
-        exchanges = just_db.find(
+        exchanges = await just_db.find(
             Exchange.__tablename__, to_class=Exchange,
             company_id = self.id,
             session_id=self.session_id
