@@ -1,6 +1,5 @@
-
-import asyncio
 from typing import Optional
+from game.session import SessionObject
 from global_modules.models.cells import Cells
 from global_modules.db.baseclass import BaseClass
 from global_modules.models.resources import Production, Resource
@@ -16,7 +15,7 @@ SETTINGS: Settings = ALL_CONFIGS['settings']
 CAPITAL: Capital = ALL_CONFIGS['capital']
 REPUTATION: Reputation = ALL_CONFIGS['reputation']
 
-class Factory(BaseClass):
+class Factory(BaseClass, SessionObject):
 
     __tablename__ = "factories"
     __unique_id__ = "_id"
@@ -36,12 +35,14 @@ class Factory(BaseClass):
 
         self.produced: int = 0  # Сколько всего произведено продукции
 
-    async def create(self, company_id: int, 
-               complectation: Optional[str] = None):
+    async def create(self, 
+                     company_id: int, 
+                     complectation: Optional[str] = None
+                     ):
         """ Создание новой фабрики
         """
         if complectation not in RESOURCES.resources and complectation is not None:
-            raise ValueError("Invalid complectation type.")
+            raise ValueError("Неверный тип комплектации.")
 
         self.company_id = company_id
         self.complectation = complectation
@@ -53,15 +54,13 @@ class Factory(BaseClass):
             self.progress = [0, turns]
 
         await self.insert()
-
-        asyncio.create_task(websocket_manager.broadcast({
+        await websocket_manager.broadcast({
             "type": "api-factory-create",
             "data": {
                 "factory": self.to_dict(),
                 "company_id": self.company_id
             }
-        }))
-
+        })
         return self
 
     @property
@@ -115,14 +114,13 @@ class Factory(BaseClass):
         self.progress = [0, production.turns]
 
         await self.save_to_base()
-
-        asyncio.create_task(websocket_manager.broadcast({
+        await websocket_manager.broadcast({
             "type": "api-factory-start-complectation",
             "data": {
             'factory_id': self.id,
             'company_id': self.company_id
             }
-        }))
+        })
         return True
 
     async def on_new_game_stage(self):
@@ -143,13 +141,13 @@ class Factory(BaseClass):
             await self.save_to_base()
 
             if self.complectation_stages == 0:
-                asyncio.create_task(websocket_manager.broadcast({
+                await websocket_manager.broadcast({
                     "type": "api-factory-end-complectation",
                     "data": {
                         'factory_id': self.id,
                         'company_id': self.company_id
                     }
-                }))
+                })
 
         # Этап производства
         elif self.is_working:
@@ -161,7 +159,7 @@ class Factory(BaseClass):
 
                 for mat, qty in materials.items():
                     try:
-                        company.remove_resource(mat, qty)
+                        await company.remove_resource(mat, qty)
                     except Exception as e:
                         return False
 
@@ -176,16 +174,10 @@ class Factory(BaseClass):
 
                 # Добавляем продукцию на склад компании
                 if self.complectation:
-                    try:
-                        company.add_resource(
-                            self.complectation, output)
-                        self.produced += output
-                    except Exception as e:
-                        max_col = company.get_warehouse_free_size()
-                        if max_col > 0:
-                            company.add_resource(
-                                self.complectation, max_col)
-                            self.produced += max_col
+                    await company.add_resource(
+                            self.complectation, output,
+                            max_space=True)
+                    self.produced += output
 
                 self.progress[0] = 0
 
@@ -195,13 +187,13 @@ class Factory(BaseClass):
                 else:
                     self.produce = False
 
-                asyncio.create_task(websocket_manager.broadcast({
+                await websocket_manager.broadcast({
                     "type": "api-factory-end-production",
                     "data": {
                         'factory_id': self.id,
                         'company_id': self.company_id
                     }
-                }))
+                })
 
             await self.save_to_base()
         return True
@@ -267,12 +259,12 @@ class Factory(BaseClass):
         await self.__db_object__.delete(self.__tablename__, 
                                   **{self.__unique_id__: self.id})
 
-        asyncio.create_task(websocket_manager.broadcast({
+        await websocket_manager.broadcast({
             "type": "api-factory-delete",
             "data": {
                 "factory_id": factory_id,
                 "company_id": company_id
             }
-        }))
+        })
 
         return True

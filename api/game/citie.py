@@ -1,6 +1,6 @@
-import asyncio
 import random
 from typing import Optional
+from game.session import SessionObject
 from global_modules.models.cells import Cells
 from global_modules.db.baseclass import BaseClass
 from modules.db import just_db
@@ -68,7 +68,7 @@ NAMES = [
     "Берилловый Вал"
 ]
 
-class Citie(BaseClass):
+class Citie(BaseClass, SessionObject):
 
     __tablename__ = "cities"
     __unique_id__ = "_id"
@@ -85,8 +85,10 @@ class Citie(BaseClass):
         # Спрос на товары: {resource_id: {'amount': int, 'price': int}}
         self.demands: dict = {}
 
-    async def create(self, session_id: str, x: int, y: int, 
-               name: Optional[str] = None):
+    async def create(self, 
+                     session_id: str, 
+                     x: int, y: int, 
+                     name: Optional[str] = None):
         """ Создание нового города
         
         Args:
@@ -94,27 +96,24 @@ class Citie(BaseClass):
             x: координата X
             y: координата Y
         """
-        from game.session import session_manager
-
-        session = await session_manager.get_session(session_id)
-        if not session:
-            raise ValueError("Сессия не найдена")
+        session = await self.get_session_or_error()
 
         self.session_id = session_id
         self.cell_position = f"{x}.{y}"
-        
+
         # Определяем приоритетную ветку на основе соседних клеток
-        self.branch = determine_city_branch(
-            x, y, session_id, session.cells, session.map_size, CELLS
+        self.branch = await determine_city_branch(
+            x, y, session_id, session.cells, session.map_size
         )
+
         self.name = name if name else random.choice(NAMES)
+        self.id = await just_db.max_id_in_table(
+            self.__tablename__)
 
         # Инициализируем спрос
         await self._update_demands(session)
 
-        await self.save_to_base()
-        await self.reupdate()
-
+        await self.insert()
         await websocket_manager.broadcast({
             "type": "api-city-create",
             "data": {
@@ -131,12 +130,11 @@ class Citie(BaseClass):
             session: объект Session (опционально, для оптимизации)
         """
         if session is None:
-            from game.session import session_manager
-            session = await session_manager.get_session(self.session_id)
-        
+            session = await self.get_session_or_error()
+
         if not session:
             return
-        
+
         # Получаем количество пользователей в сессии (минимум 1 для расчётов)
         users_count = max(len(await session.users), 1)
         
@@ -190,11 +188,7 @@ class Citie(BaseClass):
 
     async def on_new_game_stage(self):
         """Вызывается при начале нового игрового хода"""
-        from game.session import session_manager
-        
-        session = session_manager.get_session(self.session_id)
-        if not session:
-            return
+        session = await self.get_session_or_error()
         
         # Обновляем спрос на товары
         await self._update_demands(session)

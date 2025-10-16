@@ -239,9 +239,9 @@ class MongoDatabase:
         """Возвращает максимальный ID в коллекции"""
         if self.db is None:
             await self.connect()
-            
+
         collection = self._get_collection(table_name)
-        
+
         # Ищем документ с максимальным id
         cursor = collection.find().sort([('id', -1)]).limit(1)
         result = await cursor.to_list(length=1)

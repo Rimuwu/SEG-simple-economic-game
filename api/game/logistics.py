@@ -1,5 +1,5 @@
-import asyncio
 from typing import Optional, cast
+from api.game.session import SessionObject
 from global_modules.models.cells import Cells
 from global_modules.db.baseclass import BaseClass
 from modules.db import just_db
@@ -14,7 +14,7 @@ SETTINGS: Settings = ALL_CONFIGS['settings']
 CAPITAL: Capital = ALL_CONFIGS['capital']
 REPUTATION: Reputation = ALL_CONFIGS['reputation']
 
-class Logistics(BaseClass):
+class Logistics(BaseClass, SessionObject):
 
     __tablename__ = "logistics"
     __unique_id__ = "id"
@@ -47,18 +47,20 @@ class Logistics(BaseClass):
 
     async def get_delivery_speed(self) -> float:
         """Возвращает скорость доставки в клетках за ход"""
-        from game.session import session_manager
-        session = await session_manager.get_session(self.session_id)
+
+        session = await self.get_session_or_error()
+
         if not session:
             mod = 1.0
         else:
             mod = await session.get_event_effects().get(
                 'cell_logistics', 1.0
             )
-        
+
         return SETTINGS.logistics_speed * mod
 
-    async def create(self, session_id: str, resource_type: str, 
+    async def create(self, 
+               session_id: str, resource_type: str, 
                amount: int, from_company_id: int, 
                to_company_id: Optional[int] = None,
                to_city_id: Optional[int] = None,
@@ -68,10 +70,10 @@ class Logistics(BaseClass):
         
         if resource_type not in RESOURCES.resources:
             raise ValueError("Неверный тип ресурса")
-        
+
         if amount <= 0:
             raise ValueError("Количество должно быть положительным")
-        
+
         # Проверяем, что указана только одна цель
         if (to_company_id is None) == (to_city_id is None):
             raise ValueError("Необходимо указать либо ID компании, либо ID города получателя")
@@ -79,8 +81,7 @@ class Logistics(BaseClass):
         # Получаем компанию отправителя
         from game.company import Company
         from game.citie import Citie
-        from game.session import session_manager
-        
+
         sender_company = cast(Company, just_db.find_one("companies", id=from_company_id, to_class=Company))
         if not sender_company:
             raise ValueError("Компания отправитель не найдена")
@@ -89,14 +90,10 @@ class Logistics(BaseClass):
             # Проверяем, что у компании достаточно ресурсов
             if resource_type not in sender_company.warehouses or sender_company.warehouses[resource_type] < amount:
                 raise ValueError("Недостаточно ресурсов у компании отправителя")
-        
-        # Получаем информацию о сессии
-        session = await session_manager.get_session(session_id)
-        if not session:
-            raise ValueError("Сессия не найдена")
-        
-        # Устанавливаем основные поля
+
         self.session_id = session_id
+        session = await self.get_session_or_error()
+
         self.resource_type = resource_type
         self.amount = amount
         self.from_company_id = from_company_id
@@ -105,7 +102,12 @@ class Logistics(BaseClass):
 
         if to_company_id is not None:
             # Доставка в компанию
-            target_company = cast(Company, just_db.find_one("companies", id=to_company_id, to_class=Company, session_id=session_id))
+            target_company = cast(Company, 
+                await just_db.find_one("companies", 
+                            id=to_company_id, 
+                            to_class=Company, session_id=session_id
+                ))
+
             if not target_company:
                 raise ValueError("Компания получатель не найдена")
 
@@ -117,14 +119,18 @@ class Logistics(BaseClass):
 
         else:
             # Доставка в город
-            target_city = cast(Citie, just_db.find_one("cities", id=to_city_id, to_class=Citie, session_id=session_id))
+            target_city = cast(Citie, 
+                await just_db.find_one("cities", 
+                            id=to_city_id, 
+                            to_class=Citie, session_id=session_id
+                ))
             if not target_city:
                 raise ValueError("Город получатель не найден")
-            
+
             # Проверяем, что город принимает этот ресурс
             if resource_type not in target_city.demands:
                 raise ValueError("Город не принимает этот ресурс")
-            
+
             # Проверяем, что города достаточно спроса
             if amount > target_city.demands[resource_type]['amount']:
                 raise ValueError(f"Город принимает только {target_city.demands[resource_type]['amount']} единиц этого ресурса")
@@ -140,93 +146,98 @@ class Logistics(BaseClass):
 
         if not sender_no_delete:
             # Снимаем ресурсы с компании отправителя
-            sender_company.remove_resource(resource_type, amount)
+            await sender_company.remove_resource(
+                resource_type, amount)
 
         # Сохраняем в базу
         await self.insert()
 
         # Отправляем уведомление
-        asyncio.create_task(websocket_manager.broadcast({
+        await websocket_manager.broadcast({
             "type": "api-logistics_created",
             "data": {
                 "session_id": self.session_id,
                 "logistics": self.to_dict()
             }
-        }))
-        
+        })
+
         return self
 
     def _calculate_distance(self) -> float:
         """Рассчитывает манхэттенское расстояние между текущей и целевой позицией"""
-        
+
         # Парсим позиции
-        current_pos = [int(x) for x in self.current_position.split('.')]
-        target_pos = [int(x) for x in self.target_position.split('.')]
-        
+        current_pos = [
+            int(x) for x in self.current_position.split('.')]
+        target_pos = [
+            int(x) for x in self.target_position.split('.')]
+
         # Манхэттенское расстояние
         distance = abs(current_pos[0] - target_pos[0]) + abs(current_pos[1] - target_pos[1])
-        
+
         return float(distance)
 
     async def move_next_step(self) -> bool:
         """Перемещает груз на следующий шаг по маршруту"""
-        
+
         if self.status != "in_transit":
             return False
-        
+
         # Если уже на месте
         if self.distance_left <= 0:
             return await self._attempt_delivery()
-        
+
         # Перемещаемся с учетом скорости
         speed = await self.get_delivery_speed()
         self.distance_left = max(0, self.distance_left - speed)
-        
+
         # Обновляем текущую позицию (приближаемся к цели)
-        self._update_current_position()
-        
+        self._update_current_position(speed)
+
         # Проверяем, дошли ли до цели
         if self.distance_left <= 0:
             return await self._attempt_delivery()
-        
+
         await self.save_to_base()
-        
+
         # Отправляем уведомление о движении
-        asyncio.create_task(websocket_manager.broadcast({
+        await websocket_manager.broadcast({
             "type": "api-logistics_moved",
             "data": {
                 "logistics_id": self.id,
                 "new_position": self.current_position,
                 "distance_left": self.distance_left
             }
-        }))
-        
+        })
+
         return True
-    
-    def _update_current_position(self):
+
+    def _update_current_position(self, speed):
         """Обновляет текущую позицию, приближая к цели"""
-        
+
         # Если уже на месте, устанавливаем целевую позицию
         if self.distance_left <= 0:
             self.current_position = self.target_position
             return
-        
+
         # Парсим позиции
-        current_pos = [int(x) for x in self.current_position.split('.')]
-        target_pos = [int(x) for x in self.target_position.split('.')]
-        
+        current_pos = [
+            int(x) for x in self.current_position.split('.')]
+        target_pos = [
+            int(x) for x in self.target_position.split('.')]
+
         # Двигаемся в сторону цели по одной клетке за раз (простая логика)
         if current_pos[0] < target_pos[0]:
-            current_pos[0] += 1
+            current_pos[0] += speed
         elif current_pos[0] > target_pos[0]:
-            current_pos[0] -= 1
+            current_pos[0] -= speed
         elif current_pos[1] < target_pos[1]:
-            current_pos[1] += 1
+            current_pos[1] += speed
         elif current_pos[1] > target_pos[1]:
-            current_pos[1] -= 1
-        
+            current_pos[1] -= speed
+
         self.current_position = f"{current_pos[0]}.{current_pos[1]}"
-    
+
     async def _attempt_delivery(self) -> bool:
         """Пытается доставить груз получателю"""
         
@@ -253,17 +264,18 @@ class Logistics(BaseClass):
             self.status = "failed"
             await self.save_to_base()
             return False
-        
+
         # Проверяем, есть ли место на складе
-        free_space = target_company.get_warehouse_free_size()
-        
+        free_space = await target_company.get_warehouse_free_size()
+
         if free_space >= self.amount:
             # Полная доставка
-            target_company.add_resource(self.resource_type, self.amount)
+            await target_company.add_resource(self.resource_type, self.amount)
+
             self.status = "delivered"
             await self.save_to_base()
-            
-            asyncio.create_task(websocket_manager.broadcast({
+
+            await websocket_manager.broadcast({
                 "type": "api-logistics_delivered",
                 "data": {
                     "logistics_id": self.id,
@@ -271,25 +283,25 @@ class Logistics(BaseClass):
                     "resource": self.resource_type,
                     "amount": self.amount
                 }
-            }))
-            
+            })
+
             return True
         else:
             # Недостаточно места, ждем
             self.status = "waiting_pickup"
             self.waiting_turns = 0
             await self.save_to_base()
-            
-            asyncio.create_task(websocket_manager.broadcast({
+
+            await websocket_manager.broadcast({
                 "type": "api-logistics_waiting",
                 "data": {
                     "logistics_id": self.id,
                     "reason": "insufficient_warehouse_space"
                 }
-            }))
-            
+            })
+
             return False
-    
+
     async def _deliver_to_city(self) -> bool:
         """Доставляет груз городу"""
         
@@ -316,7 +328,6 @@ class Logistics(BaseClass):
         await self.save_to_base()
         
         # Обновляем цену ресурса в сессии
-        from game.session import session_manager
         session = await session_manager.get_session(self.session_id)
         if session:
             await session.update_item_price(self.resource_type, self.city_price)

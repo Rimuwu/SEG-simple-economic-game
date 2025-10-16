@@ -1,7 +1,5 @@
-
-
-import asyncio
 from typing import cast
+from game.session import SessionObject
 from global_modules.models.cells import Cells
 from global_modules.db.baseclass import BaseClass
 from modules.db import just_db
@@ -16,9 +14,10 @@ SETTINGS: Settings = ALL_CONFIGS['settings']
 CAPITAL: Capital = ALL_CONFIGS['capital']
 REPUTATION: Reputation = ALL_CONFIGS['reputation']
 
-RESET = 50
+RESET = 100
+ON_EVERY = 2
 
-class ItemPrice(BaseClass):
+class ItemPrice(BaseClass, SessionObject):
 
     __tablename__ = "item_price"
     __unique_id__ = "_id"
@@ -41,7 +40,6 @@ class ItemPrice(BaseClass):
         self.material_based_price = self.calculate_material_price()
 
         await self.insert()
-
         return self
 
     async def delete(self):
@@ -88,25 +86,27 @@ class ItemPrice(BaseClass):
     async def add_price(self, new_price: int):
         self.prices.append(new_price)
 
-        if len(self.prices) % 10 == 0:
+        if len(self.prices) % ON_EVERY == 0:
             base_price = RESOURCES.resources[self.id].basePrice
             self.prices.append(base_price)
 
         if len(self.prices) > RESET:
-            # Вычислить среднее из 50 элементов и начать заново
+            # Вычислить среднее из REST элементов и начать заново
             avg_price = int(sum(self.prices) / len(self.prices))
             self.prices = [avg_price]
 
-        self.current_price = int(sum(self.prices) / len(self.prices))
+        self.current_price = int(
+            sum(self.prices) / len(self.prices)
+            )
 
         self.material_based_price = self.calculate_material_price()
         await self.save_to_base()
 
-        asyncio.create_task(websocket_manager.broadcast({
+        await websocket_manager.broadcast({
             "type": "api-item_price_updated",
             "data": {
                 "item_id": self.id,
                 "session_id": self.session_id,
                 "price": self.get_effective_price(),
             }
-        }))
+        })

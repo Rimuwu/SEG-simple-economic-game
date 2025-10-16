@@ -1,20 +1,23 @@
 import asyncio
+from collections import Counter
 from datetime import datetime, timedelta
+from enum import Enum
 import random
 from typing import Optional
+import uuid
+
 from game.stages import stage_game_updater
-from global_modules.models.cells import CellType, Cells
-from global_modules.models.events import Events
-from modules.db import just_db
-from modules.generate import generate_code
-from enum import Enum
+
 from global_modules.db.baseclass import BaseClass
 from global_modules.load_config import ALL_CONFIGS, Settings
-from collections import Counter
+from global_modules.models.cells import CellType, Cells
+from global_modules.models.events import Events
+
+from modules.db import just_db
+from modules.generate import generate_code
 from modules.logs import game_logger
-from modules.websocket_manager import websocket_manager
 from modules.sheduler import scheduler
-import random
+from modules.websocket_manager import websocket_manager
 
 # Глобальные конфиги для оптимизации
 settings: Settings = ALL_CONFIGS['settings']
@@ -414,11 +417,11 @@ class Session(BaseClass):
                         session_id=self.session_id) # type: ignore
         if not item_price_data:
             item_price_obj = await ItemPrice().create(self.session_id, item_id)
-            return await item_price_obj.get_effective_price()
+            return item_price_obj.get_effective_price()
         else:
             item_price_obj = ItemPrice(item_id)
             await item_price_obj.load_from_base(item_price_data)
-            return await item_price_obj.get_effective_price()
+            return item_price_obj.get_effective_price()
 
     async def initialize_all_item_prices(self):
         """ Инициализировать цены для всех предметов из конфига
@@ -750,6 +753,20 @@ class Session(BaseClass):
                 "end": self.event_end
             }
         }
+
+class SessionObject:
+    session_id: str
+    _id: uuid.UUID
+
+    async def get_session(self) -> Optional[Session]:
+        return await session_manager.get_session(self.session_id)
+
+    async def get_session_or_error(self) -> Session:
+        session = await self.get_session()
+        if not session: raise ValueError(
+            f"Сессия {self.session_id} не найдена при вызове в классе {self.__class__.__name__}"
+            )
+        return session
 
 
 class SessionsManager():
