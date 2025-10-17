@@ -2,7 +2,6 @@ services:
 
   mongodb:
     image: mongo:latest
-    restart: unless-stopped
     environment:
       - MONGO_INITDB_ROOT_USERNAME=${MONGO_USERNAME}
       - MONGO_INITDB_ROOT_PASSWORD=${MONGO_PASSWORD}
@@ -11,6 +10,15 @@ services:
     volumes:
       - mongodb_data:/data/db
       - ./logs:/var/log/mongodb:rw
+    restart: always
+    command: mongod --quiet --logpath /dev/null
+    stop_signal: SIGINT
+    healthcheck:
+      test: ["CMD", "mongosh", "--eval", "db.runCommand('ping').ok", "--quiet"]
+      interval: 5s
+      timeout: 2s
+      retries: 5
+      start_period: 20s
     networks:
       - seg_network
 
@@ -29,7 +37,14 @@ services:
       - ./logs:/logs:rw
       - ./data:/data:rw
     depends_on:
-      - mongodb
+      mongodb:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:81/ping')"]
+      interval: 5s
+      timeout: 1s
+      retries: 10
+      start_period: 10s
     networks:
       - seg_network
 
@@ -49,8 +64,10 @@ services:
       - ./logs:/logs:rw
       - ./data:/data:rw
     depends_on:
-      - api
-      - mongodb
+      mongodb:
+        condition: service_healthy
+      api:
+        condition: service_healthy
     networks:
       - seg_network
 
@@ -67,7 +84,8 @@ services:
       - ME_CONFIG_BASICAUTH_USERNAME=${MONGO_EXPRESS_USERNAME}
       - ME_CONFIG_BASICAUTH_PASSWORD=${MONGO_EXPRESS_PASSWORD}
     depends_on:
-      - mongodb
+      mongodb:
+        condition: service_healthy
     networks:
       - seg_network
 
@@ -83,6 +101,9 @@ services:
     environment:
       VITE_DEBUG: ${DEBUG}
       VITE_AUTHORS: ${VITE_AUTHORS}
+    depends_on:
+      api:
+        condition: service_healthy
 
 
 networks:
