@@ -17,7 +17,7 @@ REPUTATION: Reputation = ALL_CONFIGS['reputation']
 
 class Exchange(BaseClass, SessionObject):
     """ Предложение на бирже
-        
+
         Типы сделок:
         - За монеты (offer_type='money'): X товара типа Z на Y монет
         - Бартер (offer_type='barter'): X товара типа Z на Y продукта J

@@ -1,31 +1,32 @@
-import asyncio
+from game.session import SessionObject
 from global_modules.db.baseclass import BaseClass
 from modules.db import just_db
 from modules.websocket_manager import websocket_manager
 from modules.validation import validate_username
 
-class User(BaseClass):
+class User(BaseClass, SessionObject):
 
     __tablename__ = "users"
     __unique_id__ = "id"
     __db_object__ = just_db
 
-    def __init__(self, _id: int = 0):
-        self.id: int = _id
+    def __init__(self, id: int = 0):
+        self.id: int = id
         self.username: str = ""
         self.company_id: int = 0
         self.session_id: str = ""
 
-    async def create(self, _id: int, 
+    async def create(self, id: int, 
                username: str, 
                session_id: str):
-        from game.session import session_manager
-        session = session_manager.get_session(session_id)
+        
+        self.session_id = session_id
+        session = await self.get_session()
 
-        if not session or not await session.can_user_connect():
+        if not session or not session.can_user_connect():
             raise ValueError("Неверная сессия или регистрация запрещена на данном этапе.")
 
-        self.id = _id
+        self.id = id
 
         with_this_name = await just_db.find_one("users", 
                                           username=username, 
@@ -35,8 +36,6 @@ class User(BaseClass):
 
         username = validate_username(username)
         self.username = username
-
-        self.session_id = session_id
 
         await self.insert()
 
@@ -51,14 +50,10 @@ class User(BaseClass):
 
     async def create_company(self, name: str):
         from game.company import Company
-        from game.session import session_manager
-        session = await session_manager.get_session(self.session_id)
+        session = await self.get_session_or_error()
 
         if self.company_id != 0:
             raise ValueError("Пользователь уже находится в компании.")
-
-        if not session: 
-            raise ValueError("Пользователь не в действительной сессии.")
 
         company = await Company().create(name=name, 
                                    session_id=self.session_id
@@ -76,7 +71,8 @@ class User(BaseClass):
         if self.company_id != 0:
             raise ValueError("Пользователь уже находится в компании.")
 
-        company: Company = just_db.find_one("companies", 
+        company: Company = await just_db.find_one(
+                    "companies", 
                     to_class=Company, 
                     secret_code=secret_code) # type: ignore
         if not company: 
@@ -121,7 +117,7 @@ class User(BaseClass):
         self.company_id = 0
         await self.save_to_base()
 
-        company = Company(_id=old_company_id).reupdate()
+        company = await Company(id=old_company_id).reupdate()
 
         await websocket_manager.broadcast({
             "type": "api-user_left_company",

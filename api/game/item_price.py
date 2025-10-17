@@ -37,7 +37,7 @@ class ItemPrice(BaseClass, SessionObject):
 
         self.current_price = RESOURCES.resources[item_id].basePrice
         self.prices = [self.current_price]
-        self.material_based_price = self.calculate_material_price()
+        self.material_based_price = await self.calculate_material_price()
 
         await self.insert()
         return self
@@ -55,14 +55,19 @@ class ItemPrice(BaseClass, SessionObject):
             "material_based_price": self.material_based_price
         }
 
-    def calculate_material_price(self) -> int:
+    async def calculate_material_price(self) -> int:
         resource = RESOURCES.resources.get(self.id)
         if not resource or not resource.production:
             return 0
 
         total_cost = 0
         for mat_id, qty in resource.production.materials.items():
-            mat_price_obj = cast(ItemPrice, just_db.find_one("item_price", id=mat_id, session_id=self.session_id, to_class=ItemPrice))
+            mat_price_obj = cast(ItemPrice, 
+                                 await just_db.find_one("item_price", 
+                                        id=mat_id, 
+                                        session_id=self.session_id, 
+                                        to_class=ItemPrice
+                                        ))
             if mat_price_obj:
                 mat_price = mat_price_obj.get_effective_price()
             else:
@@ -99,7 +104,7 @@ class ItemPrice(BaseClass, SessionObject):
             sum(self.prices) / len(self.prices)
             )
 
-        self.material_based_price = self.calculate_material_price()
+        self.material_based_price = await self.calculate_material_price()
         await self.save_to_base()
 
         await websocket_manager.broadcast({

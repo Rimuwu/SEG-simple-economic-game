@@ -86,7 +86,7 @@ class Company(BaseClass, SessionObject):
         not_in_use = True
         while not_in_use:
             self.secret_code = generate_number(6)
-            if not just_db.find_one("companies",
+            if not await just_db.find_one("companies",
                                     secret_code=self.secret_code):
                 not_in_use = False
 

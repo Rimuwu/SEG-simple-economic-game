@@ -308,31 +308,34 @@ class Logistics(BaseClass, SessionObject):
         from game.company import Company
         
         # Получаем компанию отправителя для зачисления денег
-        sender_company = cast(Company, just_db.find_one("companies", id=self.from_company_id, to_class=Company))
+        sender_company = cast(Company, 
+                              await just_db.find_one("companies", 
+                                                     id=self.from_company_id, 
+                                                     to_class=Company))
         if not sender_company:
             self.status = "failed"
             await self.save_to_base()
             return False
-        
+
         # Зачисляем деньги компании за проданный товар
         total_payment = self.city_price * self.amount
-        sender_company.add_balance(total_payment)
-        
+        await sender_company.add_balance(total_payment)
+
         # Добавляем экономическое влияние за продажу городу
-        sender_company.set_economic_power(
+        await sender_company.set_economic_power(
             self.amount, self.resource_type, 'city_sell'
         )
-        
+
         # Помечаем логистику как доставленную
         self.status = "delivered"
         await self.save_to_base()
-        
+
         # Обновляем цену ресурса в сессии
-        session = await session_manager.get_session(self.session_id)
+        session = await self.get_session_or_error()
         if session:
             await session.update_item_price(self.resource_type, self.city_price)
 
-        asyncio.create_task(websocket_manager.broadcast({
+        await websocket_manager.broadcast({
             "type": "api-logistics_delivered_to_city",
             "data": {
                 "logistics_id": self.id,
@@ -342,10 +345,9 @@ class Logistics(BaseClass, SessionObject):
                 "amount": self.amount,
                 "payment": total_payment
             }
-        }))
-        
+        })
         return True
-    
+
     async def on_new_turn(self) -> bool:
         """Обрабатывает новый ход для логистики"""
 
@@ -368,27 +370,30 @@ class Logistics(BaseClass, SessionObject):
         """Принудительная частичная доставка с удалением излишков"""
         from game.company import Company
         
-        target_company = cast(Company, just_db.find_one("companies", 
-                                id=self.to_company_id, to_class=Company))
+        target_company = cast(Company, 
+                              await just_db.find_one(
+                                  "companies", 
+                                id=self.to_company_id, 
+                                to_class=Company))
         if not target_company:
             self.status = "failed"
             await self.save_to_base()
             return False
-        
-        free_space = target_company.get_warehouse_free_size()
-        
+
+        free_space = await target_company.get_warehouse_free_size()
+
         if free_space > 0:
             # Доставляем сколько поместится
             delivered_amount = min(free_space, self.amount)
-            target_company.add_resource(self.resource_type, delivered_amount)
-            
+            await target_company.add_resource(self.resource_type, delivered_amount)
+
             # Остаток теряется
             lost_amount = self.amount - delivered_amount
-            
+
             self.status = "delivered"
             await self.save_to_base()
-            
-            asyncio.create_task(websocket_manager.broadcast({
+
+            await websocket_manager.broadcast({
                 "type": "api-logistics_partial_delivery",
                 "data": {
                     "logistics_id": self.id,
@@ -397,51 +402,55 @@ class Logistics(BaseClass, SessionObject):
                     "delivered_amount": delivered_amount,
                     "lost_amount": lost_amount
                 }
-            }))
-            
+            })
+
             return True
         else:
             # Весь груз теряется
             self.status = "failed"
             await self.save_to_base()
 
-            asyncio.create_task(websocket_manager.broadcast({
+            await websocket_manager.broadcast({
                 "type": "api-logistics_failed",
                 "data": {
                     "logistics_id": self.id,
                     "reason": "no_warehouse_space",
                     "lost_amount": self.amount
                 }
-            }))
-            
+            })
+
             return False
 
     async def pick_up(self, company_id: int) -> bool:
         """Позволяет компании забрать ожидающий груз"""
         if self.status != "waiting_pickup":
             raise ValueError("Груз не ожидает получения")
-        
+
         if self.to_company_id != company_id:
             raise ValueError("Только компания-получатель может забрать груз")
-        
+
         from game.company import Company
-        
-        company = cast(Company, just_db.find_one("companies", id=company_id, to_class=Company))
+
+        company = cast(Company, 
+                       await just_db.find_one("companies", 
+                                              id=company_id, 
+                                              to_class=Company
+                                              ))
         if not company:
             raise ValueError("Компания не найдена")
-        
+
         # Проверяем место на складе
-        free_space = company.get_warehouse_free_size()
+        free_space = await company.get_warehouse_free_size()
         if free_space < self.amount:
             raise ValueError("Недостаточно места на складе")
-        
+
         # Добавляем ресурсы компании
-        company.add_resource(self.resource_type, self.amount)
-        
+        await company.add_resource(self.resource_type, self.amount)
+
         self.status = "delivered"
         await self.save_to_base()
-        
-        asyncio.create_task(websocket_manager.broadcast({
+
+        await websocket_manager.broadcast({
             "type": "api-logistics_picked_up",
             "data": {
                 "logistics_id": self.id,
@@ -449,8 +458,8 @@ class Logistics(BaseClass, SessionObject):
                 "resource": self.resource_type,
                 "amount": self.amount
             }
-        }))
-        
+        })
+
         return True
 
     async def delete(self) -> bool:
@@ -458,18 +467,18 @@ class Logistics(BaseClass, SessionObject):
 
         await just_db.delete(self.__tablename__, **{self.__unique_id__: self.id})
 
-        asyncio.create_task(websocket_manager.broadcast({
+        await websocket_manager.broadcast({
             "type": "api-logistics_deleted",
             "data": {
                 "logistics_id": self.id
             }
-        }))
+        })
         
         return True
 
     def to_dict(self) -> dict:
         """Возвращает представление логистики в виде словаря"""
-        
+
         return {
             "id": self.id,
             "session_id": self.session_id,

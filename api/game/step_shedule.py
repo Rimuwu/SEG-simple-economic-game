@@ -2,7 +2,7 @@ import asyncio
 from global_modules.models.cells import Cells
 from global_modules.db.baseclass import BaseClass
 from modules.db import just_db
-from game.session import session_manager
+from game.session import SessionObject
 from global_modules.load_config import ALL_CONFIGS, Resources, Improvements, Settings, Capital, Reputation
 from modules.function_way import *
 
@@ -13,14 +13,14 @@ SETTINGS: Settings = ALL_CONFIGS['settings']
 CAPITAL: Capital = ALL_CONFIGS['capital']
 REPUTATION: Reputation = ALL_CONFIGS['reputation']
 
-class StepSchedule(BaseClass):
+class StepSchedule(BaseClass, SessionObject):
 
     __tablename__ = "step_schedule"
-    __unique_id__ = "id"
+    __unique_id__ = "_id"
     __db_object__ = just_db
 
-    def __init__(self, _id: int = 0):
-        self.id: int = _id
+    def __init__(self, id: int = 0):
+        self.id: int = id
 
         self.session_id: str = ""
         self.in_step: int = 0
@@ -51,7 +51,7 @@ class StepSchedule(BaseClass):
         if not self.id:
             raise ValueError("Расписание должно быть сохранено перед добавлением функций.")
 
-        session = await session_manager.get_session(self.session_id)
+        session = await self.get_session()
         if not session:
             await just_db.delete(self.__tablename__, id=self.id)
             raise ValueError("Неверная сессия для добавления функции.")
@@ -70,7 +70,7 @@ class StepSchedule(BaseClass):
     async def execute(self):
         """ Выполняет все функции в расписании шага
         """
-        session = await session_manager.get_session(self.session_id)
+        session = await self.get_session()
 
         if not session:
             await just_db.delete(self.__tablename__, id=self.id)

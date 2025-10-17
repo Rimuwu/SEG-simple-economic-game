@@ -420,7 +420,7 @@ class Session(BaseClass):
             return item_price_obj.get_effective_price()
         else:
             item_price_obj = ItemPrice(item_id)
-            await item_price_obj.load_from_base(item_price_data)
+            item_price_obj.load_from_base(item_price_data)
             return item_price_obj.get_effective_price()
 
     async def initialize_all_item_prices(self):
@@ -794,7 +794,7 @@ class SessionsManager():
         ss: list[dict] = await just_db.find("sessions") # type: ignore
         for s in ss:
             session = Session(s['session_id'])
-            await session.load_from_base(s)
+            session.load_from_base(s)
             self.sessions[session.session_id] = session
 
 session_manager = SessionsManager()

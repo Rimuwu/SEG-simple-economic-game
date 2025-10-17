@@ -107,11 +107,11 @@ class TaskScheduler:
             print(f"Ошибка при удалении задач завершения: {e}")
             return 0
     
-    def get_scheduled_tasks(self, _id: int):
+    def get_scheduled_tasks(self, id: int):
         """
         Возвращает список всех запланированных задач.
         """
-        return self.db.find_one(self.__table_name__, id=_id)
+        return self.db.find_one(self.__table_name__, id=id)
 
 
 scheduler = TaskScheduler()

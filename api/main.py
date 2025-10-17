@@ -32,7 +32,7 @@ async def lifespan(app: FastAPI):
 
     # Startup
     websocket_logger.info("Creating missing tables on startup...")
-    # just_db.drop_all() # Тестово
+    # await just_db.drop_all() # Тестово
 
     await just_db.create_table('sessions') # Таблица сессий
     await just_db.create_table('users') # Таблица пользователей
@@ -96,33 +96,33 @@ async def test1():
 
     # Очистка и создание сессии
     if session_manager.get_session('AFRIKA'):
-        session = session_manager.get_session('AFRIKA')
-        if session: session.delete()
+        session = await session_manager.get_session('AFRIKA')
+        if session: await session.delete()
 
-    session = session_manager.create_session('AFRIKA')
+    session = await session_manager.create_session('AFRIKA')
     
-    session.update_stage(SessionStages.FreeUserConnect, True)
+    await session.update_stage(SessionStages.FreeUserConnect, True)
     
     # Создание пользователей и компаний
     print("👥 Создаём поставщика и заказчика...")
-    user1: User = User().create(_id=1, username="MetalSupplier", session_id=session.session_id)
-    user2: User = User().create(_id=2, username="WoodCustomer", session_id=session.session_id)
+    user1: User = await User().create(id=1, username="MetalSupplier", session_id=session.session_id)
+    user2: User = await User().create(id=2, username="WoodCustomer", session_id=session.session_id)
 
-    supplier = user1.create_company("MetalCorp")  # Поставщик металла
-    supplier.set_owner(1)
+    supplier = await user1.create_company("MetalCorp")  # Поставщик металла
+    await supplier.set_owner(1)
 
-    customer = user2.create_company("WoodCorp")   # Заказчик металла, поставщик дерева
-    customer.set_owner(2)
+    customer = await user2.create_company("WoodCorp")   # Заказчик металла, поставщик дерева
+    await customer.set_owner(2)
 
-    session.update_stage(SessionStages.CellSelect, True)
+    await session.update_stage(SessionStages.CellSelect, True)
     for company in [supplier, customer]:
         await company.reupdate()
     
     # Размещение компаний на карте
-    supplier.set_position(0, 0)
-    customer.set_position(2, 3)
+    await supplier.set_position(0, 0)
+    await customer.set_position(2, 3)
     
-    session.update_stage(SessionStages.Game, True)
+    await session.update_stage(SessionStages.Game, True)
     for company in [supplier, customer]:
         await company.reupdate()
     
@@ -140,11 +140,11 @@ async def test1():
 
     print("💰")
 
-    supplier.add_resource("metal", 50)  # Металл для поставки
-    customer.add_resource("wood", 50)  # Металл для поставки
-    customer.add_balance(5000, 0.0)  # Деньги для оплаты контракта
+    await supplier.add_resource("metal", 50)  # Металл для поставки
+    await customer.add_resource("wood", 50)  # Металл для поставки
+    await customer.add_balance(5000, 0.0)  # Деньги для оплаты контракта
 
-    ex = Exchange().create(
+    ex = await Exchange().create(
         company_id=supplier.id,
         session_id=session.session_id,
         sell_resource="metal",
@@ -155,11 +155,11 @@ async def test1():
         barter_amount=5,
     )
     
-    ex.buy(
+    await ex.buy(
         customer.id,
         5
     )
     
-    session.update_stage(SessionStages.Game, True)
-    session.update_stage(SessionStages.Game, True)
-    session.update_stage(SessionStages.Game, True)
+    await session.update_stage(SessionStages.Game, True)
+    await session.update_stage(SessionStages.Game, True)
+    await session.update_stage(SessionStages.Game, True)
