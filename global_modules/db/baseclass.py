@@ -8,7 +8,7 @@ class BaseClass:
     __unique_id__: str = "_id"  # Поле, которое будет использоваться как уникальный идентификатор
     __db_object__: MongoDatabase  # Экземпляр MongoDatabase, должен быть установлен в подклассе
 
-    async def load_from_base(self, data: Optional[dict]):
+    def load_from_base(self, data: Optional[dict]):
         """ Загружает данные из словаря в атрибуты объекта.
         """
         if data is None: return None
