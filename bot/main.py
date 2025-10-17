@@ -19,14 +19,14 @@ async def main():
     """Главная функция для запуска бота"""
     bot_logger.info("Запуск бота...")
 
+    await db.connect()  # Подключаемся к базе данных
+    await db.create_table('scenes')
+
+    # Регистрируем обработчик ошибок
+    dp.error.register(error_handler)
+    register_handlers(dp)
+
     try:
-        await db.create_table('scenes')
-
-        # Регистрируем обработчик ошибок
-        dp.error.register(error_handler)
-
-        register_handlers(dp)
-
         await ws_client.connect() # Подключаемся к WebSocket серверу
         await dp.start_polling(bot)
     finally:
