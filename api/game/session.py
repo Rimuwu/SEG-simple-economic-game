@@ -60,13 +60,20 @@ class Session(BaseClass):
 
     async def start(self):
         if not self.session_id:
-            self.session_id = generate_code(32, use_letters=True, use_numbers=True, use_uppercase=True)
+            self.session_id = generate_code(8, use_letters=True, 
+                                            use_numbers=True, 
+                                            use_uppercase=True
+                                            )
         self.stage = SessionStages.FreeUserConnect.value
 
-        # Инициализируем цены для всех предметов
-        await self.initialize_all_item_prices()
-
         await self.insert()
+
+        # Инициализируем цены для всех предметов
+        try:
+            await self.initialize_all_item_prices()
+        except Exception as e:
+            print(f"Ошибка при инициализации цен: {e}")
+
         return self
 
     async def update_stage(self, new_stage: SessionStages, 
@@ -432,7 +439,8 @@ class Session(BaseClass):
         for item_id in resources.resources.keys():
             existing_price = await just_db.find_one("item_price", id=item_id, session_id=self.session_id)
             if not existing_price:
-                await ItemPrice().create(self.session_id, item_id)
+                item = ItemPrice()
+                await item.create(self.session_id, item_id)
 
         return True
 
@@ -450,7 +458,7 @@ class Session(BaseClass):
             item_price = await ItemPrice().create(self.session_id, item_id)
         else:
             item_price = ItemPrice(item_id)
-            await item_price.load_from_base(item_price_data)
+            item_price.load_from_base(item_price_data)
             
         await item_price.add_price(new_price)
         return item_price
@@ -734,7 +742,7 @@ class Session(BaseClass):
     async def to_dict(self):
         return {
             "id": self.session_id,
-            "companies": [company.to_dict() for company in await self.companies],
+            "companies": [await company.to_dict() for company in await self.companies],
             "users": [user.to_dict() for user in await self.users],
             "cities": [city.to_dict() for city in await self.cities],
             "item_prices": [item_price.to_dict() for item_price in await self.item_prices],
@@ -764,7 +772,7 @@ class SessionObject:
     async def get_session_or_error(self) -> Session:
         session = await self.get_session()
         if not session: raise ValueError(
-            f"Сессия {self.session_id} не найдена при вызове в классе {self.__class__.__name__}"
+            f"Сессия ({self.session_id}) не найдена при вызове в классе {self.__class__.__name__}"
             )
         return session
 

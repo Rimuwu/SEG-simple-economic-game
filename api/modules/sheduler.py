@@ -21,8 +21,7 @@ class TaskScheduler:
             await self.db.create_table(self.__table_name__)
 
     async def start(self):
-        if self.running:
-            return
+        if self.running: return
         self.running = True
         asyncio.create_task(self._run_scheduler())
 
@@ -39,9 +38,10 @@ class TaskScheduler:
 
     async def _check_and_execute_tasks(self):
         current_time = datetime.now()
-        tasks: list[dict] = await self.db.find(self.__table_name__)
+        tasks =  await self.db.find(self.__table_name__)
+        tasks: list[dict] = list(tasks)
 
-        for task in list(tasks):
+        for task in tasks:
             task_time = datetime.fromisoformat(task['execute_at'])
             if task_time <= current_time:
                 await self._execute_task(task)
@@ -94,24 +94,24 @@ class TaskScheduler:
 
         return await self.db.insert(self.__table_name__, task_data)
 
-    def cleanup_shutdown_tasks(self):
+    async def cleanup_shutdown_tasks(self):
         """
         Удаляет все задачи, помеченные для удаления при завершении работы API.
         Этот метод следует вызывать при завершении работы приложения.
         """
         try:
-            deleted_count = self.db.delete(self.__table_name__, delete_on_shutdown=True)
+            deleted_count = await self.db.delete(self.__table_name__, delete_on_shutdown=True)
             print(f"Удалено {deleted_count} задач при завершении работы")
             return deleted_count
         except Exception as e:
             print(f"Ошибка при удалении задач завершения: {e}")
             return 0
     
-    def get_scheduled_tasks(self, id: int):
+    async def get_scheduled_tasks(self, id: int):
         """
         Возвращает список всех запланированных задач.
         """
-        return self.db.find_one(self.__table_name__, id=id)
+        return await self.db.find_one(self.__table_name__, id=id)
 
 
 scheduler = TaskScheduler()

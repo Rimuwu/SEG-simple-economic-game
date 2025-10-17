@@ -21,7 +21,7 @@ REPUTATION: Reputation = ALL_CONFIGS['reputation']
 class Company(BaseClass, SessionObject):
 
     __tablename__ = "companies"
-    __unique_id__ = "_id"
+    __unique_id__ = "id"
     __db_object__ = just_db
 
     def __init__(self, id: int = 0):
@@ -95,15 +95,12 @@ class Company(BaseClass, SessionObject):
         self.balance = CAPITAL.start
         self.reputation = REPUTATION.start
 
-        self.id = await just_db.max_id_in_table(
-            self.__tablename__) + 1
-
         await self.insert()
         await websocket_manager.broadcast({
             "type": "api-create_company",
             "data": {
                 'session_id': self.session_id,
-                'company': self.to_dict()
+                'company': await self.to_dict()
             }
         })
         return self
@@ -150,7 +147,7 @@ class Company(BaseClass, SessionObject):
         imps = await self.get_improvements()
         col = imps['factory']['tasksPerTurn']
         col_complect = col // 3
-        cell_type: str = self.get_cell_type() # type: ignore
+        cell_type: str = await self.get_cell_type() # type: ignore
 
         for _ in range(col):
             res = None
@@ -723,17 +720,17 @@ class Company(BaseClass, SessionObject):
 
         return self.in_prison
 
-    async def business_tax(self):
+    async def business_tax(self) -> float:
         """ Определяет налоговую ставку в зависимости от типа бизнеса.
         """
 
         session = await self.get_session_or_error()
 
-        big_mod = await session.get_event_effects().get(
+        big_mod = session.get_event_effects().get(
             'tax_rate_large', CAPITAL.bank.tax.big_business
         )
 
-        small_mod = await session.get_event_effects().get(
+        small_mod = session.get_event_effects().get(
             'tax_rate_small', CAPITAL.bank.tax.small_business
         )
 
@@ -1091,11 +1088,11 @@ class Company(BaseClass, SessionObject):
                 'resource_extraction_speed', 1.0
             )
 
-            cell_type = self.get_cell_type()
+            cell_type = await self.get_cell_type()
             if session.get_event().get('cell_type') == cell_type:
                 mod *= session.get_event().get('income_multiplier', 1.0)
 
-            raw_col = int(self.raw_in_step() * mod)
+            raw_col = int(await self.raw_in_step() * mod)
 
             if resource_id and raw_col > 0:
                 await self.add_resource(
@@ -1127,6 +1124,9 @@ class Company(BaseClass, SessionObject):
 
     async def to_dict(self):
         """Возвращает полный статус компании со всеми данными"""
+        
+        cell_data = await self.get_my_cell_info()
+        
         return {
             # Основная информация
             "id": self.id,
@@ -1134,50 +1134,50 @@ class Company(BaseClass, SessionObject):
             "owner": self.owner,
             "session_id": self.session_id,
             "secret_code": self.secret_code,
-            
+
             # Финансовые данные
             "balance": self.balance,
             "last_turn_income": self.last_turn_income,
             "this_turn_income": self.this_turn_income,
             "business_type": self.business_type,
             "economic_power": self.economic_power,
-            
+
             # Репутация и статус
             "reputation": self.reputation,
             "in_prison": self.in_prison,
             "prison_end_step": self.prison_end_step,
-            
+
             # Позиция и местоположение
             "cell_position": self.cell_position,
             "position_coords": self.get_position(),
-            "cell_type": self.get_cell_type(),
-            "cell_info": self.get_my_cell_info().__dict__ if self.get_my_cell_info() else None,
-            
+            "cell_type": await self.get_cell_type(),
+            "cell_info": cell_data.__dict__ if await self.get_my_cell_info() else None,
+
             # Налоги
             "tax_debt": self.tax_debt,
             "overdue_steps": self.overdue_steps,
-            "tax_rate": self.business_tax(),
+            "tax_rate": await self.business_tax(),
             
             # Кредиты и депозиты
             "credits": self.credits,
             "deposits": self.deposits,
-            
+
             # Улучшения и ресурсы
             "improvements": self.improvements,
-            "improvements_data": self.get_improvements(),
+            "improvements_data": await self.get_improvements(),
             "warehouses": self.warehouses,
-            "warehouse_capacity": self.get_max_warehouse_size(),
-            "warehouse_free_size": self.get_warehouse_free_size(),
+            "warehouse_capacity": await self.get_max_warehouse_size(),
+            "warehouse_free_size": await self.get_warehouse_free_size(),
             "resources_amount": self.get_resources_amount(),
-            "raw_per_turn": self.raw_in_step(),
-            
+            "raw_per_turn": await self.raw_in_step(),
+
             # Пользователи и фабрики
             "users": [user.to_dict() for user in await self.users],
             "factories": [factory.to_dict() for factory in await self.get_factories()],
             "factories_count": len(await self.get_factories()),
 
             # Дополнительные возможности
-            "can_user_enter": self.can_user_enter(),
+            "can_user_enter": await self.can_user_enter(),
 
             "exchanges": [
                 change.to_dict() for change in await self.exchanges
@@ -1185,5 +1185,5 @@ class Company(BaseClass, SessionObject):
 
             "contracts": [
                 contract.to_dict() for contract in await self.get_contracts()
-            ],
+            ]
         }

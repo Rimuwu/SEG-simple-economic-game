@@ -19,7 +19,7 @@ class User(BaseClass, SessionObject):
     async def create(self, id: int, 
                username: str, 
                session_id: str):
-        
+
         self.session_id = session_id
         session = await self.get_session()
 

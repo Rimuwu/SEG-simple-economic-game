@@ -18,7 +18,7 @@ REPUTATION: Reputation = ALL_CONFIGS['reputation']
 class Factory(BaseClass, SessionObject):
 
     __tablename__ = "factories"
-    __unique_id__ = "_id"
+    __unique_id__ = "id"
     __db_object__ = just_db
 
     def __init__(self, id: int = 0):

@@ -26,7 +26,7 @@ class Contract(BaseClass, SessionObject):
     """
 
     __tablename__ = "contracts"
-    __unique_id__ = "_id"
+    __unique_id__ = "id"
     __db_object__ = just_db
 
     def __init__(self, id: int = 0):
@@ -99,13 +99,11 @@ class Contract(BaseClass, SessionObject):
             ]):
             raise ValueError("У вас максимальное количество контрактов.")
 
+        self.session_id = session_id
         session = await self.get_session_or_error()
 
-        self.id = await just_db.max_id_in_table(
-            self.__tablename__) + 1
         self.supplier_company_id = supplier_company_id
         self.customer_company_id = customer_company_id
-        self.session_id = session_id
 
         self.resource = resource
         self.amount_per_turn = amount_per_turn
@@ -369,7 +367,7 @@ class Contract(BaseClass, SessionObject):
         }
 
     async def delete(self):
-        await just_db.delete(self.__tablename__, _id=self._id)
+        await just_db.delete(self.__tablename__, id=self.id)
 
         await websocket_manager.broadcast({
             "type": "api-contract_deleted",

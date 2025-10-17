@@ -24,10 +24,10 @@ async def handle_get_companies(client_id: str, message: dict):
     }
 
     # Получаем список компаний из базы данных
-    companies = await just_db.find('companies', to_class=Company,
-                         **{k: v for k, v in conditions.items() if v is not None})
+    companies: list[Company] = await just_db.find('companies', to_class=Company,
+                         **{k: v for k, v in conditions.items() if v is not None}) # type: ignore
 
-    return [company.to_dict() for company in companies]
+    return [await company.to_dict() for company in companies]
 
 @message_handler(
     "get-company", 
@@ -59,7 +59,7 @@ async def handle_get_company(client_id: str, message: dict):
     company = await just_db.find_one('companies', to_class=Company,
                          **{k: v for k, v in conditions.items() if v is not None})
 
-    return company.to_dict() if company else None
+    return await company.to_dict() if company else None
 
 @message_handler(
     "create-company", 
@@ -96,7 +96,7 @@ async def handle_create_company(client_id: str, message: dict):
 
     return {
         'session_id': company.session_id,
-        'company': company.to_dict()
+        'company': await company.to_dict()
     }
 
 
@@ -255,11 +255,11 @@ async def handle_get_my_cell_info(client_id: str, message: dict):
     company = await Company(id=conditions["company_id"]).reupdate()
     if not company: return {"error": "Company not found."}
 
-    cell_info = company.get_my_cell_info()
+    cell_info = await company.get_my_cell_info()
     if cell_info is not None:
         return {
             "data": cell_info.__dict__,
-            "type": company.get_cell_type()
+            "type": await company.get_cell_type()
         }
     else:
         return None
@@ -284,7 +284,7 @@ async def handle_get_company_improvement_info(client_id: str, message: dict):
     company = await Company(id=conditions["company_id"]).reupdate()
     if not company: return {"error": "Company not found."}
 
-    imp = company.get_improvements()
+    imp = await company.get_improvements()
     return imp
 
 @message_handler(
@@ -349,7 +349,7 @@ async def handle_company_take_credit(client_id: str, message: dict):
         company = await Company(id=company_id).reupdate()
         if not company: raise ValueError("Компания не найдена.")
 
-        credit_data = company.take_credit(amount, period)
+        credit_data = await company.take_credit(amount, period)
 
     except ValueError as e:
         return {"error": str(e)}
@@ -420,7 +420,7 @@ async def handle_company_take_deposit(client_id: str, message: dict):
         company = await Company(id=company_id).reupdate()
         if not company: raise ValueError("Компания не найдена.")
 
-        deposit_data = company.take_deposit(amount, period)
+        deposit_data = await company.take_deposit(amount, period)
 
     except ValueError as e:
         return {"error": str(e)}

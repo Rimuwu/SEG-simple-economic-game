@@ -1,5 +1,5 @@
 from typing import Optional, cast
-from api.game.session import SessionObject
+from game.session import SessionObject
 from global_modules.models.cells import Cells
 from global_modules.db.baseclass import BaseClass
 from modules.db import just_db

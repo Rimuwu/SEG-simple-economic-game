@@ -24,7 +24,7 @@ class Exchange(BaseClass, SessionObject):
     """
 
     __tablename__ = "exchanges"
-    __unique_id__ = "_id"
+    __unique_id__ = "id"
     __db_object__ = just_db
 
     def __init__(self, id: int = 0):
@@ -98,11 +98,11 @@ class Exchange(BaseClass, SessionObject):
         else:
             raise ValueError("Недействительный тип предложения.")
 
+        self.session_id = session_id
         session = await self.get_session_or_error()
 
         # Создаём предложение
         self.company_id = company_id
-        self.session_id = session_id
         self.sell_resource = sell_resource
         self.sell_amount_per_trade = sell_amount_per_trade
         self.total_stock = total_stock
@@ -111,9 +111,6 @@ class Exchange(BaseClass, SessionObject):
         self.barter_resource = barter_resource
         self.barter_amount = barter_amount
         self.created_at = session.step
-
-        self.id = await just_db.max_id_in_table(
-            self.__tablename__) + 1
 
         await self.insert()
 

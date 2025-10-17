@@ -20,7 +20,7 @@ ON_EVERY = 2
 class ItemPrice(BaseClass, SessionObject):
 
     __tablename__ = "item_price"
-    __unique_id__ = "_id"
+    __unique_id__ = "id"
     __db_object__ = just_db
 
     def __init__(self, id: str = ""):

@@ -54,8 +54,8 @@ async def lifespan(app: FastAPI):
     websocket_logger.info("Starting task scheduler...")
 
     asyncio.create_task(scheduler.start())
-    # if debug:
-    #     asyncio.create_task(test1())
+    if debug:
+        asyncio.create_task(test1())
 
     yield
 
@@ -63,7 +63,7 @@ async def lifespan(app: FastAPI):
 
     websocket_logger.info("Stopping task scheduler...")
     scheduler.stop()
-    scheduler.cleanup_shutdown_tasks()
+    await scheduler.cleanup_shutdown_tasks()
 
 app = get_fastapi_app(
     title="API",
@@ -83,6 +83,10 @@ app = get_fastapi_app(
 async def root(request: Request):
     return {"message": f"{app.description} is running! v{app.version}"}
 
+@app.get("/ping")
+async def ping(request: Request):
+    return {"message": "pong"}
+
 async def test1():
     
     from game.user import User
@@ -92,74 +96,72 @@ async def test1():
 
     await asyncio.sleep(2)
 
-    print("🚀 Тестирование бартерного контракта с полным отслеживанием...")
-
     # Очистка и создание сессии
-    if session_manager.get_session('AFRIKA'):
+    if await session_manager.get_session('AFRIKA'):
         session = await session_manager.get_session('AFRIKA')
         if session: await session.delete()
 
     session = await session_manager.create_session('AFRIKA')
     
-    await session.update_stage(SessionStages.FreeUserConnect, True)
+    # await session.update_stage(SessionStages.FreeUserConnect, True)
     
-    # Создание пользователей и компаний
-    print("👥 Создаём поставщика и заказчика...")
-    user1: User = await User().create(id=1, username="MetalSupplier", session_id=session.session_id)
-    user2: User = await User().create(id=2, username="WoodCustomer", session_id=session.session_id)
+    # # Создание пользователей и компаний
+    # print("👥 Создаём поставщика и заказчика...")
+    # user1: User = await User().create(id=1, username="MetalSupplier", session_id=session.session_id)
+    # user2: User = await User().create(id=2, username="WoodCustomer", session_id=session.session_id)
 
-    supplier = await user1.create_company("MetalCorp")  # Поставщик металла
-    await supplier.set_owner(1)
+    # supplier = await user1.create_company("MetalCorp")  # Поставщик металла
+    # await supplier.set_owner(1)
 
-    customer = await user2.create_company("WoodCorp")   # Заказчик металла, поставщик дерева
-    await customer.set_owner(2)
+    # customer = await user2.create_company("WoodCorp")   # Заказчик металла, поставщик дерева
+    # await customer.set_owner(2)
 
-    await session.update_stage(SessionStages.CellSelect, True)
-    for company in [supplier, customer]:
-        await company.reupdate()
+    # await session.update_stage(SessionStages.CellSelect, True)
+    # for company in [supplier, customer]:
+    #     await company.reupdate()
     
-    # Размещение компаний на карте
-    await supplier.set_position(0, 0)
-    await customer.set_position(2, 3)
+    # # Размещение компаний на карте
+    # await supplier.set_position(0, 0)
+    # await customer.set_position(2, 3)
     
-    await session.update_stage(SessionStages.Game, True)
-    for company in [supplier, customer]:
-        await company.reupdate()
+    # await session.update_stage(SessionStages.Game, True)
+    # for company in [supplier, customer]:
+    #     await company.reupdate()
     
-    # ПОЛНАЯ ОЧИСТКА ИНВЕНТАРЯ
-    print("🧹 Полностью очищаем инвентарь...")
-    supplier.warehouses = {}
-    customer.warehouses = {}
-    supplier.balance = 0
-    customer.balance = 0
+    # # ПОЛНАЯ ОЧИСТКА ИНВЕНТАРЯ
+    # print("🧹 Полностью очищаем инвентарь...")
+    # supplier.warehouses = {}
+    # customer.warehouses = {}
+    # supplier.balance = 0
+    # customer.balance = 0
     
-    supplier.reputation = 100
-    customer.reputation = 100
-    await supplier.save_to_base()
-    await customer.save_to_base()
+    # supplier.reputation = 100
+    # customer.reputation = 100
+    # await supplier.save_to_base()
+    # await customer.save_to_base()
 
-    print("💰")
+    # print("💰")
 
-    await supplier.add_resource("metal", 50)  # Металл для поставки
-    await customer.add_resource("wood", 50)  # Металл для поставки
-    await customer.add_balance(5000, 0.0)  # Деньги для оплаты контракта
+    # await supplier.add_resource("metal", 50)  # Металл для поставки
+    # await customer.add_resource("wood", 50)  # Металл для поставки
+    # await customer.add_balance(5000, 0.0)  # Деньги для оплаты контракта
 
-    ex = await Exchange().create(
-        company_id=supplier.id,
-        session_id=session.session_id,
-        sell_resource="metal",
-        sell_amount_per_trade=10,
-        count_offers=5,
-        offer_type='barter',
-        barter_resource="wood",
-        barter_amount=5,
-    )
+    # ex = await Exchange().create(
+    #     company_id=supplier.id,
+    #     session_id=session.session_id,
+    #     sell_resource="metal",
+    #     sell_amount_per_trade=10,
+    #     count_offers=5,
+    #     offer_type='barter',
+    #     barter_resource="wood",
+    #     barter_amount=5,
+    # )
     
-    await ex.buy(
-        customer.id,
-        5
-    )
+    # await ex.buy(
+    #     customer.id,
+    #     5
+    # )
     
-    await session.update_stage(SessionStages.Game, True)
-    await session.update_stage(SessionStages.Game, True)
-    await session.update_stage(SessionStages.Game, True)
+    # await session.update_stage(SessionStages.Game, True)
+    # await session.update_stage(SessionStages.Game, True)
+    # await session.update_stage(SessionStages.Game, True)

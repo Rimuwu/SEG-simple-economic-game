@@ -71,7 +71,7 @@ NAMES = [
 class Citie(BaseClass, SessionObject):
 
     __tablename__ = "cities"
-    __unique_id__ = "_id"
+    __unique_id__ = "id"
     __db_object__ = just_db
 
     def __init__(self, id: int = 0):
@@ -96,9 +96,10 @@ class Citie(BaseClass, SessionObject):
             x: координата X
             y: координата Y
         """
-        session = await self.get_session_or_error()
 
         self.session_id = session_id
+        session = await self.get_session_or_error()
+
         self.cell_position = f"{x}.{y}"
 
         # Определяем приоритетную ветку на основе соседних клеток
@@ -107,8 +108,6 @@ class Citie(BaseClass, SessionObject):
         )
 
         self.name = name if name else random.choice(NAMES)
-        self.id = await just_db.max_id_in_table(
-            self.__tablename__)
 
         # Инициализируем спрос
         await self._update_demands(session)

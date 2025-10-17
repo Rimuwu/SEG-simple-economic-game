@@ -16,7 +16,7 @@ REPUTATION: Reputation = ALL_CONFIGS['reputation']
 class StepSchedule(BaseClass, SessionObject):
 
     __tablename__ = "step_schedule"
-    __unique_id__ = "_id"
+    __unique_id__ = "id"
     __db_object__ = just_db
 
     def __init__(self, id: int = 0):
@@ -37,7 +37,6 @@ class StepSchedule(BaseClass, SessionObject):
 
         self.session_id = session_id
         self.in_step = in_step
-        self.id = await just_db.max_id_in_table(self.__tablename__) + 1
 
         await self.insert()
         return self
