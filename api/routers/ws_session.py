@@ -1,6 +1,6 @@
 from modules import websocket_manager
 from modules.ws_hadnler import message_handler
-from modules.json_database import just_db
+from modules.db import just_db
 from game.session import session_manager, Session, SessionStages
 from modules.check_password import check_password
 
@@ -19,11 +19,11 @@ async def handle_get_sessions(client_id: str, message: dict):
     }
 
     # Получаем список сессий из базы данных
-    sessions = just_db.find('sessions',
+    sessions = await just_db.find('sessions',
                             to_class=Session,
                          **{k: v for k, v in conditions.items() if v is not None})
 
-    return [s.to_dict() for s in sessions]
+    return [await s.to_dict() for s in sessions]
 
 @message_handler(
     "get-session", 
@@ -42,11 +42,11 @@ async def handle_get_session(client_id: str, message: dict):
     }
 
     # Получаем сессию из базы данных
-    session = just_db.find_one('sessions',
+    session = await just_db.find_one('sessions',
                                to_class=Session,
                          **{k: v for k, v in conditions.items() if v is not None})
 
-    return session.to_dict() if session else None
+    return await session.to_dict() if session else None
 
 @message_handler(
     "create-session", 
@@ -62,18 +62,15 @@ async def handle_create_session(client_id: str, message: dict):
 
     session_id = message.get("session_id", "")
     password = message.get("password", "")
-    
+
     try:
         check_password(password)
+
+        session = await session_manager.create_session(session_id=session_id)
     except ValueError as e:
         return {"error": str(e)}
 
-    try:
-        session = session_manager.create_session(session_id=session_id)
-    except ValueError as e:
-        return {"error": str(e)}
-
-    return {"session": session.to_dict()}
+    return await session.to_dict()
 
 @message_handler(
     "update-session-stage", 
@@ -104,13 +101,13 @@ async def handle_update_session_stage(client_id: str, message: dict):
     try:
         check_password(password)
 
-        session = session_manager.get_session(session_id=session_id)
+        session = await session_manager.get_session(session_id=session_id)
         if not session: raise ValueError("Сессия не найдена.")
 
         if stage not in stages_to_types:
             raise ValueError("Неверное значение стадии.")
 
-        session.update_stage(stages_to_types[stage], 
+        await session.update_stage(stages_to_types[stage], 
                              not add_shedule)
     except ValueError as e:
         return {"error": str(e)}
@@ -131,10 +128,10 @@ async def handle_get_sessions_free_cells(
     session_id = message.get("session_id", "")
 
     try:
-        session = session_manager.get_session(session_id=session_id)
+        session = await session_manager.get_session(session_id=session_id)
         if not session: raise ValueError("Сессия не найдена.")
 
-        free_cells = session.get_free_cells()
+        free_cells = await session.get_free_cells()
         return {"free_cells": free_cells}
 
     except ValueError as e:
@@ -161,13 +158,13 @@ async def handle_delete_session(
     try:
         check_password(password)
 
-        session = session_manager.get_session(session_id=session_id)
+        session = await session_manager.get_session(session_id=session_id)
         if not session: raise ValueError("Сессия не найдена.")
 
         if not really:
             raise ValueError("Требуется подтверждение для удаления сессии.")
 
-        session.delete()
+        await session.delete()
     except ValueError as e:
         return {"error": str(e)}
 
@@ -186,10 +183,10 @@ async def handle_get_session_time_to_next_stage(
 
     session_id = message.get("session_id", "")
 
-    session = session_manager.get_session(session_id=session_id)
+    session = await session_manager.get_session(session_id=session_id)
     if not session: raise ValueError("Сессия не найдена.")
 
-    t = session.get_time_to_next_stage()
+    t = await session.get_time_to_next_stage()
     return {
         "time_to_next_stage": t, 
         "stage_now": session.stage, 
@@ -213,11 +210,11 @@ async def handle_get_item_price(client_id: str, message: dict):
     item_id = message.get("item_id", "")
 
     try:
-        session = session_manager.get_session(session_id=session_id)
+        session = await session_manager.get_session(session_id=session_id)
         if not session: 
             raise ValueError("Сессия не найдена.")
 
-        price = session.get_item_price(item_id)
+        price = await session.get_item_price(item_id)
         return {
             "item_id": item_id,
             "price": price
@@ -240,11 +237,11 @@ async def handle_get_all_item_prices(client_id: str, message: dict):
     session_id = message.get("session_id", "")
 
     try:
-        session = session_manager.get_session(session_id=session_id)
+        session = await session_manager.get_session(session_id=session_id)
         if not session: 
             raise ValueError("Сессия не найдена.")
 
-        all_prices = session.get_all_item_prices_dict()
+        all_prices = await session.get_all_item_prices_dict()
         return {
             "prices": all_prices
         }
@@ -266,7 +263,7 @@ async def handle_get_session_event(client_id: str, message: dict):
     session_id = message.get("session_id", "")
 
     try:
-        session = session_manager.get_session(session_id=session_id)
+        session = await session_manager.get_session(session_id=session_id)
         if not session: 
             raise ValueError("Сессия не найдена.")
 
@@ -292,11 +289,11 @@ async def handle_get_session_leaders(client_id: str, message: dict):
     session_id = message.get("session_id", "")
 
     try:
-        session = session_manager.get_session(session_id=session_id)
+        session = await session_manager.get_session(session_id=session_id)
         if not session: 
             raise ValueError("Сессия не найдена.")
 
-        leaders = session.leaders()
+        leaders = await session.leaders()
         return {
             "capital": leaders["capital"].to_dict() if leaders["capital"] else None,
             "reputation": leaders["reputation"].to_dict() if leaders["reputation"] else None,

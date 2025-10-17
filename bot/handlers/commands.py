@@ -287,9 +287,8 @@ async def on_pong(message: dict):
 
 @ws_client.on_event("connect")
 async def on_connect():
-    load_scenes_from_db(scene_manager)
+    await load_scenes_from_db(scene_manager)
     print("🔗 Подключено к WebSocket серверу")
-
 
 @ws_client.on_message('api-update_session_stage')
 async def on_update_session_stage(message: dict):
