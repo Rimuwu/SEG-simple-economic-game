@@ -911,11 +911,9 @@ class Company(BaseClass, SessionObject):
             Начисляет доход по вкладам на баланс вклада (не на счёт компании).
             Автоматически снимает депозиты по окончании срока.
         """
-        from game.session import session_manager
         
-        session = session_manager.get_session(self.session_id)
-        if not session:
-            return False
+        session = await self.get_session()
+        if not session: return False
 
         for index, deposit in enumerate(self.deposits):
             if deposit["steps_now"] < deposit["steps_total"]:

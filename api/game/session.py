@@ -90,7 +90,7 @@ class Session(BaseClass):
         elif self.step >= self.max_steps:
             game_logger.info(f"Достигнуто максимальное количество шагов. Завершение игры в сессии {self.session_id}.")
             new_stage = SessionStages.End
-            self.end_game()
+            await self.end_game()
             return
 
         elif new_stage == SessionStages.CellSelect:
@@ -540,7 +540,7 @@ class Session(BaseClass):
             "economic": economic_winner
         }
 
-    def end_game(self):
+    async def end_game(self):
         from game.company import Company
 
         for company in await self.companies:
