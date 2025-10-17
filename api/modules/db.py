@@ -5,6 +5,6 @@ just_db = MongoDatabase(
             connection_string=getenv(
                 'MONGODB_URL', 'mongodb://localhost:27017'
             ),
-            database_name='bot_database',
+            database_name='api_database',
             auto_connect=True
             )

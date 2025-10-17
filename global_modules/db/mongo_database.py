@@ -61,18 +61,17 @@ class MongoDatabase:
 
     async def create_table(self, table_name: str, indexes: Optional[List[str]] = None):
         """Создаёт новую коллекцию с индексами"""
-        collection = self._get_collection(table_name)
-        
-        # Создаём индексы если указаны
-        if indexes:
-            index_models = [IndexModel([(field, 1)]) for field in indexes]
-            await collection.create_indexes(index_models)
+        if self.db is None:
+            raise RuntimeError("Database not connected")
+
+        if table_name not in await self.db.list_collection_names():
+            await self.db.create_collection(table_name)
 
     async def insert(self, table_name: str, record: Dict[str, Any]) -> int:
         """Вставляет запись в коллекцию"""
         if self.db is None:
             await self.connect()
-            
+
         collection = self._get_collection(table_name)
         
         # Добавляем автоматические поля
@@ -81,7 +80,7 @@ class MongoDatabase:
             # Получаем максимальный id
             max_id = await self.max_id_in_table(table_name)
             record['id'] = max_id + 1
-            
+
         record['created_at'] = datetime.now()
         record['updated_at'] = datetime.now()
 
@@ -124,7 +123,7 @@ class MongoDatabase:
                 
             if to_class:
                 instance = to_class()
-                await instance.load_from_base(document)
+                instance.load_from_base(document)
                 results.append(instance)
             else:
                 results.append(document)
@@ -151,7 +150,7 @@ class MongoDatabase:
 
         if to_class:
             instance = to_class()
-            await instance.load_from_base(document)
+            instance.load_from_base(document)
             return instance
         else:
             return document
