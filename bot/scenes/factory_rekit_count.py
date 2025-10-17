@@ -4,11 +4,10 @@ from oms.utils import callback_generator
 from global_modules.logs import Logger
 from modules.ws_client import get_factories
 from modules.resources import RESOURCES, get_resource_name
-from .oneuser_page import OneUserPage
 bot_logger = Logger.get_logger("bot")
 
 
-class FactoryRekitCount(OneUserPage):
+class FactoryRekitCount(Page):
     __page_name__ = "factory-rekit-count"
     
     async def content_worker(self):

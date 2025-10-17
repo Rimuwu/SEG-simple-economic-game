@@ -10,6 +10,7 @@ from game.session import SessionObject, SessionStages
 from global_modules.load_config import ALL_CONFIGS, Resources, Improvements, Settings, Capital, Reputation
 from global_modules.bank import calc_credit, get_credit_conditions, check_max_credit_steps, calc_deposit, get_deposit_conditions, check_max_deposit_steps
 from game.factory import Factory
+from modules.logs import game_logger
 
 RESOURCES: Resources = ALL_CONFIGS["resources"]
 CELLS: Cells = ALL_CONFIGS['cells']
@@ -57,12 +58,16 @@ class Company(BaseClass, SessionObject):
 
     async def set_owner(self, user_id: int):
         if self.owner != 0:
+            game_logger.warning(f"Попытка установить владельца компании {self.name} ({self.id}), но владелец уже установлен: {self.owner}.")
             raise ValueError("Владелец уже установлен.")
+
         if user_id in [user.id for user in await self.users] is False:
+            game_logger.warning(f"Пользователь {user_id} не является членом компании {self.name} ({self.id}) при попытке назначения владельцем.")
             raise ValueError("Пользователь не является членом компании.")
 
         self.owner = user_id
         await self.save_to_base()
+        game_logger.info(f"Пользователь {user_id} назначен владельцем компании {self.name} ({self.id}).")
 
     async def create(self, name: str, session_id: str):
         self.name = name
@@ -71,6 +76,7 @@ class Company(BaseClass, SessionObject):
             self.__tablename__, name=name, session_id=session_id)
 
         if with_this_name:
+            game_logger.warning(f"Попытка создать компанию с уже существующим именем '{name}' в сессии {session_id}.")
             raise ValueError(f"Компания с именем '{name}' уже существует.")
 
         self.session_id = session_id
@@ -103,6 +109,7 @@ class Company(BaseClass, SessionObject):
                 'company': await self.to_dict()
             }
         })
+        game_logger.info(f"Создана новая компания '{self.name}' ({self.id}) в сессии {self.session_id} с секретным кодом {self.secret_code}.")
         return self
 
     async def can_user_enter(self):
@@ -130,6 +137,7 @@ class Company(BaseClass, SessionObject):
 
         session = await self.get_session_or_error()
         if not await session.can_select_cell(x, y):
+            game_logger.warning(f"Компания {self.name} ({self.id}) не может выбрать клетку ({x}, {y}) в сессии {self.session_id}.")
             raise ValueError("Невозможно выбрать эту клетку - либо она занята, либо находится вне карты.")
 
         old_position = self.cell_position
@@ -137,6 +145,7 @@ class Company(BaseClass, SessionObject):
 
         await self.save_to_base()
         await self.reupdate()
+        game_logger.info(f"Компания {self.name} ({self.id}) установила позицию на клетку ({x}, {y}).")
 
         # Если все компании выбрали клетки, переходим к следующему этапу
         await session.reupdate()
@@ -192,6 +201,7 @@ class Company(BaseClass, SessionObject):
                 "company_id": self.id
             }
         })
+        game_logger.info(f"Компания {self.name} ({self.id}) удалена из сессии {self.session_id}.")
         return True
 
     async def get_max_warehouse_size(self) -> int:
@@ -215,13 +225,16 @@ class Company(BaseClass, SessionObject):
             max_space - добавить максимально возможное количество
         """
         if RESOURCES.get_resource(resource) is None:
+            game_logger.warning(f"Попытка добавить несуществующий ресурс '{resource}' компании {self.name} ({self.id}).")
             raise ValueError(f"Ресурс '{resource}' не существует.")
 
         if amount <= 0:
+            game_logger.warning(f"Попытка добавить отрицательное количество ресурса '{resource}' ({amount}) компании {self.name} ({self.id}).")
             raise ValueError("Количество должно быть положительным целым числом.")
 
         if not max_space:
             if self.get_resources_amount() + amount > await self.get_max_warehouse_size() and not ignore_space:
+                game_logger.warning(f"Недостаточно места на складе компании {self.name} ({self.id}) для добавления {amount} единиц '{resource}'. Свободно: {self.get_warehouse_free_size()}")
                 raise ValueError("Недостаточно места на складе.")
         if max_space:
             free_space = await self.get_warehouse_free_size()
@@ -243,16 +256,20 @@ class Company(BaseClass, SessionObject):
                 "amount": amount
             }
         })
+        game_logger.info(f"Компания {self.name} ({self.id}) получила {amount} единиц ресурса '{resource}'. Всего на складе: {self.warehouses[resource]}")
         return True
 
     async def remove_resource(self, resource: str, amount: int):
         if RESOURCES.get_resource(resource) is None:
+            game_logger.warning(f"Попытка удалить несуществующий ресурс '{resource}' у компании {self.name} ({self.id}).")
             raise ValueError(f"Ресурс '{resource}' не существует.")
 
         if amount <= 0:
+            game_logger.warning(f"Попытка удалить отрицательное количество ресурса '{resource}' ({amount}) у компании {self.name} ({self.id}).")
             raise ValueError("Количество должно быть положительным целым числом.")
 
         if resource not in self.warehouses or self.warehouses[resource] < amount:
+            game_logger.warning(f"Недостаточно ресурса '{resource}' у компании {self.name} ({self.id}) для удаления {amount} единиц. Доступно: {self.warehouses.get(resource, 0)}")
             raise ValueError(f"Недостаточно ресурса '{resource}' для удаления.")
 
         self.warehouses[resource] -= amount
@@ -269,6 +286,7 @@ class Company(BaseClass, SessionObject):
                 "amount": amount
             }
         })
+        game_logger.info(f"Компания {self.name} ({self.id}) потратила {amount} единиц ресурса '{resource}'. Осталось: {self.warehouses.get(resource, 0)}")
         return True
 
     def get_resources_amount(self):
@@ -494,13 +512,19 @@ class Company(BaseClass, SessionObject):
         self.in_prison_check()
 
         if not isinstance(c_sum, int) or not isinstance(steps, int):
+            game_logger.warning(f"Компания {self.name} ({self.id}) пытается взять кредит с неверными типами данных: сумма={type(c_sum)}, шаги={type(steps)}")
             raise ValueError("Сумма и шаги должны быть целыми числами.")
 
         if c_sum <= 0 or steps <= 0:
+            game_logger.warning(f"Компания {self.name} ({self.id}) пытается взять кредит с неположительными значениями: сумма={c_sum}, шаги={steps}")
             raise ValueError("Сумма и шаги должны быть положительными целыми числами.")
+
+        if steps <= 1:
+            raise ValueError("Нельзя взять кредит на 1 ход")
 
         credit_condition = get_credit_conditions(self.reputation)
         if not credit_condition.possible:
+            game_logger.warning(f"Компания {self.name} ({self.id}) не может взять кредит с текущей репутацией {self.reputation}")
             raise ValueError("Кредит невозможен с текущей репутацией.")
 
         total, pay_per_turn, extra = calc_credit(
@@ -512,15 +536,19 @@ class Company(BaseClass, SessionObject):
         if not check_max_credit_steps(steps, 
                                       session.step, 
                                       session.max_steps):
+            game_logger.warning(f"Компания {self.name} ({self.id}) пытается взять кредит на {steps} шагов, что превышает оставшееся время игры")
             raise ValueError("Срок кредита превышает максимальное количество шагов игры.")
 
         if len(self.credits) >= SETTINGS.max_credits_per_company:
+            game_logger.warning(f"Компания {self.name} ({self.id}) достигла максимального количества кредитов ({SETTINGS.max_credits_per_company})")
             raise ValueError("Достигнуто максимальное количество активных кредитов для этой компании.")
 
         if c_sum > CAPITAL.bank.credit.max:
+            game_logger.warning(f"Компания {self.name} ({self.id}) пытается взять кредит {c_sum}, превышающий максимум {CAPITAL.bank.credit.max}")
             raise ValueError(f"Сумма кредита превышает максимальный лимит {CAPITAL.bank.credit.max}.")
 
         elif c_sum < CAPITAL.bank.credit.min:
+            game_logger.warning(f"Компания {self.name} ({self.id}) пытается взять кредит {c_sum}, меньше минимума {CAPITAL.bank.credit.min}")
             raise ValueError(f"Сумма кредита ниже минимального лимита {CAPITAL.bank.credit.min}.")
 
         credit_data = {
@@ -544,6 +572,7 @@ class Company(BaseClass, SessionObject):
                 "steps": steps
             }
         })
+        game_logger.info(f"Компания {self.name} ({self.id}) взяла кредит на сумму {c_sum} на {steps} шагов. К доплате: {total}")
         return credit_data
 
     async def credit_paid_step(self):
@@ -692,6 +721,7 @@ class Company(BaseClass, SessionObject):
                 "end_step": end_step
             }
         })
+        game_logger.info(f"Компания {self.name} ({self.id}) отправлена в тюрьму до шага {end_step} в сессии {self.session_id}")
 
     async def leave_prison(self):
         """ Выход из тюрьмы по времени
@@ -710,6 +740,7 @@ class Company(BaseClass, SessionObject):
                 "company_id": self.id
             }
         })
+        game_logger.info(f"Компания {self.name} ({self.id}) освобождена из тюрьмы в сессии {self.session_id}")
         return True
 
     def in_prison_check(self):
@@ -745,8 +776,10 @@ class Company(BaseClass, SessionObject):
         if self.tax_debt > 0:
             self.overdue_steps += 1
             await self.remove_reputation(REPUTATION.tax.late)
+            game_logger.warning(f"Компания {self.name} ({self.id}) имеет просроченный налоговый долг. Просрочка: {self.overdue_steps} шагов")
 
         if self.overdue_steps > REPUTATION.tax.not_paid_stages:
+            game_logger.warning(f"Компания {self.name} ({self.id}) превысила максимальную просрочку по налогам ({self.overdue_steps} > {REPUTATION.tax.not_paid_stages}). Отправляется в тюрьму")
             self.overdue_steps = 0
             self.tax_debt = 0
 
@@ -878,6 +911,11 @@ class Company(BaseClass, SessionObject):
             Начисляет доход по вкладам на баланс вклада (не на счёт компании).
             Автоматически снимает депозиты по окончании срока.
         """
+        from game.session import session_manager
+        
+        session = session_manager.get_session(self.session_id)
+        if not session:
+            return False
 
         for index, deposit in enumerate(self.deposits):
             if deposit["steps_now"] < deposit["steps_total"]:
@@ -1099,6 +1137,7 @@ class Company(BaseClass, SessionObject):
                         resource_id, raw_col,
                         max_space=True
                 )
+                game_logger.info(f"Компания {self.name} ({self.id}) добыла {raw_col} единиц ресурса '{resource_id}' на шаге {step}")
 
 
         factories = await self.get_factories()

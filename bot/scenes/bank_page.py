@@ -6,9 +6,8 @@ from .oneuser_page import OneUserPage
 
 Page = OneUserPage
 
-
-class BankPage(OneUserPage):
-
+class BankPage(Page):
+    __for_blocked_pages__ = ["bank-credit-page", "bank-deposit-page"]
     __page_name__ = "bank-menu"
     
     async def content_worker(self):

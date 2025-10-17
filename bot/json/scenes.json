@@ -133,13 +133,6 @@
                 "image": "img/exchange.png",
                 "content": ""
             },
-            "contract-main-page": {
-                "image": "img/contract.png",
-                "content": "",
-                "to_pages": {
-                    "main-page": "↪️ Назад"
-                }
-            },
             "upgrade-menu": {
                 "image": "img/upgrade.png",
                 "content": "",
@@ -149,10 +142,7 @@
             },
             "logistics-menu": {
                 "image": "img/exchange.png",
-                "content": "",
-                "to_pages": {
-                    "main-page": "↪️ Назад"
-                }
+                "content": ""
             },
             "factory-menu": {
                 "image": "img/main_company.png",
@@ -160,6 +150,17 @@
                 "to_pages": {
                     "main-page": "↪️ Назад"
                 }
+            },
+            "contract-view-page": {
+                "title": "",
+                "content": "",
+                "to_pages": {
+                    "contract-main-page": "↪️ Назад"
+                }
+            },
+            "factory-change-mode": {
+                "image": "img/main_company.png",
+                "content": ""
             },
             "factory-rekit-groups": {
                 "image": "img/main_company.png",

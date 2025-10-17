@@ -4,19 +4,18 @@ from modules.ws_client import get_company, company_take_deposit, company_withdra
 from oms.utils import callback_generator
 from global_modules.bank import get_deposit_conditions, calc_deposit, CAPITAL, check_max_deposit_steps
 from global_modules.logs import Logger
-from .oneuser_page import OneUserPage
 
 bot_logger = Logger.get_logger("bot")
 
 
-class BankDepositPage(OneUserPage):
+class BankDepositPage(Page):
     
     __page_name__ = "bank-deposit-page"
     
     async def content_worker(self):
         scene_data = self.scene.get_data('scene')
         company_id = scene_data.get('company_id')
-        session_id = scene_data.get('session_id')
+        session_id = scene_data.get('session')
         
         if not company_id:
             return "❌ Ошибка: компания не найдена"
@@ -258,7 +257,7 @@ _Вклад можно забрать через 3 хода после откр�
         """Генерация кнопок"""
         scene_data = self.scene.get_data('scene')
         company_id = scene_data.get('company_id')
-        session_id = scene_data.get('session_id')
+        session_id = scene_data.get('session')
         deposit_state = scene_data.get('deposit_state', 'main')
         
         buttons = []
@@ -321,6 +320,14 @@ _Вклад можно забрать через 3 хода после откр�
                                     str(i)
                                 )
                             })
+                        
+                buttons.append({
+                    'text': f'⬅️ Назад',
+                    'callback_data': callback_generator(
+                        self.scene.__scene_name__,
+                        'back_to_bank'
+                    )
+                })
         
         # Кнопки для экрана просмотра вклада
         elif deposit_state == 'view_deposit':
@@ -350,7 +357,7 @@ _Вклад можно забрать через 3 хода после откр�
                 
                 # Кнопка возврата к списку вкладов
                 buttons.append({
-                    'text': '⬅️ Назад к списку',
+                    'text': '⬅️ Назад',
                     'callback_data': callback_generator(
                         self.scene.__scene_name__,
                         'back_to_main'
@@ -397,7 +404,7 @@ _Вклад можно забрать через 3 хода после откр�
         """Начало процесса открытия вклада - запрос суммы"""
         scene_data = self.scene.get_data('scene')
         company_id = scene_data.get('company_id')
-        session_id = scene_data.get('session_id')
+        session_id = scene_data.get('session')
         
         # Проверяем репутацию и время до конца игры
         company_data = await get_company(id=company_id)
@@ -494,7 +501,7 @@ _Вклад можно забрать через 3 хода после откр�
         
         scene_data = self.scene.get_data('scene')
         company_id = scene_data.get('company_id')
-        session_id = scene_data.get('session_id')
+        session_id = scene_data.get('session')
         
         if not company_id:
             await callback.answer("❌ Ошибка: компания не найдена", show_alert=True)
@@ -621,13 +628,24 @@ _Вклад можно забрать через 3 хода после откр�
         await callback.answer("❌ Операция отменена")
         await self.scene.update_message()
     
+    
+    @Page.on_callback('back_to_bank')
+    async def back_to_bank_handler(self, callback: CallbackQuery, args: list):
+        scene_data = self.scene.get_data('scene')
+        scene_data['deposit_state'] = 'main'
+        scene_data['deposit_amount'] = 0
+        scene_data['deposit_period'] = 0
+        scene_data['error_message'] = ''  # Очищаем ошибки
+        await self.scene.set_data('scene', scene_data)
+        await self.scene.update_page('bank-menu')
+    
     @Page.on_text('int')
     async def handle_input(self, message: Message, value: int):
         """Обработка ввода чисел (сумма или срок)"""
         scene_data = self.scene.get_data('scene')
         deposit_state = scene_data.get('deposit_state', 'main')
         company_id = scene_data.get('company_id')
-        session_id = scene_data.get('session_id')
+        session_id = scene_data.get('session')
         
         # Ввод суммы вклада
         if deposit_state == 'input_amount':

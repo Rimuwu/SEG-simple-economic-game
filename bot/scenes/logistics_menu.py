@@ -1,15 +1,14 @@
 from typing import Dict, List, Optional
-
-from oms import Page
 from aiogram.types import CallbackQuery, Message  # type: ignore
 from oms.utils import callback_generator
 from modules.ws_client import get_logistics, logistics_pickup
 from global_modules.load_config import ALL_CONFIGS, Resources
 from modules.utils import xy_into_cell
+from .oneuser_page import OneUserPage
 
 
 RESOURCES: Resources = ALL_CONFIGS["resources"]
-
+Page = OneUserPage
 
 class LogisticsMenu(Page):
 
@@ -81,6 +80,10 @@ class LogisticsMenu(Page):
             buttons.append({
                 "text": "📦 Забрать доставленные",
                 "callback_data": callback_generator(self.scene.__scene_name__, "logistics_claim")
+            })
+            buttons.append({
+                "text": "⬅️ Назад",
+                "callback_data": callback_generator(self.scene.__scene_name__, "back_main_page")
             })
         elif stage == "list":
             self.row_width = 1
@@ -303,6 +306,18 @@ class LogisticsMenu(Page):
             lines.append(f"Доставлены к вам: {delivered_to_company}")
 
         return lines
+    
+    
+    @Page.on_callback('back_main_page')
+    async def back_main_page(self, callback: CallbackQuery, args: list):
+        await self.scene.update_key("logistics-menu", "stage", "main")
+        await self.scene.update_key("logistics-menu", "logistics_page", 0)
+        await self.scene.update_key("logistics-menu", "current_logistics_id", None)
+        await self.scene.update_key("logistics-menu", "status_message", None)
+        await self.scene.update_key("logistics-menu", "status_level", "info")
+        await self.scene.update_page('main-page')
+        await callback.answer()
+    
 
     async def _build_list_text(self, page_data: dict, logistics: List[dict]) -> List[str]:
         lines = ["🚚 **Маршруты доставки**"]

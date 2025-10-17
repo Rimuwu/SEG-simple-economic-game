@@ -23,6 +23,7 @@ from scenes.factory_rekit_count import FactoryRekitCount
 from scenes.factory_rekit_resource import FactoryRekitResource
 from scenes.factory_rekit_produce import FactoryRekitProduce
 from scenes.factory_start_groups import FactoryStartGroups
+from scenes.factory_change_mode import FactoryChangeMode
 from scenes.exchange_page import ExchangePage
 from scenes.change_turn_page import ChangeTurnPage
 from scenes.prison_page import PrisonPage
@@ -52,7 +53,6 @@ class GameManager(AdminScene):
         BankPage,
         BankCreditPage,
         BankDepositPage,
-        ContractMainPage,
         UpgradeMenu,
         LogisticsMenu,
         FactoryMenu,
@@ -61,6 +61,7 @@ class GameManager(AdminScene):
         FactoryRekitResource,
         FactoryRekitProduce,
         FactoryStartGroups,
+        FactoryChangeMode,
         ChangeTurnPage,
         PrisonPage,
         EndGamePage,

@@ -1,5 +1,6 @@
 from asyncio import sleep
 import asyncio
+import os
 from pprint import pprint
 import random
 from fastapi import FastAPI, Request
@@ -69,10 +70,8 @@ app = get_fastapi_app(
     title="API",
     version="6.6.6",
     description="SEG API",
-    debug=False,
+    debug=os.getenv("DEBUG", "False").lower() == "true",
     lifespan=lifespan,
-    limiter=False,
-    middlewares=[],
     routers=[
         connect_ws.router
     ],
