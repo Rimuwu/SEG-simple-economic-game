@@ -1,4 +1,4 @@
-from .oneuser_page import OneUserPage
+from .utils.oneuser_page import OneUserPage
 from modules.ws_client import get_company_contracts, accept_contract, get_contract, get_company
 from global_modules.load_config import ALL_CONFIGS, Resources
 
