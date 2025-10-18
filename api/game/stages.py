@@ -12,32 +12,32 @@ async def stage_game_updater(session_id: str):
     """ Фнукция для цикличного обновления стадии игры
     """
     from game.session import SessionStages, session_manager
-    session = session_manager.get_session(session_id)
+    session = await session_manager.get_session(session_id)
 
     if not session: return 0
     if session.stage != SessionStages.Game.value:
-        session.update_stage(SessionStages.Game)
-        sh_id = scheduler.schedule_task(
+        await session.update_stage(SessionStages.Game)
+        sh_id = await scheduler.schedule_task(
             stage_game_updater, 
             datetime.now() + timedelta(seconds=GAME_TIME),
             kwargs={"session_id": session_id}
         )
         session.change_turn_schedule_id = sh_id
-        session.save_to_base()
+        await session.save_to_base()
 
     elif session.stage == SessionStages.Game.value:
         if session.step >= session.max_steps:
-            session.update_stage(SessionStages.End)
+            await session.update_stage(SessionStages.End)
             return 0
 
-        session.update_stage(SessionStages.ChangeTurn)
-        sh_id = scheduler.schedule_task(
+        await session.update_stage(SessionStages.ChangeTurn)
+        sh_id = await scheduler.schedule_task(
             stage_game_updater, 
             datetime.now() + timedelta(seconds=CHANGETURN_TIME),
             kwargs={"session_id": session_id}
         )
         session.change_turn_schedule_id = sh_id
-        session.save_to_base()
+        await session.save_to_base()
 
 async def leave_from_prison(session_id: str, company_id: int):
     """ Фнукция для выхода из тюрьмы по времени
@@ -45,13 +45,13 @@ async def leave_from_prison(session_id: str, company_id: int):
     from game.company import Company
     from game.session import session_manager
 
-    session = session_manager.get_session(session_id)
+    session = await session_manager.get_session(session_id)
     if not session: return 0
 
-    company = Company(company_id).reupdate()
+    company = await Company(company_id).reupdate()
     if not company: return 0
 
-    company.leave_prison()
+    await company.leave_prison()
     return 1
 
 async def clear_session_event(session_id: str):
@@ -59,15 +59,14 @@ async def clear_session_event(session_id: str):
     """
     from game.session import session_manager
 
-    session = session_manager.get_session(session_id)
+    session = await session_manager.get_session(session_id)
     if not session: 
         return 0
 
     session.event_type = None
     session.event_start = None
     session.event_end = None
-    session.save_to_base()
-    session.reupdate()
+    await session.save_to_base()
     
     game_logger.info(f"Event cleared for session {session_id}")
     return 1

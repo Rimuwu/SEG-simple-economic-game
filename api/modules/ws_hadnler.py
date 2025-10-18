@@ -3,6 +3,7 @@ from typing import Callable, Dict, List, Union
 from modules.websocket_manager import websocket_manager
 from modules.logs import websocket_logger
 from modules.logs import routers_logger
+import traceback
 
 MESSAGE_HANDLERS: Dict[str, dict[str, Union[Callable, str]]] = {}
 
@@ -65,12 +66,17 @@ async def handle_message(client_id: str, message: dict):
                 await websocket_manager.send_message(client_id, response)
 
         except Exception as e:
-            websocket_logger.error(f"Ошибка в обработчике {message_type}: {e}")
+            print(traceback.format_exc())
+            websocket_logger.error(f"Ошибка в обработчике {message_type}: {e}\n{traceback.format_exc()}")
             error_message = {
                 "type": "error",
-                "message": f"Ошибка обработки сообщения типа {message_type}: {str(e)}"
+                "message": f"Ошибка обработки сообщения типа {message_type}: {str(e)}",
+                "error": str(e)
             }
             await websocket_manager.send_message(client_id, error_message)
+            routers_logger.error(
+                f"Ошибка в роутере {message_type} для клиента {client_id}: {error_message}")
+
     else:
         # Неизвестный тип сообщения
         websocket_logger.warning(f"Неизвестный тип сообщения от {client_id}: {message_type}")

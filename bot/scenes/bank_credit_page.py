@@ -4,17 +4,15 @@ from modules.ws_client import get_company, company_take_credit, company_pay_cred
 from oms.utils import callback_generator
 from global_modules.bank import get_credit_conditions, calc_credit, CAPITAL
 from global_modules.load_config import ALL_CONFIGS
-from pprint import pprint
-from .oneuser_page import OneUserPage
 
-class BankCreditPage(OneUserPage):
+class BankCreditPage(Page):
     
     __page_name__ = "bank-credit-page"
     
     async def content_worker(self):
         scene_data = self.scene.get_data('scene')
         company_id = scene_data.get('company_id')
-        session_id = scene_data.get('session_id')
+        session_id = scene_data.get('session')
         
         if not company_id:
             return "❌ Ошибка: компания не найдена"
@@ -129,7 +127,7 @@ class BankCreditPage(OneUserPage):
 *Шаг 1: Введите срок кредита*
 
 На какое количество ходов хотите взять кредит?
-Минимум: 1 ход
+Минимум: 2 ход
 Максимум: {max_period} ход(ов)
 (Текущий ход: {current_step}, до конца игры: {max_period})"""
         
@@ -241,6 +239,7 @@ class BankCreditPage(OneUserPage):
         
         # Кнопки для основного экрана
         if credit_state == 'main':
+            self.row_width = 1
             # Получаем данные компании
             company_data = await get_company(id=company_id)
             
@@ -284,6 +283,7 @@ class BankCreditPage(OneUserPage):
         
         # Кнопки для экранов ввода - добавляем кнопку отмены
         elif credit_state in ['input_period', 'input_amount', 'pay_amount']:
+            self.row_width = 2
             buttons = [
                 {
                     'text': '❌ Отменить',
@@ -296,6 +296,7 @@ class BankCreditPage(OneUserPage):
         
         # Кнопки для экрана подтверждения
         elif credit_state == 'confirm':
+            self.row_width = 1
             buttons = [
                 {
                     'text': '✅ Да, взять кредит',
@@ -312,8 +313,6 @@ class BankCreditPage(OneUserPage):
                     )
                 }
             ]
-        
-        self.row_width = 1
         return buttons
     
     @Page.on_callback('take_credit')
@@ -486,15 +485,15 @@ class BankCreditPage(OneUserPage):
         scene_data = self.scene.get_data('scene')
         credit_state = scene_data.get('credit_state', 'main')
         company_id = scene_data.get('company_id')
-        session_id = scene_data.get('session_id')
+        session_id = scene_data.get('session')
         
         # Ввод срока кредита
         if credit_state == 'input_period':
             # Очищаем предыдущую ошибку
             scene_data['error_message'] = ''
             
-            if value < 1:
-                scene_data['error_message'] = 'Срок должен быть не менее 1 хода'
+            if value < 2:
+                scene_data['error_message'] = 'Срок должен быть не менее 2 хода'
                 await self.scene.set_data('scene', scene_data)
                 await self.scene.update_message()
                 return
