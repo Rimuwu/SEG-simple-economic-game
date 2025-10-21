@@ -129,9 +129,17 @@
                 "image": "img/bank.png",
                 "content": ""
             },
-            "exchange-page": {
+            "exchange-main-page": {
+                "image": "img/exchange.png",
+                "content": "На данной странице вы можете посмотреть текущие предожения на биржу или создать сообственные."
+            },
+            "exchange-sellect-confirm-page": {
                 "image": "img/exchange.png",
                 "content": ""
+            },
+            "exchange-create-page": {
+                "image": "img/exchange.png",
+                "content": "Выберите ресурс, который выставите на биржу\nПоказаны ресурсы, которые находятся в вашем инвентаре и их кол-во"
             },
             "upgrade-menu": {
                 "image": "img/upgrade.png",

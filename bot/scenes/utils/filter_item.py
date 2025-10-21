@@ -6,7 +6,6 @@ from oms.utils import callback_generator
 RESOURCES: Resources = ALL_CONFIGS["resources"]
 
 class ItemFilter(OneUserPage):
-    
     async def content_worker(self):
         return ""
     
