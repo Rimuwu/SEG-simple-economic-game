@@ -11,12 +11,21 @@ class ExchangeMain(OneUserPage):
     __page_name__ = "exchange-main-page"
     
     
+    async def data_preparate(self):
+        await self.scene.update_key("exchange-main-page", "page_number", 0)
+        await self.scene.update_key("exchange-main-page", "state", "all") #all, our
+    
+    
     async def buttons_worker(self):
         data = self.scene.get_data("scene")
         session = data.get("session")
+        company = data.get("company_id")
+        state = self.scene.get_key("exchange-main-page", "state")
         self.row_width = 2
         buttons = []
-        
+        all_ex_page_container = []
+        our_ex_page_container = []
+        cur_page = self.scene.get_key("exchange-main-page", "page_number")
         exchanges = await get_exchanges(session_id=session)
         for ex in exchanges:
             text = None
@@ -37,7 +46,20 @@ class ExchangeMain(OneUserPage):
                     "select_exchange",
                     ex["id"]
                 )
-            
-            
+            if ex["company_id"] != company:
+                all_ex_page_container.append({
+                    "text": text,
+                    "callback_data": callback,
+                    "next_line": True
+                })
+            elif ex["company_id"] == company:
+                our_ex_page_container.append({
+                    "text": text,
+                    "callback_data": callback,
+                    "next_line": True
+                })
+        
+        if state == "all":
+            pass
         
         return buttons

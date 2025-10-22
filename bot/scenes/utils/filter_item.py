@@ -5,7 +5,7 @@ from oms.utils import callback_generator
 
 RESOURCES: Resources = ALL_CONFIGS["resources"]
 
-class ItemFilter(OneUserPage):
+class ItemFilter(OneUserPage):    
     
     async def data_preparate(self):
         self.scene.update_key("scene", "page_filter_item", 0)
