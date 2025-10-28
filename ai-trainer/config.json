@@ -1,0 +1,79 @@
+{
+  "game_server": {
+    "ws_uri": "ws://localhost:81/ws/connect",
+    "update_password": "supersecret",
+    "timeout": 60
+  },
+  "action_timeouts": {
+    "inventory_open": 3,
+    "inventory_close": 2,
+    "inventory_move_item": 2,
+    "market_open": 5,
+    "market_list_items": 4,
+    "market_sell_item": 15,
+    "market_buy_item": 15,
+    "market_close": 2,
+    "cell_select": 8,
+    "cell_info": 3,
+    "improvement_info": 3,
+    "improve_building": 10,
+    "credit_take": 8,
+    "credit_pay": 8,
+    "tax_pay": 5,
+    "bank_open": 4,
+    "bank_close": 2,
+    "trade_route_create": 12,
+    "trade_route_delete": 5,
+    "npc_interact": 6
+  },
+  "training_difficulty_levels": {
+    "easy": {
+      "iterations": 100,
+      "learning_rate": 0.001,
+      "batch_size": 32,
+      "epochs": 5
+    },
+    "medium": {
+      "iterations": 500,
+      "learning_rate": 0.0005,
+      "batch_size": 16,
+      "epochs": 10
+    },
+    "hard": {
+      "iterations": 1000,
+      "learning_rate": 0.0001,
+      "batch_size": 8,
+      "epochs": 20
+    },
+    "expert": {
+      "iterations": 2000,
+      "learning_rate": 0.00005,
+      "batch_size": 4,
+      "epochs": 40
+    }
+  },
+  "reward_system": {
+    "capital_weight": 0.4,
+    "reputation_weight": 0.3,
+    "economic_level_weight": 0.3,
+    "win_bonus": 1000,
+    "loss_penalty": -100,
+    "bankruptcy_penalty": -500
+  },
+  "training_session": {
+    "max_players": 4,
+    "max_game_turns": 100,
+    "skip_timers": true,
+    "debug_mode": false
+  },
+  "model_storage": {
+    "models_dir": "./models",
+    "checkpoints_dir": "./checkpoints",
+    "logs_dir": "./logs",
+    "save_interval": 10
+  },
+  "logging": {
+    "level": "INFO",
+    "format": "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
+  }
+}
