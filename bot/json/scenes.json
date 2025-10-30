@@ -131,7 +131,11 @@
             },
             "exchange-main-page": {
                 "image": "img/exchange.png",
-                "content": "На данной странице вы можете посмотреть текущие предожения на биржу или создать сообственные."
+                "content": "На данной странице вы можете посмотреть текущие предожения на биржу или создать сообственные.",
+                "to_pages": {
+                    "exchange-create-page": "Создать предложение",
+                    "main-page": "↪️ Назад"
+                }
             },
             "exchange-sellect-confirm-page": {
                 "image": "img/exchange.png",
