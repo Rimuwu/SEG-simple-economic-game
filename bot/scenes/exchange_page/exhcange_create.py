@@ -1,4 +1,5 @@
 from utils.filter_item import ItemFilter
+from oms.utils import callback_generator
 from modules.ws_client import create_exchange_offer
 import json
 from global_modules.load_config import ALL_CONFIGS, Resources
@@ -56,4 +57,4 @@ class ExchangeCreate(ItemFilter):
         settings = json.loads(data)
         self.row_width = 2
         buttons = []
-        buttons.append()
+        buttons.append({"text": f""})
