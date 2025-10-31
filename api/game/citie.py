@@ -1,3 +1,4 @@
+import copy
 import random
 from typing import Optional
 from game.session import SessionObject

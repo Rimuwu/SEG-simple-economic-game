@@ -43,16 +43,23 @@ class Session(BaseClass):
     __unique_id__ = "session_id"
     __db_object__ = just_db
 
-    def __init__(self, session_id: str = ""): 
+    def __init__(self, session_id: str = "",
+                 map_pattern: str = "random",
+                 map_size: Optional[dict] = None,
+                 max_steps: int = 15,
+                 bots_count: int = 2
+                 ): 
         self.session_id = session_id
         self.cells: list[str] = []
-        self.map_size: dict = {"rows": 7, "cols": 7}
-        self.map_pattern: str = "random"
+        self.map_size: dict = map_size if map_size else {
+            "rows": 7, "cols": 7}
+        self.map_pattern: str = map_pattern
         self.cell_counts: dict = {}
         self.stage: str = SessionStages.FreeUserConnect.value
         self.step: int = 0
-        self.max_steps: int = 15
+        self.max_steps: int = max_steps
         self.change_turn_schedule_id: int = 0
+        self.bots_count: int = bots_count
 
         self.event_type: Optional[str] = None
         self.event_start: Optional[int] = None
@@ -807,7 +814,9 @@ class Session(BaseClass):
                 "type": self.event_type,
                 "start": self.event_start,
                 "end": self.event_end
-            }
+            },
+            
+            "bots_count": self.bots_count
         }
 
 class SessionObject:
