@@ -1,6 +1,0 @@
-tensorflow==2.20.0
-# numpy==2.3.4
-python-dotenv==1.2.1
-websockets==15.0.1
-# pydantic==2.12.3
-# aiohttp==3.13.2

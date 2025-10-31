@@ -57,7 +57,7 @@ class Factory(BaseClass, SessionObject):
         await websocket_manager.broadcast({
             "type": "api-factory-create",
             "data": {
-                "factory": self.to_dict(),
+                "factory": await self.to_dict(),
                 "company_id": self.company_id
             }
         })
@@ -150,7 +150,7 @@ class Factory(BaseClass, SessionObject):
                 })
 
         # Этап производства
-        elif self.is_working:
+        elif await self.is_working:
             resource = RESOURCES.get_resource(self.complectation) # type: ignore
 
             # Снимаем материалы со склада компании при первом ходе производства
@@ -182,7 +182,7 @@ class Factory(BaseClass, SessionObject):
                 self.progress[0] = 0
 
                 # Если авто, то проверяем материалы и продолжаем производство, если есть материалы
-                if self.is_auto and self.check_materials():
+                if self.is_auto and await self.check_materials():
                     self.produce = True
                 else:
                     self.produce = False
@@ -235,7 +235,7 @@ class Factory(BaseClass, SessionObject):
 
         return all_good
 
-    def to_dict(self) -> dict:
+    async def to_dict(self) -> dict:
         """ Получение статуса фабрики
         """
         return {
@@ -246,8 +246,8 @@ class Factory(BaseClass, SessionObject):
             "produce": self.produce,
             "is_auto": self.is_auto,
             "complectation_stages": self.complectation_stages,
-            "is_working": self.is_working,
-            "check_materials": self.check_materials() if self.complectation else False
+            "is_working": await self.is_working,
+            "check_materials": await self.check_materials() if self.complectation else False
         }
 
     async def delete(self):

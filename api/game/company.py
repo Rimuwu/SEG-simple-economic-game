@@ -1210,7 +1210,7 @@ class Company(BaseClass, SessionObject):
 
             # Пользователи и фабрики
             "users": [user.to_dict() for user in await self.users],
-            "factories": [factory.to_dict() for factory in await self.get_factories()],
+            "factories": [await factory.to_dict() for factory in await self.get_factories()],
             "factories_count": len(await self.get_factories()),
 
             # Дополнительные возможности
