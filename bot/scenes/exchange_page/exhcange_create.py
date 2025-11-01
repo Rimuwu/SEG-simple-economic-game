@@ -1,13 +1,14 @@
-from utils.filter_item import ItemFilter
+from utils.oneuser_page import OneUserPage
 from oms.utils import callback_generator
 from modules.ws_client import create_exchange_offer
 import json
 from global_modules.load_config import ALL_CONFIGS, Resources
+from aiogram.types import CallbackQuery
 
 RESOURCES: Resources = ALL_CONFIGS["resources"]
 
 
-class ExchangeCreate(ItemFilter):
+class ExchangeCreate(OneUserPage):
     __for_blocked_pages__ = ["exchange-sellect-confirm", "exchange-main-page"]
     __page_name__ = "exchange-create-page"
     
@@ -76,16 +77,16 @@ class ExchangeCreate(ItemFilter):
                         "callback_data": callback_generator(self.scene.__scene_name__, "set_count_offers"),})
         if settings["offer_type"] == "money":
             buttons.append({"text": f"Цена за сделку: {price}",
-                            "callback_data": callback_generator(self.scene.__scene_name__, "change_price")})
+                            "callback_data": callback_generator(self.scene.__scene_name__, "change_price"),
+                            "ignore_row": True})
         else:
             buttons.append({"text": f"Ресурс для бартера: {barter_resource} x{settings['barter_amount'] if settings['barter_amount'] else 'N'}",
-                            "callback_data": callback_generator(self.scene.__scene_name__, "set_barter_resource")})
-        buttons.append({"text": "Создать предложение",
-                        "callback_data": callback_generator(self.scene.__scene_name__, "create_exchange_offer"),
-                        "ignore_row": True})
+                            "callback_data": callback_generator(self.scene.__scene_name__, "set_barter_resource"),
+                            "ignore_row": True})
+        buttons.append({"text": "Создать",
+                        "callback_data": callback_generator(self.scene.__scene_name__, "create_exchange_offer")})
+        buttons.append({"text": "Очистить",
+                        "callback_data": callback_generator(self.scene.__scene_name__, "clear_exchange_offer")})
         buttons.append({"text": "Назад",
-                        "callback_data": callback_generator(self.scene.__scene_name__, "go_back"),
-                        "ignore_row": True})
+                        "callback_data": callback_generator(self.scene.__scene_name__, "to_page", "exchange-main-page")})
         return buttons
-        
-        
