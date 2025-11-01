@@ -29,7 +29,7 @@ class Statistic(BaseClass, SessionObject):
         self.contracnts: int = 0 # Количество контрактов компании
         self.warehouse: int = 0 # Размер склада компании
 
-        self.product_production: int = 0 # Объем производства продуктов компанией
+        self.product_count: int = 0 # Объем производства продуктов компанией
         self.sell_to_city: int = 0 # Объем продаж в город компанией
 
     async def create(self, 

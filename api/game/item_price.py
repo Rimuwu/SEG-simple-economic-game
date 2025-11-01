@@ -30,6 +30,10 @@ class ItemPrice(BaseClass, SessionObject):
         self.current_price: int = 0
         self.material_based_price: int = 0
 
+        self.popularity: int = 0  # Как часто покупают этот товар
+    
+    # def 
+
 
     async def create(self, session_id: str, item_id: str):
         self.id = item_id
