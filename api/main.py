@@ -47,6 +47,7 @@ async def lifespan(app: FastAPI):
     await just_db.create_table('factories') # Таблица с заводами
     await just_db.create_table('item_price') # Таблица с ценами на товары
     await just_db.create_table('logistics') # Таблица с логистикой
+    await just_db.create_table('statistics') # Таблица со статистикой
 
     websocket_logger.info("Loading sessions from database...")
     await session_manager.load_from_base()

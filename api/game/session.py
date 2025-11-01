@@ -4,7 +4,8 @@ from datetime import datetime, timedelta
 from enum import Enum
 import random
 from typing import Optional
-import uuid
+from api.modules.websocket_manager import websocket_manager
+from game.statistic import Statistic
 
 from game.stages import stage_game_updater
 
@@ -17,7 +18,6 @@ from modules.db import just_db
 from modules.generate import generate_code
 from modules.logs import game_logger
 from modules.sheduler import scheduler
-from modules.websocket_manager import websocket_manager
 
 # Глобальные конфиги для оптимизации
 settings: Settings = ALL_CONFIGS['settings']
@@ -146,6 +146,13 @@ class Session(BaseClass):
                 if company is not None:
                     await company.on_new_game_stage(self.step + 1)
 
+                    await Statistic().create(
+                        company_id=company.id,
+                        session_id=self.session_id,
+                        stage=self.step,
+                        data={}
+                    )
+
             # Обновляем города
             for city in await self.cities:
                 await city.on_new_game_stage()
@@ -162,6 +169,37 @@ class Session(BaseClass):
             self.step += 1
             await self.execute_step_schedule(self.step)
 
+        elif new_stage == SessionStages.ChangeTurn:
+            from game.company import Company
+
+            companies = await self.companies
+            for company in companies:
+                company: Company
+
+                await Statistic().update_me(
+                    company_id=company.id,
+                    session_id=self.session_id,
+                    stage=self.step,
+                    **{
+                        "balance": company.balance,
+                        "reputation": company.reputation,
+                        "economic_power": company.economic_power,
+                        "tax_debt": company.tax_debt,
+                        "credits": len(company.credits),
+                        "deposits": len(company.deposits),
+                        "in_prison": company.in_prison,
+                        "business_type": company.business_type,
+                        "factories": len(
+                            await company.get_factories()),
+                        "exchanges": len(
+                            await company.exchanges),
+                        "contracnts": len(
+                            await company.get_contracts()),
+                        "warehouse": 
+                            await company.get_max_warehouse_size()
+                    }
+                )
+
         elif new_stage == SessionStages.End:
             await self.end_game()
 
@@ -170,7 +208,8 @@ class Session(BaseClass):
 
         await self.save_to_base()
 
-        game_logger.info(f"В сессии {self.session_id} изменена стадия с {old_stage} на {self.stage}.")
+        game_logger.info(
+            f"В сессии {self.session_id} изменена стадия с {old_stage} на {self.stage}.")
 
         asyncio.create_task(websocket_manager.broadcast({
             "type": "api-update_session_stage",
